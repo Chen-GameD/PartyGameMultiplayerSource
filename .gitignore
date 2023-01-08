@@ -30,3 +30,15 @@
 *.exe
 *.out
 *.app
+
+# UEContent
+/.idea
+/Binaries
+/Config
+/Content
+/DericedDataCache
+/Intermediate
+/Plugins
+/Saved
+/Script
+*.uproject
