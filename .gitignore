@@ -33,6 +33,7 @@
 
 # UEContent
 /.idea
+/.vs
 /Binaries
 /Config
 /Content
