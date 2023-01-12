@@ -19,6 +19,8 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("GameMode Init JsonObject_1 succeeded"));
 	else
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("GameMode Init JsonObject_1 failed"));
+
+	CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
@@ -75,11 +77,18 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 
 void AMGameMode::Server_RespawnMinigameObject_Implementation()
 {
-	if (MinigameObjectClass)
+	// if (MinigameObjectClass)
+	// {
+	// 	FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
+	// 	FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
+	// 	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameObjectClass, spawnLocation, spawnRotation);
+	// }
+
+	if (MinigameDataAsset)
 	{
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
 		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameObjectClass, spawnLocation, spawnRotation);
+		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
 	}
 }
 
@@ -142,6 +151,9 @@ void AMGameMode::StartTheGame()
 	AMGameState* MyGameState = GetGameState<AMGameState>();
 	if (MyGameState)
 	{
+		// Set the game time
+		MyGameState->GameTime = MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].GameTime;
+		
 		MyGameState->IsGameStart = true;
 		MyGameState->StartGame();
 	}

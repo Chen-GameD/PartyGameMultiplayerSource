@@ -17,7 +17,7 @@ struct FMinigameRuleStruct
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
-	float GameTime;
+	int GameTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
 	TSubclassOf<AMinigameMainObjective> MinigameObject;

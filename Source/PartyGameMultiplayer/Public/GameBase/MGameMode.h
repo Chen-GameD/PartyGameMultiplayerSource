@@ -6,6 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerStart.h"
 #include "LevelInteraction/MinigameMainObjective.h"
+#include "LevelInteraction/MinigameObject/MinigameBaseDataAsset.h"
 #include "MGameMode.generated.h"
 
 /**
@@ -85,6 +86,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AMinigameMainObjective> MinigameObjectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UMinigameBaseDataAsset* MinigameDataAsset;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	int CurrentMinigameIndex;
 
 private:
 	
