@@ -2,9 +2,11 @@
 
 
 #include "GameBase/MGameState.h"
-
+#include "../../Public/M_PlayerState.h"
 #include "Character/MPlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "../../Public/Character/MCharacter.h"
+#include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
 
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -18,6 +20,29 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 void AMGameState::SetClientStartGame_Implementation()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+	
+#pragma region Siloutte_Config
+
+	// Get local player state and team id
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(MyLocalPlayerController->
+		GetPawn()->GetPlayerState());
+	auto myTeamID = MyPlayerState->TeamIndex;
+
+	for (int i = 0; i < PlayerArray.Num(); i++) {
+		// Cast to custom ps
+		auto ps = Cast<AM_PlayerState>(PlayerArray[i]);
+		auto character = Cast<AMCharacter>(ps->GetPawn());
+		// On the same team as the local player
+		if (ps->TeamIndex == myTeamID) {
+			character->GetMesh()->SetCustomDepthStencilValue(252);
+		}
+		else {
+			character->GetMesh()->SetCustomDepthStencilValue(0);
+		}
+	}
+
+#pragma endregion Siloutte_Config
+
 	if (IsGameStart)
 	{
 		if (MyLocalPlayerController)
