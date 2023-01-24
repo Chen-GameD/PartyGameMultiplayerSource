@@ -22,6 +22,8 @@
 #include "GameBase/MGameState.h"
 #include "UI/HealthBar.h"
 
+#define IS_LISTEN_SERVER
+
 // Constructor
 // ===================================================
 #pragma region Constructor
@@ -638,11 +640,15 @@ void AMCharacter::OnHealthUpdate()
 {
 	if (IsDead)
 		return;
-	
+
+#ifdef IS_LISTEN_SERVER
+	SetHealthBarUI();
+#else
 	if (!(GetLocalRole() == ROLE_Authority))
 	{
 		SetHealthBarUI();
 	}
+#endif
 	
 	//Client-specific functionality
 	if (IsLocallyControlled())
