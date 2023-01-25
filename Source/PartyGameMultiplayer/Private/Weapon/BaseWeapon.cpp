@@ -108,7 +108,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 				for (auto& Elem : AttackObjectMap)
 				{
 					Elem.Value += DeltaTime;
-					if (Cast<ACharacter*>(Elem.Key))
+					if (Cast<ACharacter>(Elem.Key))
 					{
 						if (AccumulatedTimeToGenerateDamage < Elem.Value)
 						{
@@ -116,7 +116,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 							Elem.Value = 0;
 						}
 					}
-					else if (Cast<AMinigameMainObjective*>(Elem.Key))
+					else if (Cast<AMinigameMainObjective>(Elem.Key))
 					{
 						if (MiniGameAccumulatedTimeToGenerateDamage < Elem.Value)
 						{
