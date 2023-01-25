@@ -89,20 +89,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Client duty
-	if (GetLocalRole() != ROLE_Authority) 
-	{
-		if (!IsPickedUp)
-		{
-			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
-			// The following 2 settings can be commented because the OnRep_Transform() should already have done the work. Just a safety measure.
-			DisplayCase->SetWorldLocation(RootLocation);
-			DisplayCase->SetWorldRotation(RootRotation);
-			DisplayCase->SetWorldScale3D(RootScale);
-		}
-	}
-
-	// Server duty
+	// Server/Listen Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with the collision of the display box
@@ -121,26 +108,39 @@ void ABaseWeapon::Tick(float DeltaTime)
 				for (auto& Elem : AttackObjectMap)
 				{
 					Elem.Value += DeltaTime;
-					if (dynamic_cast<ACharacter*>(Elem.Key))
-					{						
+					if (Cast<ACharacter*>(Elem.Key))
+					{
 						if (AccumulatedTimeToGenerateDamage < Elem.Value)
 						{
 							GenerateDamage(Elem.Key);
 							Elem.Value = 0;
 						}
 					}
-					else if (dynamic_cast<AMinigameMainObjective*>(Elem.Key))
+					else if (Cast<AMinigameMainObjective*>(Elem.Key))
 					{
 						if (MiniGameAccumulatedTimeToGenerateDamage < Elem.Value)
 						{
 							GenerateDamage(Elem.Key);
 							Elem.Value = 0;
 						}
-					}					
+					}
 				}
 			}
 		}
 	}
+	// Pure Client
+	else
+	{
+		if (!IsPickedUp)
+		{
+			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
+			// The following 2 settings can be commented because the OnRep_Transform() should already have done the work. Just a safety measure.
+			DisplayCase->SetWorldLocation(RootLocation);
+			DisplayCase->SetWorldRotation(RootRotation);
+			DisplayCase->SetWorldScale3D(RootScale);
+		}
+	}
+	
 }
 
 
