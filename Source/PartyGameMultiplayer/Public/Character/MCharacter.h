@@ -11,6 +11,7 @@
 #include "../M_PlayerState.h"
 #include "MCharacter.generated.h"
 
+#define IS_LISTEN_SERVER
 
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter

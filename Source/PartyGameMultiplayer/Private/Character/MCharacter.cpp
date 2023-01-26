@@ -22,8 +22,6 @@
 #include "GameBase/MGameState.h"
 #include "UI/HealthBar.h"
 
-#define IS_LISTEN_SERVER
-
 // Constructor
 // ===================================================
 #pragma region Constructor
@@ -638,9 +636,6 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	if (IsDead)
-		return;
-
 #ifdef IS_LISTEN_SERVER
 	SetHealthBarUI();
 #else
@@ -649,6 +644,9 @@ void AMCharacter::OnHealthUpdate()
 		SetHealthBarUI();
 	}
 #endif
+	
+	if (IsDead)
+		return;
 	
 	//Client-specific functionality
 	if (IsLocallyControlled())
@@ -915,6 +913,17 @@ bool AMCharacter::GetIsDead()
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
+#ifdef IS_LISTEN_SERVER
+	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+	if (isShowing)
+	{
+		healthBar->ShowTip();
+	}
+	else
+	{
+		healthBar->HideTip();
+	}
+#else
 	if (IsLocallyControlled())
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
@@ -927,6 +936,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing)
 			healthBar->HideTip();
 		}
 	}
+#endif
 }
 
 #pragma endregion UI
@@ -983,6 +993,27 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+#ifdef IS_LISTEN_SERVER
+	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+	healthBar->HideTip();
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState)
+	{
+		SetGameUIVisibility(MyGameState->IsGameStart);
+	}
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+	if (MyPlayerState)
+	{
+		if (MyPlayerState->TeamIndex == 1)
+		{
+			GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
+		}
+		else
+		{
+			GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
+		}
+	}
+#else
 	if (!(GetLocalRole() == ROLE_Authority))
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
@@ -1005,6 +1036,7 @@ void AMCharacter::BeginPlay()
 			}
 		}
 	}
+#endif
 }
 
 // Called every frame
@@ -1014,6 +1046,26 @@ void AMCharacter::Tick(float DeltaTime)
 
 	ActByBuff(DeltaTime);
 
+#ifdef IS_LISTEN_SERVER
+	// listen server: on server and client
+	// EffectRun
+	if (EffectRun->IsActive() == false)
+	{
+		if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
+		{
+			EffectRun->Activate(); 
+		}
+				
+	}
+	else
+	{
+		if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
+		{
+			EffectRun->Deactivate();
+		}
+				
+	}
+#else
 	// client-only
 	if (GetLocalRole() != ROLE_Authority)
 	{
@@ -1035,11 +1087,20 @@ void AMCharacter::Tick(float DeltaTime)
 				
 		}
 	}
+#endif
+
 	// server-only
-	else
+	if (GetLocalRole() == ROLE_Authority)
 	{
+#ifdef IS_LISTEN_SERVER
 		// EffectJump
+		bool tempIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (tempIsOnGround != IsOnGround)
+			OnRep_IsOnGround();
+#else
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+#endif
 	}
 		
 }
