@@ -64,7 +64,6 @@ ABaseWeapon::ABaseWeapon()
 		Right now the weapon's collision type is set to Trigger by default, this could be changed in the future. But I guess Trigger would be
 		the most convenient solution
 	*/
-	// TODO: Not necessarily be Trigger
 	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));
 	WeaponMesh->SetupAttachment(DisplayCase);	
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
@@ -89,7 +88,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// Server/Listen Server
+	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with the collision of the display box
@@ -128,16 +127,17 @@ void ABaseWeapon::Tick(float DeltaTime)
 			}
 		}
 	}
-	// Pure Client
-	else
+
+	// Client / Listen Server
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsPickedUp)
 		{
 			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
-			// The following 2 settings can be commented because the OnRep_Transform() should already have done the work. Just a safety measure.
-			DisplayCase->SetWorldLocation(RootLocation);
-			DisplayCase->SetWorldRotation(RootRotation);
-			DisplayCase->SetWorldScale3D(RootScale);
+			// The following transform settings can be commented because the OnRep_Transform() should already have done the work. Just a safety measure.
+			//DisplayCase->SetWorldLocation(RootLocation);
+			//DisplayCase->SetWorldRotation(RootRotation);
+			//DisplayCase->SetWorldScale3D(RootScale);
 		}
 	}
 	
@@ -227,6 +227,8 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	{
 		OnRep_IsPickedUp();
 	}
+
+
 }
 
 // should only be called on server

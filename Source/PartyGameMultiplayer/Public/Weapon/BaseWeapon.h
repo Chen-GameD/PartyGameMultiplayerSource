@@ -136,6 +136,7 @@ public:
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
 
+	// TODO: Assgin them one time by an external class(like damage manager)
 	UPROPERTY(EditAnywhere, Category = "Damage")
 		float Damage;
 	UPROPERTY(EditAnywhere, Category = "Damage")
@@ -149,8 +150,7 @@ protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;
 
-	// if we don't need the weapon to know which character is using it [on the client end], then this variable doesn't have to be replicated
-	//UPROPERTY(Replicated)
+	// don't replicate pointers
 	ACharacter* HoldingPlayer;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Transform)
@@ -184,13 +184,14 @@ protected:
 		which ensures that their classes will be recognized within the header file.
 	*/
 
-	// Static Mesh used to provide a visual representation of the object.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		class UStaticMeshComponent* WeaponMesh;
-
 	// Sphere component used to make sure the weapon could be on the ground after threw away.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* DisplayCase;
+
+	// Static Mesh used to provide a visual representation of the object.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* WeaponMesh;
+	
 
 	/*	PrimitiveComponent(has OnWeaponOverlapBegin&OnWeaponOverlapEnd) used to test collision
 			UPrimitiveComponent->UMeshComponent->UStaticMeshComponent
