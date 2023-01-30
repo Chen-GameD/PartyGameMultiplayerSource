@@ -52,8 +52,8 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 		EnumWeaponType WeaponType = AttackingWeapon->WeaponType;
 		float Damage = AttackingWeapon->Damage;
 		FString weaponDamageParName = AttackingWeapon->GetWeaponName() + TEXT("Damage");
-		if(!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
-			Damage = 0.0f;
+		//if(!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
+		//	Damage = 0.0f;
 		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
 
 		//FString testStr = UJsonFactory::LoadFileToString("DataFiles/test.txt");

@@ -36,24 +36,13 @@ enum EnumAttackBuff
 	Knockback
 };
 
-/*
-	UClasses cannot really be abstract in the C++ sense, because the UObject sub-system requires that each class can be instantiated
-	(it creates at least one instance of each class as a so called Class Default Object [CDO] that holds the default properties of that class).
-	Therefore, every class method must have an implementation, even if it does nothing.
-	That being said, you can get similar behavior by decorating your member methods with the PURE_VIRTUAL macro. This will tell
-	the UObject sub-system that your intent is to declare a pure virtual method. So even though the method is not pure virtual
-	in the C++ sense - it has a (possibly empty) function body - the compiler can still ensure that all child classes do supply an actual implementation.
 
-	Summary:
-	If you don't want a class to be instantiated, use the "Abstract" class specifier, although it isn't exactly abstract in the C++ sense
-	We can't make a UClass abstract by putting a pure virtual function into it, because Unreal doesn't allow pure virtual functions in a UClass.
-*/
 UCLASS(Abstract)
 class PARTYGAMEMULTIPLAYER_API ABaseWeapon : public AActor
 {
 	GENERATED_BODY()
 
-// MEMBER METHODS
+/* MEMBER METHODS */
 public:
 	ABaseWeapon();
 
@@ -71,16 +60,6 @@ public:
 	// should only be called on server
 	virtual void AttackStop();
 
-	/*
-		Confusion: the macro doesn't keep the child class from instantiating when it doesn't implement the interface...
-		If return type is not void, you have write something like "ABaseWeapon::AttackStart, return false;" inside the macro
-	
-		For example, the flamethrower starts to throw the flame
-		virtual void AttackStart() PURE_VIRTUAL(ABaseWeapon::AttackStart, );
-		For example, the flamethrower stops throwing the flame
-		virtual void AttackStop() PURE_VIRTUAL(ABaseWeapon::AttackStop, );
-	*/
-
 	//Get weapon name
 	virtual FString GetWeaponName() const;
 
@@ -91,16 +70,16 @@ public:
 protected:
 	virtual void CheckInitilization();
 	virtual void BeginPlay() override;
-	//virtual void Destroyed() override; 
+	virtual void Destroyed() override; 
 	virtual void PlayAnimationWhenNotBeingPickedUp(float DeltaTime);
-	//virtual void GenerateAttackHitEffect() PURE_VIRTUAL(ABaseWeapon::GenerateAttackHitEffect, );
+	// should be only on client
 	virtual void GenerateAttackHitEffect();
-	//virtual void GenerateDamage(class AActor* DamagedActor) PURE_VIRTUAL(ABaseWeapon::GenerateDamage, );
-	virtual void GenerateDamage(class AActor* DamagedActor);
-	//virtual void GenerateBuff(class AActor* DamagedActor);
+	// only on server, generate stuff like damage, buff and so on
+	virtual void GenerateDamageLike(class AActor* DamagedActor);
 
+	/* RepNotify Functions */
 	UFUNCTION()
-		virtual void OnRep_Transform();
+		virtual void OnRep_DisplayCaseTransform();
 	UFUNCTION()
 		virtual void OnRep_bAttackOn();
 	UFUNCTION()
@@ -109,6 +88,7 @@ protected:
 		virtual void OnRep_IsPickedUp();	
 	UFUNCTION()
 		virtual void OnRep_DamageGenerationCounter();
+
 	// only is called on server
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
@@ -117,7 +97,7 @@ protected:
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	// only is called on server(For test use, will not be used in the actual project)
+	// only is called on server(For test, will not be used in the actual play)
 	UFUNCTION(Category = "Weapon")
 		virtual void OnDisplayCaseOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -125,14 +105,14 @@ protected:
 private:
 
 
-// MEMBER VARIABLES
+/* MEMBER VARIABLES */
 public:
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
 	bool IsCombined;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* textureUI;
-	// Ele is short for Element
+	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
 
@@ -153,12 +133,12 @@ protected:
 	// don't replicate pointers
 	ACharacter* HoldingPlayer;
 
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootLocation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FRotator RootRotation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootScale;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FVector DisplayCaseLocation;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FRotator DisplayCaseRotation;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FVector DisplayCaseScale;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
@@ -172,7 +152,7 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
 		unsigned int DamageGenerationCounter;
 
-	// record what is being attacked and how long they have been attacked
+	// Which actor is being attacked - how long they have been attacked
 	TMap<AActor*, float> AttackObjectMap;
 
 	/**

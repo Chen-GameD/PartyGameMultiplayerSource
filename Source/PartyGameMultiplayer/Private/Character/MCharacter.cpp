@@ -535,6 +535,11 @@ void AMCharacter::Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
+		// Listen Server
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_IsAllowDash();
+		}
 		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
@@ -1001,15 +1006,22 @@ void AMCharacter::BeginPlay()
 	}
 }
 
-// Called every frame
+
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	ActByBuff(DeltaTime);
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		ActByBuff(DeltaTime);
 
-	// client-only
-	if (GetLocalRole() != ROLE_Authority)
+		// For EffectJump
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+	}
+
+	// Client(Listen Server)
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		// EffectRun
 		if (EffectRun->IsActive() == false)
@@ -1017,24 +1029,17 @@ void AMCharacter::Tick(float DeltaTime)
 			if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
 			{
 				EffectRun->Activate(); 
-			}
-				
+			}				
 		}
 		else
 		{
 			if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
 			{
 				EffectRun->Deactivate();
-			}
-				
+			}				
 		}
 	}
-	// server-only
-	else
-	{
-		// EffectJump
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-	}
+	
 		
 }
 #pragma endregion Engine life cycle function
@@ -1059,11 +1064,7 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		buffParArr.Add(0.0f);
 		BuffMap[BuffType] = buffParArr;
 	}
-	if (BuffMap[BuffType].Num() != 2)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("BuffMap went wrong!"));
-		return -1.0f;
-	}
+	check(BuffMap[BuffType].Num() == 2);
 
 	float& buffPoints = BuffMap[BuffType][0];
 	float& buffRemainedTime = BuffMap[BuffType][1];
@@ -1109,7 +1110,6 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
 		LaunchCharacter(AttackedDir, false, false);
 	}
-
 	return 0.0f;
 }
 
@@ -1124,7 +1124,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 	}
 
 	EnumAttackBuff buffType;
-	// Burning
+	/*  Burning */
 	buffType = EnumAttackBuff::Burning;
 	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
 	{
@@ -1148,7 +1148,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			}
 		}
 	}
-	// Paralysis
+	/* Paralysis */
 	buffType = EnumAttackBuff::Paralysis;	
 	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
 	{
@@ -1169,8 +1169,6 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			{
 				buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
 			}			
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Paralysis remain time: %f, %f, %f"), 
-			//	DeltaTime, targetCustomTimeDilation, buffRemainedTime));
 			if (buffRemainedTime <= 0.0f)
 			{
 				buffPoints = 0.0f;
