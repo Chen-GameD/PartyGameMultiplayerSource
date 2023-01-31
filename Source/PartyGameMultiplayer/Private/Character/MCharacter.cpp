@@ -417,9 +417,6 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 void AMCharacter::DropOffWeapon(bool isLeft)
 {
-	if (IsDead)
-		return;
-	
 	if (isLeft && LeftWeapon)
 	{
 		LeftWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
