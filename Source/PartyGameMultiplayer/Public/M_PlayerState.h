@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
+#include "SystemHelper/GlobalMacro.h"
 #include "M_PlayerState.generated.h"
 
 /**
@@ -30,6 +31,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void UpdatePlayerName(const FString& i_Name);
+
+	UFUNCTION(Server, Reliable)
+	void UpdatePlayerReadyState();
 
 	UFUNCTION()
 	void UpdateLobbyUIInformation();

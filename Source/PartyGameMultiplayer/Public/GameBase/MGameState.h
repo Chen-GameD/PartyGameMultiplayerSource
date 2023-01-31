@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "SystemHelper/GlobalMacro.h"
 #include "MGameState.generated.h"
 
 /**

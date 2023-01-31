@@ -9,9 +9,10 @@
 #include "UI/InventoryMenu.h"
 #include "Weapon/BaseWeapon.h"
 #include "../M_PlayerState.h"
+#include "SystemHelper/GlobalMacro.h"
 #include "MCharacter.generated.h"
 
-#define IS_LISTEN_SERVER
+//#define IS_LISTEN_SERVER
 
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter

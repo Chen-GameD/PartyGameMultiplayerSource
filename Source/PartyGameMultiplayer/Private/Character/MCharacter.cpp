@@ -174,6 +174,14 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 void AMCharacter::SetTextureInUI()
 {
+#ifdef IS_LISTEN_SERVER
+	if (InventoryMenuWidget)
+	{
+		InventoryMenuWidget->SetLeftItemUI(LeftWeapon == nullptr ? nullptr : LeftWeapon->textureUI);
+		InventoryMenuWidget->SetRightItemUI(RightWeapon == nullptr ? nullptr : RightWeapon->textureUI);
+		InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->textureUI);
+	}
+#else
 	if (IsLocallyControlled())
 	{
 		if (InventoryMenuWidget)
@@ -183,6 +191,7 @@ void AMCharacter::SetTextureInUI()
 			InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->textureUI);
 		}
 	}
+#endif
 }
 
 void AMCharacter::Attack_Implementation()
@@ -408,6 +417,10 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	IsPickingWeapon = false;
+
+#ifdef IS_LISTEN_SERVER
+	SetTextureInUI();
+#endif
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -535,6 +548,9 @@ void AMCharacter::Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
+#ifdef IS_LISTEN_SERVER
+		OnRep_IsAllowDash();
+#endif
 		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
