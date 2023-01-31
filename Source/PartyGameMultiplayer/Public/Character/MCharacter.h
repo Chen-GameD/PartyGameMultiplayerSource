@@ -105,6 +105,9 @@ public:
 
 	UFUNCTION()
 	void SetThisCharacterMesh(int TeamIndex);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetCanMove(bool i_CanMove);
 	
 protected:
 
