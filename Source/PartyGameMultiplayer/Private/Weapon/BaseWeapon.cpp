@@ -410,9 +410,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 		{
 			if (AttackObjectMap.Contains(OtherActor))
 			{
-				//AttackObjectMap.Remove(OtherActor);
-				// change should be faster than remove
-				AttackObjectMap[OtherActor] = 0.0f;
+				AttackObjectMap.Remove(OtherActor);
 			}
 			bAttackOverlap = false;
 		}
