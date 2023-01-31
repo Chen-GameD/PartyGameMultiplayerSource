@@ -11,22 +11,17 @@
 
 AWeaponTaser::AWeaponTaser()
 {
-	/*
-		bCanEverTick is set to true in BaseWeapon Class.
-		You can uncomment the following line and turn this off to improve performance if you don't need it.
-	*/
-	//PrimaryActorTick.bCanEverTick = false;
-
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Taser;
 
+	// Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Body.Taser_Body"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
+	// create a secondary weapon mesh which is specific for Taser
 	TaserForkMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TaserForkMesh"));
 	TaserForkMesh->SetCollisionProfileName(TEXT("Trigger"));
 	/*TaserForkMesh->SetCollisionProfileName(TEXT("Custom"));
