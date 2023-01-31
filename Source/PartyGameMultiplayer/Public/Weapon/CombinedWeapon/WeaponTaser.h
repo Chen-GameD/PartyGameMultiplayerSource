@@ -26,7 +26,7 @@ protected:
 	virtual void CheckInitilization() override;
 	/*virtual void GenerateAttackHitEffect() override;*/
 	//virtual void GenerateDamage(class AActor* DamagedActor) override;
-	virtual void OnRep_bAttackOn() override;
+	//virtual void OnRep_bAttackOn() override;
 
 private:
 

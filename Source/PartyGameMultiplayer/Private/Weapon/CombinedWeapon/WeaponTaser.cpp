@@ -117,29 +117,3 @@ void AWeaponTaser::CheckInitilization()
 	// do something specific to this weapon
 	check(AttackHitEffect);
 }
-
-
-//void AWeaponTaser::GenerateAttackHitEffect()
-//{
-//	FVector spawnLocation = GetActorLocation();
-//	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-//}
-//
-//
-//void AWeaponTaser::GenerateDamage(class AActor* DamagedActor)
-//{
-//	// Note: The 3rd parameter is EventInstigator, be careful if the weapon has an instigator or not.
-//	// if it doesn't and the 3rd parameter is set to GetInstigator()->Controller, the game would crash when overlap happens
-//	// (The projectile in the demo has an instigator, because the instigator parameter is assigned when the the character spawns it in HandleFire function)
-//	check(GetInstigator()->Controller);
-//	UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//}
-
-void AWeaponTaser::OnRep_bAttackOn()
-{
-	Super::OnRep_bAttackOn();
-	/*if(bAttackOn)
-		TaserForkMesh->SetRelativeLocation(TaserForkMesh->GetRelativeLocation() + FVector3d(-150.0f, 0, 0));
-	else
-		TaserForkMesh->SetRelativeLocation(TaserForkMesh->GetRelativeLocation() - FVector3d(-150.0f, 0, 0));*/
-}
