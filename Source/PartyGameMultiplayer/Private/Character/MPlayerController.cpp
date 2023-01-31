@@ -51,17 +51,19 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex, const FString
 void AMPlayerController::GetReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
-	if (MyServerPlayerState->TeamIndex != 0)
-	{
-		if (MyServerPlayerState->IsReady == true)
-		{
-			MyServerPlayerState->IsReady = false;
-		}
-		else
-		{
-			MyServerPlayerState->IsReady = true;
-		}
-	}
+
+	MyServerPlayerState->UpdatePlayerReadyState();
+	// if (MyServerPlayerState->TeamIndex != 0)
+	// {
+	// 	if (MyServerPlayerState->IsReady == true)
+	// 	{
+	// 		MyServerPlayerState->IsReady = false;
+	// 	}
+	// 	else
+	// 	{
+	// 		MyServerPlayerState->IsReady = true;
+	// 	}
+	// }
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)

@@ -174,7 +174,7 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 void AMCharacter::SetTextureInUI()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		if (InventoryMenuWidget)
 		{
@@ -408,13 +408,15 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	IsPickingWeapon = false;
+
+	if (GetNetMode() == NM_ListenServer)
+	{
+		SetTextureInUI();
+	}
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
 {
-	if (IsDead)
-		return;
-	
 	if (isLeft && LeftWeapon)
 	{
 		LeftWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -535,11 +537,13 @@ void AMCharacter::Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
+
 		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
 		{
 			OnRep_IsAllowDash();
 		}
+
 		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
@@ -641,13 +645,13 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	if (IsDead)
-		return;
-	
-	if (!(GetLocalRole() == ROLE_Authority))
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		SetHealthBarUI();
 	}
+	
+	if (IsDead)
+		return;
 	
 	//Client-specific functionality
 	if (IsLocallyControlled())
@@ -914,7 +918,7 @@ bool AMCharacter::GetIsDead()
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
 		if (isShowing)
@@ -981,8 +985,8 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (!(GetLocalRole() == ROLE_Authority))
+	
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
@@ -1015,7 +1019,8 @@ void AMCharacter::Tick(float DeltaTime)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		ActByBuff(DeltaTime);
-
+		// client-only
+		if (GetLocalRole() != ROLE_Authority)
 		// For EffectJump
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
 	}
@@ -1039,12 +1044,20 @@ void AMCharacter::Tick(float DeltaTime)
 			}				
 		}
 	}
-	
-		
+
+	// server-only
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		bool oldIsOnGround = IsOnGround;
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (GetNetMode() == NM_ListenServer)
+		{
+			if (oldIsOnGround != IsOnGround)
+				OnRep_IsOnGround();
+		}
+	}
 }
 #pragma endregion Engine life cycle function
-
-
 
 float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
 	AController* EventInstigator, ABaseWeapon* DamageCauser)

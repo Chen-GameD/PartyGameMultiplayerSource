@@ -59,6 +59,11 @@ void AMGameState::UpdateGameTime()
 		IsGameStart = false;
 		GetWorldTimerManager().ClearTimer(GameStartTimerHandle);
 	}
+	
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateGameStartTimerUI();
+	}
 }
 
 void AMGameState::StartGame_Implementation()
