@@ -785,6 +785,12 @@ void AMCharacter::SetThisCharacterMesh(int TeamIndex)
 	}
 }
 
+void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
+{
+	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+	playerController->SetCanMove(i_CanMove);
+}
+
 // RepNotify function
 void AMCharacter::OnRep_CurrentHealth()
 {

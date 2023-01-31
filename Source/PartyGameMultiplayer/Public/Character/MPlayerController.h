@@ -64,6 +64,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();
+
+	UFUNCTION(Server, Reliable)
+	void SetCanMove(bool i_CanMove);
 	
 protected:
 
@@ -124,6 +127,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UUserWidget* WB_GameTimerUI;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	bool CanMove = true;
 
 // Members
 // ==============================================================

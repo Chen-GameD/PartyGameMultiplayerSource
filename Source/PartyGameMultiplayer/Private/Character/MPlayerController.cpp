@@ -24,6 +24,8 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
+	DOREPLIFETIME(AMPlayerController, CanMove);
+
 	//Replicate Action
 }
 
@@ -70,6 +72,11 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 	{
 		MyGameMode->CheckGameStart();
 	}
+}
+
+void AMPlayerController::SetCanMove_Implementation(bool i_CanMove)
+{
+	CanMove = i_CanMove;
 }
 
 void AMPlayerController::BeginPlay()
@@ -278,7 +285,7 @@ void AMPlayerController::Server_RequestRespawn_Implementation()
 void AMPlayerController::MoveForward(float Value)
 {
 	AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
-	if (MyPawn)
+	if (MyPawn && CanMove)
 	{
 		if (MyPawn->GetIsDead())
 			return;
@@ -302,7 +309,7 @@ void AMPlayerController::MoveForward(float Value)
 void AMPlayerController::MoveRight(float Value)
 {
 	AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
-	if (MyPawn)
+	if (MyPawn && CanMove)
 	{
 		if (MyPawn->GetIsDead())
 			return;
@@ -383,7 +390,7 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 	// Direct the Pawn towards that location
 	APawn* const MyPawn = GetPawn();
 	AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if(MyPawn && MyGameState)
+	if(MyPawn && MyGameState && CanMove)
 	{
 		if (MyGameState->IsGameStart)
 		{
