@@ -103,6 +103,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 		}		
 	}
 
+
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -177,19 +178,21 @@ void ABaseWeapon::AttackStart()
 {
 	if (bAttackOn)
 		return;
-
 	check(GetOwner() != nullptr);
+
 	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
 
 	SetActorEnableCollision(bAttackOn);
 	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	//AttackDetectComponent->OnActorEnableCollisionChanged();
 	
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}	
+		
 }
 
 
@@ -199,16 +202,17 @@ void ABaseWeapon::AttackStop()
 		return;
 
 	check(GetOwner() != nullptr);
+
 	bAttackOn = false;
-
-	SetActorEnableCollision(bAttackOn);
-	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
 	{
 		OnRep_bAttackOn();
 	}
+	ApplyDamageCounter = 0;
+
+	SetActorEnableCollision(bAttackOn);
+	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 
@@ -396,9 +400,10 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
 
-			if (AttackType == EnumAttackType::OneHit)
+			if (AttackType == EnumAttackType::OneHit && ApplyDamageCounter == 0)
 			{
 				GenerateDamageLike(OtherActor);
+				ApplyDamageCounter++;
 			}
 			// Listen server
 			if (GetNetMode() == NM_ListenServer)

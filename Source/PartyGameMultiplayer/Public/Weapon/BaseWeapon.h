@@ -142,6 +142,9 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseScale;
 
+	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
+	int ApplyDamageCounter;
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
 
