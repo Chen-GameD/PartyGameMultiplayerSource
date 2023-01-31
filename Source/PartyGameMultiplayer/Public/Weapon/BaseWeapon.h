@@ -73,6 +73,8 @@ protected:
 	virtual void Destroyed() override; 
 	virtual void PlayAnimationWhenNotBeingPickedUp(float DeltaTime);
 	// should be only on client
+	virtual void DisplayCaseCollisionSetActive(bool IsActive);
+	// should be only on client
 	virtual void GenerateAttackHitEffect();
 	// only on server, generate stuff like damage, buff and so on
 	virtual void GenerateDamageLike(class AActor* DamagedActor);

@@ -34,7 +34,6 @@ ABaseWeapon::ABaseWeapon()
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
-	DisplayCase->SetCollisionProfileName(TEXT("Custom"));
 	/*DisplayCase->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));*/
 	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
 	DisplayCase->SetupAttachment(RootComponent);
@@ -142,10 +141,8 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	SetOwner(HoldingPlayer);
 
 	SetActorEnableCollision(false);
-	// Change DisplayCase Collision Type
-	DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
-	DisplayCase->SetSimulatePhysics(false);
-	DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//  Set DisplayCaseCollision to inactive
+	DisplayCaseCollisionSetActive(false);
 
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -165,12 +162,8 @@ void ABaseWeapon::GetThrewAway()
 	SetOwner(HoldingPlayer);
 
 	SetActorEnableCollision(true);
-	// Change DisplayCase Collision Type
-	DisplayCase->SetCollisionProfileName(TEXT("Custom"));
-	DisplayCase->SetSimulatePhysics(true);
-	DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
-	DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	//  Set DisplayCaseCollision to active
+	DisplayCaseCollisionSetActive(true);
 
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -236,13 +229,12 @@ void ABaseWeapon::BeginPlay()
 	// Server: Register collision callback functions
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		DisplayCase->SetSimulatePhysics(true);
-		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
-		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+		//  Set DisplayCaseCollision to active
+		DisplayCaseCollisionSetActive(true);
 		
 		AttackDetectComponent->SetCollisionProfileName(TEXT("Trigger"));
 		AttackDetectComponent->SetGenerateOverlapEvents(true);
+
 		AttackDetectComponent->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapBegin);
 		AttackDetectComponent->OnComponentEndOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapEnd);
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);
@@ -277,6 +269,24 @@ void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 	WeaponMesh->SetWorldRotation(NewRotation);
 }
 
+
+void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
+{
+	if (IsActive)
+	{
+		DisplayCase->SetCollisionProfileName(TEXT("Custom"));
+		DisplayCase->SetSimulatePhysics(true);
+		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	}
+	else
+	{
+		DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
+		DisplayCase->SetSimulatePhysics(false);
+		DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
 
 void ABaseWeapon::GenerateAttackHitEffect()
 {
