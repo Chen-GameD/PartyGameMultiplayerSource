@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
-#include "SystemHelper/GlobalMacro.h"
 #include "M_PlayerState.generated.h"
 
 /**

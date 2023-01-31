@@ -174,15 +174,7 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 void AMCharacter::SetTextureInUI()
 {
-#ifdef IS_LISTEN_SERVER
-	if (InventoryMenuWidget)
-	{
-		InventoryMenuWidget->SetLeftItemUI(LeftWeapon == nullptr ? nullptr : LeftWeapon->textureUI);
-		InventoryMenuWidget->SetRightItemUI(RightWeapon == nullptr ? nullptr : RightWeapon->textureUI);
-		InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->textureUI);
-	}
-#else
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		if (InventoryMenuWidget)
 		{
@@ -191,7 +183,6 @@ void AMCharacter::SetTextureInUI()
 			InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->textureUI);
 		}
 	}
-#endif
 }
 
 void AMCharacter::Attack_Implementation()
@@ -418,9 +409,10 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	IsPickingWeapon = false;
 
-#ifdef IS_LISTEN_SERVER
-	SetTextureInUI();
-#endif
+	if (GetNetMode() == NM_ListenServer)
+	{
+		SetTextureInUI();
+	}
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -548,9 +540,13 @@ void AMCharacter::Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-#ifdef IS_LISTEN_SERVER
-		OnRep_IsAllowDash();
-#endif
+
+		// Listen Server
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_IsAllowDash();
+		}
+
 		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
@@ -652,14 +648,10 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-#ifdef IS_LISTEN_SERVER
-	SetHealthBarUI();
-#else
-	if (!(GetLocalRole() == ROLE_Authority))
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		SetHealthBarUI();
 	}
-#endif
 	
 	if (IsDead)
 		return;
@@ -929,18 +921,7 @@ bool AMCharacter::GetIsDead()
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
-#ifdef IS_LISTEN_SERVER
-	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
-	if (isShowing)
-	{
-		healthBar->ShowTip();
-	}
-	else
-	{
-		healthBar->HideTip();
-	}
-#else
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
 		if (isShowing)
@@ -952,7 +933,6 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing)
 			healthBar->HideTip();
 		}
 	}
-#endif
 }
 
 #pragma endregion UI
@@ -1008,29 +988,8 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-#ifdef IS_LISTEN_SERVER
-	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
-	healthBar->HideTip();
-	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if (MyGameState)
-	{
-		SetGameUIVisibility(MyGameState->IsGameStart);
-	}
-	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-	if (MyPlayerState)
-	{
-		if (MyPlayerState->TeamIndex == 1)
-		{
-			GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
-		}
-		else
-		{
-			GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
-		}
-	}
-#else
-	if (!(GetLocalRole() == ROLE_Authority))
+	
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
@@ -1052,38 +1011,25 @@ void AMCharacter::BeginPlay()
 			}
 		}
 	}
-#endif
 }
 
-// Called every frame
+
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	ActByBuff(DeltaTime);
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		ActByBuff(DeltaTime);
+		// client-only
+		if (GetLocalRole() != ROLE_Authority)
+		// For EffectJump
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+	}
 
-#ifdef IS_LISTEN_SERVER
-	// listen server: on server and client
-	// EffectRun
-	if (EffectRun->IsActive() == false)
-	{
-		if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
-		{
-			EffectRun->Activate(); 
-		}
-				
-	}
-	else
-	{
-		if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
-		{
-			EffectRun->Deactivate();
-		}
-				
-	}
-#else
-	// client-only
-	if (GetLocalRole() != ROLE_Authority)
+	// Client(Listen Server)
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		// EffectRun
 		if (EffectRun->IsActive() == false)
@@ -1091,38 +1037,30 @@ void AMCharacter::Tick(float DeltaTime)
 			if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
 			{
 				EffectRun->Activate(); 
-			}
-				
+			}				
 		}
 		else
 		{
 			if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
 			{
 				EffectRun->Deactivate();
-			}
-				
+			}				
 		}
 	}
-#endif
 
 	// server-only
 	if (GetLocalRole() == ROLE_Authority)
 	{
-#ifdef IS_LISTEN_SERVER
-		// EffectJump
-		bool tempIsOnGround = IsOnGround;
+		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-		if (tempIsOnGround != IsOnGround)
-			OnRep_IsOnGround();
-#else
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-#endif
+		if (GetNetMode() == NM_ListenServer)
+		{
+			if (oldIsOnGround != IsOnGround)
+				OnRep_IsOnGround();
+		}
 	}
-		
 }
 #pragma endregion Engine life cycle function
-
-
 
 float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
 	AController* EventInstigator, ABaseWeapon* DamageCauser)
@@ -1142,11 +1080,7 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		buffParArr.Add(0.0f);
 		BuffMap[BuffType] = buffParArr;
 	}
-	if (BuffMap[BuffType].Num() != 2)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("BuffMap went wrong!"));
-		return -1.0f;
-	}
+	check(BuffMap[BuffType].Num() == 2);
 
 	float& buffPoints = BuffMap[BuffType][0];
 	float& buffRemainedTime = BuffMap[BuffType][1];
@@ -1192,7 +1126,6 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
 		LaunchCharacter(AttackedDir, false, false);
 	}
-
 	return 0.0f;
 }
 
@@ -1207,7 +1140,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 	}
 
 	EnumAttackBuff buffType;
-	// Burning
+	/*  Burning */
 	buffType = EnumAttackBuff::Burning;
 	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
 	{
@@ -1231,7 +1164,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			}
 		}
 	}
-	// Paralysis
+	/* Paralysis */
 	buffType = EnumAttackBuff::Paralysis;	
 	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
 	{
@@ -1252,8 +1185,6 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			{
 				buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
 			}			
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Paralysis remain time: %f, %f, %f"), 
-			//	DeltaTime, targetCustomTimeDilation, buffRemainedTime));
 			if (buffRemainedTime <= 0.0f)
 			{
 				buffPoints = 0.0f;
