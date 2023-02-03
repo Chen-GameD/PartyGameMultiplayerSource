@@ -7,6 +7,7 @@
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "OnlineSessionSettings.h"
+#include "Blueprint/UserWidget.h"
 
 const FName SESSION_NAME = FName("MAINSESSION");
 
@@ -149,6 +150,30 @@ TArray<USessionEntry*> UEOSGameInstance::GetSessionsList()
 		}
 	}
 	return sessions;
+}
+
+void UEOSGameInstance::UI_ShowMainMenu()
+{
+	if (WB_MainMenuClass)
+	{
+		if (!WB_MainMenu)
+		{
+			// Create menu
+			APlayerController* currentPlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+			if (currentPlayerController != nullptr)
+			{
+				WB_MainMenu = CreateWidget<UUserWidget>(currentPlayerController, WB_MainMenuClass);
+				//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
+                
+				WB_MainMenu->AddToViewport();
+				FInputModeUIOnly inputMode;
+				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				currentPlayerController->SetInputMode(inputMode);
+				currentPlayerController->SetShowMouseCursor(true);
+			}
+			
+		}
+	}
 }
 
 void UEOSGameInstance::JoinSession(int32 index)
