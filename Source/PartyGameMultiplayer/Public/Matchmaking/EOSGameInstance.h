@@ -51,6 +51,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	TArray<USessionEntry*> GetSessionsList();
 
+	UFUNCTION(BlueprintCallable)
+	void UI_ShowMainMenu();
+
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -58,6 +61,15 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsSessionsListAvailable = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	TSubclassOf<UUserWidget> WB_MainMenuClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UUserWidget* WB_MainMenu;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	FString PlayerName = "CMY";
 
 	void OnCreateSessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnDestroySessionComplete(FName sessionName, bool bWasSuccessful);

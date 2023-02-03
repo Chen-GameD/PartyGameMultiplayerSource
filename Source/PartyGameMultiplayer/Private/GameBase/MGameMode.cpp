@@ -4,6 +4,8 @@
 #include "GameBase/MGameMode.h"
 
 #include "M_PlayerState.h"
+#include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameState.h"
 #include "GameFramework/Character.h"
@@ -167,6 +169,40 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (NewPlayer)
 	{
+		FUniqueNetIdRepl UniqueNetIdRepl;
+		if(NewPlayer->IsLocalController())
+		{
+			ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
+			if(LocalPlayer)
+			{
+				UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+			}
+			else
+			{
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				check(IsValid(NetConnectionRef));
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+			}
+		}
+		else
+		{
+			UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+			check(IsValid(NetConnectionRef));
+			UniqueNetIdRepl = NetConnectionRef->PlayerId;
+		}
+		
+		TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+		if(UniqueNetId == nullptr)
+			return;
+		IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+		IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+		bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
+		if(bRegistrationSuccess)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
+			UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
+		}
+		
 		CurrentPlayerNum++;
 
 		for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
