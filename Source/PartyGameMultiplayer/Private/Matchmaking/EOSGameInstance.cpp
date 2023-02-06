@@ -142,8 +142,8 @@ TArray<USessionEntry*> UEOSGameInstance::GetSessionsList()
 		for (auto session : SearchSettings->SearchResults)
 		{
 			USessionEntry *newEntry = NewObject<USessionEntry>();
-			newEntry->SetSessionData(session.GetSessionIdStr(), session.Session.NumOpenPublicConnections,
-			              session.Session.SessionSettings.NumPrivateConnections+session.Session.SessionSettings.NumPublicConnections);
+			newEntry->SetSessionData(session.GetSessionIdStr(), session.Session.SessionSettings.NumPublicConnections,
+			              session.Session.SessionSettings.NumPublicConnections-session.Session.NumOpenPublicConnections);
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sessions in search result"));
 			UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *session.GetSessionIdStr());
 			sessions.Add(newEntry);
@@ -189,6 +189,7 @@ void UEOSGameInstance::JoinSession(int32 index)
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
 					SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
 					UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *SearchSettings->SearchResults[index].Session.OwningUserName);
+					CurrentlyJoiningSessionIndex = index;
 					SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[index]);
 				}
 				else
@@ -284,18 +285,20 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 			{
 				if(IOnlineSessionPtr OnlineSessionPtr = OnlineSubsystem->GetSessionInterface())
 				{
-					OnlineSessionPtr->GetResolvedConnectString(SearchSettings->SearchResults[0], NAME_GamePort, JoinURL);
+					int32 index = (CurrentlyJoiningSessionIndex == -1) ? 0 : CurrentlyJoiningSessionIndex;
+					OnlineSessionPtr->GetResolvedConnectString(SearchSettings->SearchResults[index], NAME_GamePort, JoinURL);
 					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
 					if(!JoinURL.IsEmpty())
 					{
 						//JoinURL.Append("/Game/Level/SessionTest");
-						if(SearchSettings->SearchResults[0].Session.SessionSettings.Settings.Contains(SETTING_MAPNAME))
+						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_MAPNAME))
 						{
-							auto val = SearchSettings->SearchResults[0].Session.SessionSettings.Settings.Find(SETTING_MAPNAME);
+							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_MAPNAME);
 							UE_LOG(LogTemp, Warning, TEXT("strMapKeys : %s"), *val->ToString());
 							//JoinURL.Append(val->ToString());
 						}
 						PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
+						CurrentlyJoiningSessionIndex = -1;
 					}
 				}
 			}

@@ -71,6 +71,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	FString PlayerName = "CMY";
 
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentlyJoiningSessionIndex = -1;
+
 	void OnCreateSessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnDestroySessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnFindSessionComplete(bool bWasSuccessful);
