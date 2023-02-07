@@ -17,17 +17,15 @@ ADamageManagerNew::ADamageManagerNew()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
-	if (!DamageManagerDataAsset)
+	static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> DefaultDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
+	if (DefaultDamageManagerDataAsset.Succeeded())
 	{
-		/*static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> MyDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
-		if (MyDamageManagerDataAsset.Succeeded())
-		{
-			DamageManagerDataAsset = MyDamageManagerDataAsset.Object;
-			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("find bp data asset object!"));
-		}
-		else
-			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("cannot find bp data asset object!"));*/
+		DamageManagerDataAsset = DefaultDamageManagerDataAsset.Object;
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("find bp data asset object!"));
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, FString::Printf(TEXT("%f"), DamageManagerDataAsset->TestDamageNumber));
 	}
+	else
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("cannot find bp data asset object!"));
 }
 
 // Called when the game starts or when spawned
