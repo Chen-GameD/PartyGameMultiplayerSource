@@ -169,7 +169,7 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (NewPlayer)
 	{
-		FUniqueNetIdRepl UniqueNetIdRepl;
+		/*FUniqueNetIdRepl UniqueNetIdRepl;
 		if(NewPlayer->IsLocalController())
 		{
 			ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
@@ -201,7 +201,7 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
 			UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
-		}
+		}*/
 		
 		CurrentPlayerNum++;
 

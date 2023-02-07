@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Weapon/DamageManager.h"
+#include "Weapon/DamageManagerNew.h"
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/JsonFactory.h"
 #include "Character/MCharacter.h"
@@ -9,17 +9,43 @@
 #include "Kismet/GameplayStatics.h"
 
 
-UDamageManagerDataAsset* DamageManager::DamageManagerDataAsset = nullptr;
+UDamageManagerDataAsset* ADamageManagerNew::DamageManagerDataAsset = nullptr;
 
-DamageManager::DamageManager()
+// Sets default values
+ADamageManagerNew::ADamageManagerNew()
 {
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = false;
+
+	if (!DamageManagerDataAsset)
+	{
+		/*static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> MyDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
+		if (MyDamageManagerDataAsset.Succeeded())
+		{
+			DamageManagerDataAsset = MyDamageManagerDataAsset.Object;
+			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("find bp data asset object!"));
+		}
+		else
+			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("cannot find bp data asset object!"));*/
+	}
 }
 
-DamageManager::~DamageManager()
+// Called when the game starts or when spawned
+void ADamageManagerNew::BeginPlay()
 {
+	Super::BeginPlay();
+	
 }
 
-bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor)
+// Called every frame
+void ADamageManagerNew::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+
+bool ADamageManagerNew::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor)
 {
 	if (!AttackingWeapon || !DamagedActor)
 		return false;
@@ -30,22 +56,11 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 	//	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during DealDamageAndBuffBetweenActors()!");
 	//	return false;
 	//}	
-	
-	// todo to assign
-	if(!DamageManagerDataAsset)
+
+	if (DamageManagerDataAsset)
 	{
-		static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> MyDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
-		if (MyDamageManagerDataAsset.Succeeded())
-		{
-			DamageManagerDataAsset = MyDamageManagerDataAsset.Object;
-			if (DamageManagerDataAsset)
-			{
-				float tmpFloat = DamageManagerDataAsset->TestDamageNumber;
-				GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("tmpFloat is %f"), tmpFloat));
-			}
-		}
-		else
-			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("cannot find bp data asset object!"));
+		float tmpFloat = DamageManagerDataAsset->TestDamageNumber;
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("tmpFloat is %f"), tmpFloat));
 	}
 
 	if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
@@ -64,7 +79,7 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 		AM_PlayerState* AttakingWeaponPS = DamagedCharacterController->GetPlayerState<AM_PlayerState>();
 		if (!pCharacterPS || !AttakingWeaponPS)
 			return false;
-		if(pCharacterPS->TeamIndex == AttakingWeaponPS->TeamIndex)
+		if (pCharacterPS->TeamIndex == AttakingWeaponPS->TeamIndex)
 			return false;
 
 		EnumWeaponType WeaponType = AttackingWeapon->WeaponType;
@@ -105,7 +120,7 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
 		}
 		// Blower
-		else if(AttackingWeapon->WeaponType == EnumWeaponType::Blower)
+		else if (AttackingWeapon->WeaponType == EnumWeaponType::Blower)
 		{
 			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
 		}
@@ -132,7 +147,7 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 		}
 
 		// TODO: judge if it is a teammate
-		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);	
+		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
 
 	}
 	else if (dynamic_cast<AMinigameMainObjective*>(DamagedActor))
@@ -153,7 +168,7 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 	return true;
 }
 
-bool DamageManager::ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor)
+bool ADamageManagerNew::ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor)
 {
 	auto jsonObject = UJsonFactory::GetJsonObject_1();
 	if (!jsonObject)
@@ -181,7 +196,7 @@ bool DamageManager::ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingW
 		check(AttackingWeapon->GetHoldingPlayer());
 		FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
 		FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, 
+		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir,
 			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
 	}
 	else

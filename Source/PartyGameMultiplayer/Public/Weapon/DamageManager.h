@@ -5,6 +5,9 @@
 #include "CoreMinimal.h"
 #include "BaseWeapon.h"
 #include "Character/MCharacter.h"
+#include "DamageManagerDataAsset.h"
+
+class UDamageManagerDataAsset;
 
 class PARTYGAMEMULTIPLAYER_API DamageManager
 {
@@ -15,7 +18,8 @@ public:
 	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor);
 	static bool ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor);
 protected:
-private:
+private:	
+	static UDamageManagerDataAsset* DamageManagerDataAsset;
 
 public:
 protected:

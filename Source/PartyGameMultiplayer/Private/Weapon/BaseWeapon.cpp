@@ -20,6 +20,7 @@
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 #include "Weapon/DamageManager.h"
+#include "Weapon/DamageManagerNew.h"
 
 
 ABaseWeapon::ABaseWeapon()
@@ -326,7 +327,8 @@ void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor)
 	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
 	//}
 
-	bool success = DamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor);
+	//bool success = DamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor);
+	bool success = ADamageManagerNew::DealDamageAndBuffBetweenActors(this, DamagedActor);
 	if (success)
 	{
 		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
