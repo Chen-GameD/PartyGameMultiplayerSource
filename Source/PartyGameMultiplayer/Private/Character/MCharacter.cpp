@@ -104,6 +104,8 @@ AMCharacter::AMCharacter()
 	EffectLand = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectLand"));
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
+
+	CanMove = true;
 }
 #pragma endregion Constructor
 
@@ -1087,6 +1089,7 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 
 	float& buffPoints = BuffMap[BuffType][0];
 	float& buffRemainedTime = BuffMap[BuffType][1];
+
 	if (BuffType == EnumAttackBuff::Burning)
 	{
 		float oldBuffPoints = buffPoints;
@@ -1094,9 +1097,9 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
-			float burningBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffAddTimeOnce", burningBuffAddTimeOnce))
-				burningBuffAddTimeOnce = 0.0f;
+			float burningBuffAddTimeOnce = 5.0f;
+			//if (!jsonObject->TryGetNumberField("burningBuffAddTimeOnce", burningBuffAddTimeOnce))
+			//	burningBuffAddTimeOnce = 0.0f;
 			buffRemainedTime += burningBuffAddTimeOnce;
 		}
 	}
@@ -1105,9 +1108,9 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		if (buffPoints < 1.0f)
 		{
 			buffPoints = 1.0f;
-			float paralysisBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("paralysisBuffAddTimeOnce", paralysisBuffAddTimeOnce))
-				paralysisBuffAddTimeOnce = 0.0f;
+			float paralysisBuffAddTimeOnce = 5.0f;
+			//if (!jsonObject->TryGetNumberField("paralysisBuffAddTimeOnce", paralysisBuffAddTimeOnce))
+			//	paralysisBuffAddTimeOnce = 0.0f;
 			buffRemainedTime = paralysisBuffAddTimeOnce;
 		}		
 	}
@@ -1153,9 +1156,9 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
 			// key value
-			float burningBuffDamagePerSecond = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffDamagePerSecond", burningBuffDamagePerSecond))
-				burningBuffDamagePerSecond = 0.0f;
+			float burningBuffDamagePerSecond = 5.0f;
+			//if (!jsonObject->TryGetNumberField("burningBuffDamagePerSecond", burningBuffDamagePerSecond))
+			//	burningBuffDamagePerSecond = 0.0f;
 			SetCurrentHealth(CurrentHealth - DeltaTime * burningBuffDamagePerSecond);
 			buffRemainedTime -= DeltaTime;
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));
@@ -1173,26 +1176,41 @@ void AMCharacter::ActByBuff(float DeltaTime)
 	{
 		float& buffPoints = BuffMap[buffType][0];
 		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
+		if (1.0f <= buffPoints)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
-			// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
-			// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
-			float targetCustomTimeDilation = 1.0f / 1000.0f;
-			if (CustomTimeDilation != targetCustomTimeDilation)
+			if (0.0f < buffRemainedTime)
 			{
-				CustomTimeDilation = targetCustomTimeDilation;
+				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
+
+				// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
+				// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
+				/*float targetCustomTimeDilation = 1.0f / 1000.0f;
+				if (CustomTimeDilation != targetCustomTimeDilation)
+				{
+					CustomTimeDilation = targetCustomTimeDilation;
+					buffRemainedTime -= DeltaTime;
+				}
+				else
+				{
+					buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
+				}*/
+				if (CanMove)
+				{
+					Server_SetCanMove(false);
+					CanMove = false;
+				}				
 				buffRemainedTime -= DeltaTime;
 			}
 			else
 			{
-				buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
-			}			
-			if (buffRemainedTime <= 0.0f)
-			{
+				if (!CanMove)
+				{
+					Server_SetCanMove(true);
+					CanMove = true;
+				}
 				buffPoints = 0.0f;
 				buffRemainedTime = 0.0f;
-				CustomTimeDilation = 1.0f;
+				//CustomTimeDilation = 1.0f;
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
 			}
 		}

@@ -121,8 +121,8 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 	{
 		float Damage = AttackingWeapon->MiniGameDamage;
 		FString weaponDamageParName = AttackingWeapon->GetWeaponName() + TEXT("MiniGameDamage");
-		if (!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
-			Damage = 0.0f;
+		//if (!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
+		//	Damage = 0.0f;
 		//// Temporary; weird to assign MiniGameAccumulatedTimeToGenerateDamage here
 		//if (999.0f < AttackingWeapon->MiniGameAccumulatedTimeToGenerateDamage)
 		//	AttackingWeapon->MiniGameAccumulatedTimeToGenerateDamage = AttackingWeapon->AccumulatedTimeToGenerateDamage;

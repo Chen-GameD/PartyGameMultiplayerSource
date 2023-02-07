@@ -299,6 +299,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Buff")
 	float BurningBuffDamagePerSecond;
 
+	bool CanMove; // only used on the Server, only for paralysis rn
+
 	// Weapon
 	// to do
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
