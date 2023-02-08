@@ -15,6 +15,7 @@
 #include "NiagaraComponent.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/JsonFactory.h"
+#include "Weapon/DamageManagerNew.h"
 #include <Character/animUtils.h>
 
 #include "Character/MPlayerController.h"
@@ -1070,13 +1071,6 @@ void AMCharacter::Tick(float DeltaTime)
 float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
 	AController* EventInstigator, ABaseWeapon* DamageCauser)
 {
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::AccumulateAttackedBuff()!");
-		return false;
-	}
-
 	if (!BuffMap.Contains(BuffType))
 	{
 		BuffMap.Add(BuffType);
@@ -1097,10 +1091,11 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
-			float burningBuffAddTimeOnce = 5.0f;
-			//if (!jsonObject->TryGetNumberField("burningBuffAddTimeOnce", burningBuffAddTimeOnce))
-			//	burningBuffAddTimeOnce = 0.0f;
-			buffRemainedTime += burningBuffAddTimeOnce;
+			float BurningBuffAddTimeOnce = 5.0f;
+			FString ParName = "BurningBuffAddTimeOnce";
+			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffAddTimeOnce = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			buffRemainedTime += BurningBuffAddTimeOnce;
 		}
 	}
 	else if (BuffType == EnumAttackBuff::Paralysis)
@@ -1108,10 +1103,11 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		if (buffPoints < 1.0f)
 		{
 			buffPoints = 1.0f;
-			float paralysisBuffAddTimeOnce = 5.0f;
-			//if (!jsonObject->TryGetNumberField("paralysisBuffAddTimeOnce", paralysisBuffAddTimeOnce))
-			//	paralysisBuffAddTimeOnce = 0.0f;
-			buffRemainedTime = paralysisBuffAddTimeOnce;
+			float ParalysisBuffAddTimeOnce = 5.0f;
+			FString ParName = "ParalysisBuffAddTimeOnce";
+			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				ParalysisBuffAddTimeOnce = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			buffRemainedTime = ParalysisBuffAddTimeOnce;
 		}		
 	}
 	else if (BuffType == EnumAttackBuff::Knockback)
@@ -1138,13 +1134,6 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 
 void AMCharacter::ActByBuff(float DeltaTime)
 {
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::ActByBuff()!");
-		return;
-	}
-
 	EnumAttackBuff buffType;
 	/*  Burning */
 	buffType = EnumAttackBuff::Burning;
@@ -1156,10 +1145,11 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
 			// key value
-			float burningBuffDamagePerSecond = 5.0f;
-			//if (!jsonObject->TryGetNumberField("burningBuffDamagePerSecond", burningBuffDamagePerSecond))
-			//	burningBuffDamagePerSecond = 0.0f;
-			SetCurrentHealth(CurrentHealth - DeltaTime * burningBuffDamagePerSecond);
+			float BurningBuffDamagePerSecond = 5.0f;
+			FString ParName = "BurningBuffDamagePerSecond";
+			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffDamagePerSecond = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
 			buffRemainedTime -= DeltaTime;
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));
 			if (buffRemainedTime <= 0.0f)

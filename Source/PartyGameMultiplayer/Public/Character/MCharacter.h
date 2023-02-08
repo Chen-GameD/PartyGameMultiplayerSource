@@ -295,10 +295,8 @@ protected:
 	float OriginalMaxWalkSpeed;
 	float DashSpeed;
 	FTimerHandle DashingTimer;
-	// Buff
-	UPROPERTY(EditAnywhere, Category = "Buff")
-	float BurningBuffDamagePerSecond;
 
+	// buff
 	bool CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon

@@ -29,7 +29,7 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-private:
-private:
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
+private:
+private:	
 };

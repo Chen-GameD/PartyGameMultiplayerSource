@@ -30,23 +30,6 @@ bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon,
 	//	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during DealDamageAndBuffBetweenActors()!");
 	//	return false;
 	//}	
-	
-	// todo to assign
-	if(!DamageManagerDataAsset)
-	{
-		static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> MyDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
-		if (MyDamageManagerDataAsset.Succeeded())
-		{
-			DamageManagerDataAsset = MyDamageManagerDataAsset.Object;
-			if (DamageManagerDataAsset)
-			{
-				float tmpFloat = DamageManagerDataAsset->TestDamageNumber;
-				GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("tmpFloat is %f"), tmpFloat));
-			}
-		}
-		else
-			GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("cannot find bp data asset object!"));
-	}
 
 	if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
 	{

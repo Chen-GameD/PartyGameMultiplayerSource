@@ -17,9 +17,14 @@ class PARTYGAMEMULTIPLAYER_API UDamageManagerDataAsset : public UDataAsset
 public:
 	UDamageManagerDataAsset()
 	{
-		TestDamageNumber = 0.0f;
 	}
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
-	float TestDamageNumber;
+	TMap<FString, float> Character_Damage_Map;
+
+	UPROPERTY(EditAnywhere, Category = "Damage Manager")
+	TMap<FString, float> Character_Buff_Map;
+
+	UPROPERTY(EditAnywhere, Category = "Damage Manager")
+	TMap<FString, float> MiniGame_Damage_Map;
 };
