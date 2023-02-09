@@ -463,14 +463,15 @@ ACharacter* ABaseWeapon::GetHoldingPlayer() const
 
 
 // TODO, input class type as the function parameter
-void ABaseWeapon::SpawnProjectile()
+void ABaseWeapon::SpawnProjectile(TSubclassOf<class ABaseProjectile> SpecificProjectileClass)
 {
 	FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
-	FRotator spawnRotation = GetActorRotation();
+	FRotator spawnRotation = (GetActorRotation().Vector() + GetActorUpVector()).Rotation();
 
 	FActorSpawnParameters spawnParameters;
 	spawnParameters.Instigator = GetInstigator();
 	spawnParameters.Owner = this;
 
-	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(spawnLocation, spawnRotation, spawnParameters);
+	//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 }

@@ -2,6 +2,7 @@
 
 
 #include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/ElementWeapon/ProjectileAlarm.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
@@ -63,7 +64,7 @@ void AWeaponAlarm::AttackStart()
 	ApplyDamageCounter = 0;
 	
 	SetActorHiddenInGame(bAttackOn);
-	SpawnProjectile();
+	SpawnProjectile(AProjectileAlarm::StaticClass());
 }
 
 

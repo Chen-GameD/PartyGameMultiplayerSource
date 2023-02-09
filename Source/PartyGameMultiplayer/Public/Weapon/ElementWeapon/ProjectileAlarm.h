@@ -13,5 +13,6 @@ UCLASS()
 class PARTYGAMEMULTIPLAYER_API AProjectileAlarm : public ABaseProjectile
 {
 	GENERATED_BODY()
-	
+public:
+	AProjectileAlarm();	
 };

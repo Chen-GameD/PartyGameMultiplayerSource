@@ -79,7 +79,7 @@ protected:
 	// only on server, generate stuff like damage, buff and so on
 	virtual void GenerateDamageLike(class AActor* DamagedActor);
 
-	virtual void SpawnProjectile();
+	virtual void SpawnProjectile(TSubclassOf<class ABaseProjectile> SpecificProjectileClass);
 
 	/* RepNotify Functions */
 	UFUNCTION()
