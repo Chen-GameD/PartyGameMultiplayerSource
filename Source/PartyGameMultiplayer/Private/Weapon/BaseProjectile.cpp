@@ -20,27 +20,27 @@ ABaseProjectile::ABaseProjectile()
 	
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
 	RootComponent = StaticMesh;
-	// static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
-	// if (DefaultMesh.Succeeded())
-	// {
-	// 	StaticMesh->SetStaticMesh(DefaultMesh.Object);
-	// 	StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	// 	StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
-	// }
-	// StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
+	 static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
+	 if (DefaultMesh.Succeeded())
+	 {
+	 	StaticMesh->SetStaticMesh(DefaultMesh.Object);
+	 	StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+	 	StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
+	 }
+	 StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
 
-	// ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
-	// ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
-	// ProjectileMovementComponent->InitialSpeed = 1500.0f;
-	// ProjectileMovementComponent->MaxSpeed = 1500.0f;
-	// ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	// ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
-	//
-	// static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultAttackHitEffect(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
-	// if (DefaultAttackHitEffect.Succeeded())
-	// {
-	// 	AttackHitEffect = DefaultAttackHitEffect.Object;
-	// }
+	 ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+	 ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
+	 ProjectileMovementComponent->InitialSpeed = 1500.0f;
+	 ProjectileMovementComponent->MaxSpeed = 1500.0f;
+	 ProjectileMovementComponent->bRotationFollowsVelocity = true;
+	 ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
+	
+	 static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultAttackHitEffect(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
+	 if (DefaultAttackHitEffect.Succeeded())
+	 {
+	 	AttackHitEffect = DefaultAttackHitEffect.Object;
+	 }
 }
 
 
@@ -65,5 +65,5 @@ void ABaseProjectile::Destroyed()
 void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//Destroy();
+	Destroy();
 }

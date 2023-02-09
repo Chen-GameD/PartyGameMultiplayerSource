@@ -21,6 +21,7 @@
 #include "LevelInteraction/MinigameMainObjective.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageManagerNew.h"
+#include "Weapon/BaseProjectile.h"
 
 
 ABaseWeapon::ABaseWeapon()
@@ -192,8 +193,6 @@ void ABaseWeapon::AttackStart()
 	SetActorEnableCollision(bAttackOn);
 	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	//AttackDetectComponent->OnActorEnableCollisionChanged();
-	
-		
 }
 
 
@@ -460,4 +459,18 @@ FString ABaseWeapon::GetWeaponName() const
 ACharacter* ABaseWeapon::GetHoldingPlayer() const
 {
 	return HoldingPlayer;
+}
+
+
+// TODO, input class type as the function parameter
+void ABaseWeapon::SpawnProjectile()
+{
+	FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+	FRotator spawnRotation = GetActorRotation();
+
+	FActorSpawnParameters spawnParameters;
+	spawnParameters.Instigator = GetInstigator();
+	spawnParameters.Owner = this;
+
+	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(spawnLocation, spawnRotation, spawnParameters);
 }

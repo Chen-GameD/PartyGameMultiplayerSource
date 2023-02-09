@@ -17,7 +17,7 @@ AWeaponAlarm::AWeaponAlarm()
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Alarm;
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
@@ -47,3 +47,40 @@ AWeaponAlarm::AWeaponAlarm()
 
 }
 
+
+void AWeaponAlarm::AttackStart()
+{
+	if (bAttackOn)
+		return;
+	check(GetOwner() != nullptr);
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+	
+	SetActorHiddenInGame(bAttackOn);
+	SpawnProjectile();
+}
+
+
+void AWeaponAlarm::AttackStop()
+{
+	if (!bAttackOn)
+		return;
+
+	check(GetOwner() != nullptr);
+
+	bAttackOn = false;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+
+	SetActorHiddenInGame(bAttackOn);
+}

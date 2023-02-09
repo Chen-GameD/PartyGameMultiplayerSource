@@ -19,7 +19,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
 
-	// only is called on server
+	// Server specific
 	UFUNCTION(Category = "Projectile")
 		virtual void OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
