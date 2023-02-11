@@ -3,3 +3,10 @@
 
 #include "UI/PlayerUI/MCharacterSkillWidget.h"
 
+void UMCharacterSkillWidget::UpdateDashInfo(float percentage)
+{
+	if(IsValid(Dash_INFO))
+	{
+		Dash_INFO->SetPercent(percentage);
+	}
+}

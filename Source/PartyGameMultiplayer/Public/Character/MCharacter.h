@@ -13,6 +13,9 @@
 
 //#define IS_LISTEN_SERVER
 
+UENUM()
+enum SkillType { SKILL_DASH };
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 {

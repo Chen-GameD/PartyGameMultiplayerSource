@@ -16,6 +16,10 @@ class PARTYGAMEMULTIPLAYER_API UMCharacterBuffWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	UFUNCTION()
+	void ShowFireBuff(bool IsShowing);
+	UFUNCTION()
+	void ShowShockBuff(bool IsShowing);
 
 protected:
 	UPROPERTY(meta = (BindWidget))

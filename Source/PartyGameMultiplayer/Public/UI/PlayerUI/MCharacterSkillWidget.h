@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Image.h"
+#include "Components/ProgressBar.h"
 #include "MCharacterSkillWidget.generated.h"
 
 /**
@@ -17,9 +18,12 @@ class PARTYGAMEMULTIPLAYER_API UMCharacterSkillWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	UFUNCTION()
+	void UpdateDashInfo(float percentage);
 
 protected:
+	// Dash Skill
 	UPROPERTY(meta = (BindWidget))
-	UImage* Dash_INFO;
+	UProgressBar* Dash_INFO;
 	
 };
