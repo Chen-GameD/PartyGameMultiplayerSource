@@ -24,14 +24,22 @@ protected:
 	// Player Information
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthBar;
-
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* PlayerName;
 
 	// Buff information
+	UPROPERTY(meta = (BindWidget))
+	UNamedSlot* BuffSlot;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class UMCharacterBuffWidget> BuffInfoClass;
-	
 	UPROPERTY()
 	UMCharacterBuffWidget* BuffInfo;
+
+	// Skill information
+	UPROPERTY(meta = (BindWidget))
+	UNamedSlot* SkillSlot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<class UMCharacterSkillWidget> SkillInfoClass;
+	UPROPERTY()
+	UMCharacterSkillWidget* SkillInfo;
 };
