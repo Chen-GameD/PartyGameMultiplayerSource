@@ -38,6 +38,15 @@ int WeaponConfig::GetOnCombineClassRef(FString weaponName_1, FString weaponName_
 		case Taser:
 			CombineClass = 2;
 			break;
+		case Alarmgun:
+			CombineClass = 3;
+			break;
+		case Bomb:
+			CombineClass = 4;
+			break;
+		case Cannon:
+			CombineClass = 5;
+			break;
 		default: ;
 	}
 

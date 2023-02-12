@@ -13,10 +13,10 @@ enum EnumWeaponType
 	Fork,
 	Blower,
 	Lighter,
+	Alarm,
 	Flamethrower,
 	Flamefork,
 	Taser,
-	Alarm,
 	Alarmgun,
 	Bomb,
 	Cannon

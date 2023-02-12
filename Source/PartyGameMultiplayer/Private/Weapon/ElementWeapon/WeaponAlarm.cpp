@@ -51,9 +51,8 @@ AWeaponAlarm::AWeaponAlarm()
 
 void AWeaponAlarm::AttackStart()
 {
-	if (bAttackOn)
+	if (bAttackOn || !GetOwner())
 		return;
-	check(GetOwner() != nullptr);
 
 	bAttackOn = true;
 	// Listen server
@@ -70,7 +69,7 @@ void AWeaponAlarm::AttackStart()
 
 void AWeaponAlarm::AttackStop()
 {
-	if (!bAttackOn)
+	if (!bAttackOn || !GetOwner())
 		return;
 
 	check(GetOwner() != nullptr);

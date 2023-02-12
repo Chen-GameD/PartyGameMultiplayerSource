@@ -12,11 +12,6 @@
 
 AProjectileAlarm::AProjectileAlarm()
 {
-	PrimaryActorTick.bCanEverTick = true;
-
-	bReplicates = true;
-
-
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
 	if (DefaultMesh.Succeeded())
 	{
@@ -24,7 +19,6 @@ AProjectileAlarm::AProjectileAlarm()
 		StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
-	StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
 
 	ProjectileMovementComponent->InitialSpeed = 800.0f;
 	ProjectileMovementComponent->MaxSpeed = 800.0f;

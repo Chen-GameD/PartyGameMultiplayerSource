@@ -20,6 +20,7 @@ ABaseProjectile::ABaseProjectile()
 	
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
 	StaticMesh->SetupAttachment(RootComponent);
+	StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
 	if (DefaultMesh.Succeeded())
@@ -28,7 +29,7 @@ ABaseProjectile::ABaseProjectile()
 		StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
-	StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
+	
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
