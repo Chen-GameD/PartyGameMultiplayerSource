@@ -464,7 +464,8 @@ ACharacter* ABaseWeapon::GetHoldingPlayer() const
 // TODO, input class type as the function parameter
 void ABaseWeapon::SpawnProjectile(TSubclassOf<class ABaseProjectile> SpecificProjectileClass)
 {
-	if (auto pCharacter = GetOwner())
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
 		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree

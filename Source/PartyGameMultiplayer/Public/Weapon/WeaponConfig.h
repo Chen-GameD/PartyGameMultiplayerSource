@@ -42,7 +42,10 @@ private:
 		{"Alarm", "Alarm_Socket"},
 		{"Flamefork", "Flamefork_Socket"},
 		{"Flamethrower", "Flamethrower_Socket"},
-		{"Taser", "Taser_Socket"}
+		{"Taser", "Taser_Socket"},
+		{"Alarmgun", "Alarmgun_Socket"},
+		{"Bomb", "Bomb_Socket"},
+		{"Cannon", "Cannon_Socket"}
 	};
 
 	std::map<FString, EnumWeaponType> CombineWeaponIndex{

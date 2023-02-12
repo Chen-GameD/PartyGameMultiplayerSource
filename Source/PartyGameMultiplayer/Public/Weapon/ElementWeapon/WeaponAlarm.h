@@ -25,6 +25,8 @@ public:
 
 protected:
 private:
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class ABaseProjectile> SpecificProjectileClass;
 
 // MEMBER VARIABLES
 public:

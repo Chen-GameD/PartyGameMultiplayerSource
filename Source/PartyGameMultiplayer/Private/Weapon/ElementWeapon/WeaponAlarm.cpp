@@ -63,7 +63,7 @@ void AWeaponAlarm::AttackStart()
 	ApplyDamageCounter = 0;
 	
 	SetActorHiddenInGame(bAttackOn);
-	SpawnProjectile(AProjectileAlarm::StaticClass());
+	SpawnProjectile(SpecificProjectileClass);
 }
 
 
