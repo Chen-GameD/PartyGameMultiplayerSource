@@ -14,7 +14,6 @@
 //#include "UObject/ConstructorHelpers.h"
 #include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
-//#include "Character/MCharacter.h"
 #include "GameFramework/Character.h"
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
@@ -219,7 +218,7 @@ void ABaseWeapon::CheckInitilization()
 {
 	check(WeaponMesh);
 	check(DisplayCase);
-	check(AttackDetectComponent);
+	//check(AttackDetectComponent);
 }
 
 
@@ -234,13 +233,16 @@ void ABaseWeapon::BeginPlay()
 	{
 		//  Set DisplayCaseCollision to active
 		DisplayCaseCollisionSetActive(true);
-		
-		AttackDetectComponent->SetCollisionProfileName(TEXT("Trigger"));
-		AttackDetectComponent->SetGenerateOverlapEvents(true);
-
-		AttackDetectComponent->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapBegin);
-		AttackDetectComponent->OnComponentEndOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapEnd);
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);
+		
+		if (AttackDetectComponent)
+		{
+			AttackDetectComponent->SetCollisionProfileName(TEXT("Trigger"));
+			AttackDetectComponent->SetGenerateOverlapEvents(true);
+
+			AttackDetectComponent->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapBegin);
+			AttackDetectComponent->OnComponentEndOverlap.AddDynamic(this, &ABaseWeapon::OnAttackOverlapEnd);
+		}
 	}
 	// Client
 	else
@@ -293,8 +295,11 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 
 void ABaseWeapon::GenerateAttackHitEffect()
 {
-	FVector spawnLocation = AttackDetectComponent->GetComponentLocation();
-	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);	
+	if (AttackDetectComponent)
+	{
+		FVector spawnLocation = AttackDetectComponent->GetComponentLocation();
+		UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+	}	
 }
 
 
@@ -461,20 +466,19 @@ ACharacter* ABaseWeapon::GetHoldingPlayer() const
 }
 
 
-// TODO, input class type as the function parameter
-void ABaseWeapon::SpawnProjectile(TSubclassOf<class ABaseProjectile> SpecificProjectileClass)
+void ABaseWeapon::SpawnProjectile()
 {
-	auto pCharacter = GetOwner();
-	if (pCharacter && SpecificProjectileClass)
-	{
-		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
-		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree
+	//auto pCharacter = GetOwner();
+	//if (pCharacter && SpecificProjectileClass)
+	//{
+	//	FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+	//	FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree
 
-		FActorSpawnParameters spawnParameters;
-		spawnParameters.Instigator = GetInstigator();
-		spawnParameters.Owner = this;
+	//	FActorSpawnParameters spawnParameters;
+	//	spawnParameters.Instigator = GetInstigator();
+	//	spawnParameters.Owner = this;
 
-		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
-		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
-	}
+	//	//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+	//	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	//}
 }

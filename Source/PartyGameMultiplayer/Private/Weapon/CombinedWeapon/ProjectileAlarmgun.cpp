@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Weapon/ElementWeapon/ProjectileAlarm.h"
+#include "Weapon/CombinedWeapon/ProjectileAlarmgun.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -10,9 +10,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
-AProjectileAlarm::AProjectileAlarm()
+AProjectileAlarmgun::AProjectileAlarmgun()
 {
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Fork/Fork_2.Fork_2"));
 	if (DefaultMesh.Succeeded())
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
@@ -20,9 +20,9 @@ AProjectileAlarm::AProjectileAlarm()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 800.0f;
-	ProjectileMovementComponent->MaxSpeed = 800.0f;
+	ProjectileMovementComponent->InitialSpeed = 1800.0f;
+	ProjectileMovementComponent->MaxSpeed = 1800.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 1.0f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
 
 }

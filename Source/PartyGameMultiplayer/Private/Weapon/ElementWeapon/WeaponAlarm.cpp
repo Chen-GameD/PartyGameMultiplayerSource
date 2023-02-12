@@ -15,7 +15,7 @@
 // Sets default values
 AWeaponAlarm::AWeaponAlarm()
 {
-	IsCombined = true;
+	IsCombined = false;
 	WeaponType = EnumWeaponType::Alarm;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
@@ -63,7 +63,7 @@ void AWeaponAlarm::AttackStart()
 	ApplyDamageCounter = 0;
 	
 	SetActorHiddenInGame(bAttackOn);
-	SpawnProjectile(SpecificProjectileClass);
+	SpawnProjectile();
 }
 
 
@@ -83,4 +83,22 @@ void AWeaponAlarm::AttackStop()
 	ApplyDamageCounter = 0;
 
 	SetActorHiddenInGame(bAttackOn);
+}
+
+
+void AWeaponAlarm::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree
+
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
 }

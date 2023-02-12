@@ -2,6 +2,7 @@
 
 
 #include "Weapon/CombinedWeapon/WeaponCannon.h"
+#include "Weapon/BaseProjectile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
@@ -45,4 +46,56 @@ AWeaponCannon::AWeaponCannon()
 	// WeaponName
 	WeaponName = "Cannon";
 
+}
+
+
+void AWeaponCannon::AttackStart()
+{
+	if (bAttackOn || !GetOwner())
+		return;
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+
+	SpawnProjectile();
+}
+
+
+void AWeaponCannon::AttackStop()
+{
+	if (!bAttackOn || !GetOwner())
+		return;
+
+	check(GetOwner() != nullptr);
+
+	bAttackOn = false;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+}
+
+
+void AWeaponCannon::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() * 1.73f + pCharacter->GetActorUpVector()).Rotation();  // character up 30 degree
+
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
 }

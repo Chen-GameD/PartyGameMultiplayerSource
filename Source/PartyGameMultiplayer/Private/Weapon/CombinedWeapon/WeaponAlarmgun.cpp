@@ -49,23 +49,54 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 }
 
 
-// should only be called on server
 void AWeaponAlarmgun::AttackStart()
 {
-	Super::AttackStart();
+	if (bAttackOn || !GetOwner())
+		return;
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Test shooting a bullet"));
-	FVector spawnLocation = GetActorLocation() + (GetActorUpVector() * 0.0f);
-	FRotator spawnRotation = GetActorRotation();
-	auto spawnRotationEuler = spawnRotation.Euler();
-	spawnRotationEuler.X = -spawnRotationEuler.X;
-	spawnRotation = spawnRotationEuler.Rotation();
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
 
-	FActorSpawnParameters spawnParameters;
-	// Instigator: The APawn that is responsible for damage done by the spawned Actor. (Can be left as NULL).
-	spawnParameters.Instigator = GetInstigator();
-	spawnParameters.Owner = this;
+	SpawnProjectile();
+}
 
-	auto spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(spawnLocation, spawnRotation, spawnParameters);
 
+void AWeaponAlarmgun::AttackStop()
+{
+	if (!bAttackOn || !GetOwner())
+		return;
+
+	check(GetOwner() != nullptr);
+
+	bAttackOn = false;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+
+}
+
+
+void AWeaponAlarmgun::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+		FRotator spawnRotation = pCharacter->GetActorRotation();  // horizontal
+
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
 }

@@ -4,11 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Weapon/BaseWeapon.h"
+
 #include "WeaponCannon.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AWeaponCannon : public ABaseWeapon
 {
@@ -17,6 +16,13 @@ class PARTYGAMEMULTIPLAYER_API AWeaponCannon : public ABaseWeapon
 // MEMBER METHODS
 public:
 	AWeaponCannon();
+
+	// should only be called on server
+	virtual void AttackStart() override;
+	// should only be called on server
+	virtual void AttackStop() override;
+	// should only be called on server
+	virtual void SpawnProjectile() override;
 
 protected:
 private:

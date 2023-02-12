@@ -78,8 +78,8 @@ protected:
 	virtual void GenerateAttackHitEffect();
 	// only on server, generate stuff like damage, buff and so on
 	virtual void GenerateDamageLike(class AActor* DamagedActor);
-
-	virtual void SpawnProjectile(TSubclassOf<class ABaseProjectile> SpecificProjectileClass);
+	// should only be called on server
+	virtual void SpawnProjectile();
 
 	/* RepNotify Functions */
 	UFUNCTION()
@@ -130,6 +130,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Damage")
 		float MiniGameAccumulatedTimeToGenerateDamage;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
+		bool IsPickedUp;
+
 protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;
@@ -146,9 +149,6 @@ protected:
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
 	int ApplyDamageCounter;
-
-	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
-		bool IsPickedUp;
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOn)
 		bool bAttackOn;
@@ -206,6 +206,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
 		TSubclassOf<class UDamageType> MiniGameDamageType;
+
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class ABaseProjectile> SpecificProjectileClass;
 
 	//WeaponName
 	FString WeaponName;
