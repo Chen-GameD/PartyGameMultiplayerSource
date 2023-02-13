@@ -102,7 +102,7 @@ void AMGameMode::CheckGameStart()
 	bool CanStart = true;
 
 	// Test
-	CurrentPlayerNum = 2;
+	//CurrentPlayerNum = 2;
 	// Test
 	
 	if (TeamOnePlayerNum + TeamTwoPlayerNum == CurrentPlayerNum && CurrentPlayerNum == PlayerNum)
@@ -124,7 +124,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 0.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 5, false);
 			}
 		}
 		else
