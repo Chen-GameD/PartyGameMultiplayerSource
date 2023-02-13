@@ -3,6 +3,12 @@
 
 #include "UI/HealthBar.h"
 
+void UHealthBar::SetLocalControlledUI()
+{
+	healthBar->SetVisibility(ESlateVisibility::Hidden);
+	healthText->SetVisibility(ESlateVisibility::Hidden);
+}
+
 void UHealthBar::SetHealthToProgressBar(float percentage)
 {
 	if(!IsValid(healthBar))

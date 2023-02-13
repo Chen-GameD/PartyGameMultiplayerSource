@@ -19,6 +19,10 @@ class PARTYGAMEMULTIPLAYER_API UMPlayerStatusWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	UMPlayerStatusWidget(const FObjectInitializer& ObjectInitializer);
+
+	virtual void NativeConstruct() override;
+	
 	UFUNCTION()
 	void ShowWidget(bool IsShowing);
 
@@ -30,10 +34,13 @@ public:
 
 	// Buff Information
 	// Currently, two functions are used to control the display and disappearance of the two buffs, which can be changed according to subsequent needs.
+
 	UFUNCTION()
-	void ShowFireBuff(bool IsShowing);
+	void ToggleBuffUI(bool IsShowing);
 	UFUNCTION()
-	void ShowShockBuff(bool IsShowing);
+	void ToggleFireBuffUI(bool IsShowing);
+	UFUNCTION()
+	void ToggleShockBuffUI(bool IsShowing);
 
 	// Skill Information
 	UFUNCTION()

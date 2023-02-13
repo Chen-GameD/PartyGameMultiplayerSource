@@ -4,7 +4,31 @@
 #include "UI/PlayerUI/MPlayerStatusWidget.h"
 
 #include "Character/MCharacter.h"
+#include "Components/NamedSlot.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/PlayerUI/MCharacterSkillWidget.h"
+
+UMPlayerStatusWidget::UMPlayerStatusWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
+{
+}
+
+void UMPlayerStatusWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (BuffSlot && BuffInfoClass)
+	{
+		BuffInfo = CreateWidget<UMCharacterBuffWidget>(this, BuffInfoClass, "BuffWidget");
+		BuffSlot->AddChild(BuffInfo);
+		ToggleBuffUI(false);
+	}
+
+	if (SkillSlot && SkillInfoClass)
+	{
+		SkillInfo = CreateWidget<UMCharacterSkillWidget>(this, SkillInfoClass, "SkillInfoWidget");
+		SkillSlot->AddChild(SkillInfo);
+	}
+}
 
 void UMPlayerStatusWidget::ShowWidget(bool IsShowing)
 {
@@ -24,19 +48,25 @@ void UMPlayerStatusWidget::SetPlayerName(FString i_Name)
 	PlayerName->SetText(FText::FromString(i_Name));
 }
 
-void UMPlayerStatusWidget::ShowFireBuff(bool IsShowing)
+void UMPlayerStatusWidget::ToggleBuffUI(bool IsShowing)
+{
+	ToggleFireBuffUI(IsShowing);
+	ToggleShockBuffUI(IsShowing);
+}
+
+void UMPlayerStatusWidget::ToggleFireBuffUI(bool IsShowing)
 {
 	if (BuffInfo)
 	{
-		BuffInfo->ShowFireBuff(IsShowing);
+		BuffInfo->ToggleFireBuff(IsShowing);
 	}
 }
 
-void UMPlayerStatusWidget::ShowShockBuff(bool IsShowing)
+void UMPlayerStatusWidget::ToggleShockBuffUI(bool IsShowing)
 {
 	if (BuffInfo)
 	{
-		BuffInfo->ShowShockBuff(IsShowing);
+		BuffInfo->ToggleShockBuff(IsShowing);
 	}
 }
 
