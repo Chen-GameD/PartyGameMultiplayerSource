@@ -99,6 +99,11 @@ void AMGameMode::CheckGameStart()
 {
 	int const PlayerNum = UGameplayStatics::GetNumPlayerStates(GetWorld());
 	bool CanStart = true;
+
+	// Test
+	CurrentPlayerNum = 2;
+	// Test
+	
 	if (TeamOnePlayerNum + TeamTwoPlayerNum == CurrentPlayerNum && CurrentPlayerNum == PlayerNum)
 	{
 		// All player join a team

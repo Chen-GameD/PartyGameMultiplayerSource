@@ -13,6 +13,9 @@
 
 //#define IS_LISTEN_SERVER
 
+UENUM()
+enum SkillType { SKILL_DASH };
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 {
@@ -39,6 +42,8 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AMCharacter();
+
+	virtual void Restart() override;
 
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -99,6 +104,9 @@ public:
 
 	UFUNCTION()
 	void SetGameUIVisibility(bool isVisible);
+
+	UFUNCTION()
+	void SetLocallyControlledGameUI(bool isVisible);
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);

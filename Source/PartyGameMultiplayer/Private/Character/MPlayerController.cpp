@@ -11,13 +11,13 @@
 #include "GameBase/MGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
+#include "UI/MInGameHUD.h"
 
 // Constructor
 // ===================================================
 #pragma region Constructor
 AMPlayerController::AMPlayerController()
 {
-	
 }
 
 void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -79,6 +79,14 @@ void AMPlayerController::SetCanMove_Implementation(bool i_CanMove)
 	CanMove = i_CanMove;
 }
 
+void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_UpdatePlayerHealth(percentage);
+	}
+}
+
 void AMPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -86,6 +94,8 @@ void AMPlayerController::BeginPlay()
 	if (IsLocalPlayerController())
 	{
 		UI_ShowLobbyMenu();
+		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
+		check(MyInGameHUD);
 	}
 	
 	// if (IsLocalPlayerController())
@@ -229,20 +239,24 @@ void AMPlayerController::StartTheGame()
 
 void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
 {
-	// AMCharacter* MyPawn = Cast<AMCharacter>(GetPawn());
-	// if (MyPawn)
-	// {
-	// 	MyPawn->SetGameUIVisibility(isVisible);
-	// }
-	
 	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
 	{
 		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
 
-		if (pawn)
+		if (pawn && !pawn->IsLocallyControlled())
 		{
 			pawn->SetGameUIVisibility(isVisible);
 		}
+		else if (pawn && pawn->IsLocallyControlled())
+		{
+			pawn->SetLocallyControlledGameUI(isVisible);
+		}
+	}
+
+	// Open Current Player Status Widget
+	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
+	{
+		MyInGameHUD->StartGameUI();
 	}
 }
 

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/MInGameHUD.h"
 #include "MPlayerController.generated.h"
 
 /**
@@ -67,6 +68,11 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void SetCanMove(bool i_CanMove);
+
+	// UI Update
+	// InGame UI
+	UFUNCTION()
+	void UI_InGame_UpdateHealth(float percentage);
 	
 protected:
 
@@ -133,7 +139,9 @@ public:
 
 // Members
 // ==============================================================
-	
+private:
+	//InGame HUD
+	AMInGameHUD* MyInGameHUD;
 
 	
 };

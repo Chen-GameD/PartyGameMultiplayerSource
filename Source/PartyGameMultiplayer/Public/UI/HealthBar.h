@@ -18,6 +18,7 @@ class PARTYGAMEMULTIPLAYER_API UHealthBar : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	void SetLocalControlledUI();
 	void SetHealthToProgressBar(float percentage);
 	void ShowTip();
 	void HideTip();

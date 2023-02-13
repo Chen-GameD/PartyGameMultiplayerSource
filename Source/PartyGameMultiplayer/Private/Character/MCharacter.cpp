@@ -108,6 +108,17 @@ AMCharacter::AMCharacter()
 
 	CanMove = true;
 }
+
+void AMCharacter::Restart()
+{
+	Super::Restart();
+
+	if (IsLocallyControlled())
+	{
+		AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+		playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+	}
+}
 #pragma endregion Constructor
 
 // Replicated Properties
@@ -650,7 +661,15 @@ void AMCharacter::OnHealthUpdate()
 {
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		SetHealthBarUI();
+		if (!IsLocallyControlled())
+		{
+			SetHealthBarUI();
+		}
+		else
+		{
+			AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+			playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+		}
 	}
 	
 	if (IsDead)
@@ -762,6 +781,23 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		healthBar->HideTip();
+		healthBar->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
+{
+	if (isVisible)
+	{
+		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		healthBar->HideTip();
+		healthBar->SetVisibility(ESlateVisibility::Visible);
+		healthBar->SetLocalControlledUI();
 	}
 	else
 	{
