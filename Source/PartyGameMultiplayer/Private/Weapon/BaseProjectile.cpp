@@ -57,9 +57,9 @@ void ABaseProjectile::BeginPlay()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 5.0f, false);
 	}
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 3.0f, false);
 }
 
 
@@ -85,16 +85,7 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 		if ((Cast<ACharacter>(OtherActor) && OtherActor != pHoldingPlayer) ||
 			(Cast<AMinigameMainObjective>(OtherActor)))
 		{
-			/*if (AttackType == EnumAttackType::OneHit && ApplyDamageCounter == 0)
-			{
-				GenerateDamageLike(OtherActor);
-				ApplyDamageCounter++;
-			}*/
-			// Listen server
-			//if (GetNetMode() == NM_ListenServer)
-			//{
-			//	OnRep_bAttackOverlap();
-			//}
+			pWeapon->GenerateDamageLike(OtherActor);
 
 			Destroy();
 		}

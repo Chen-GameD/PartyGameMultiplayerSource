@@ -59,13 +59,14 @@ public:
 	virtual void AttackStart();
 	// should only be called on server
 	virtual void AttackStop();
-
 	//Get weapon name
 	virtual FString GetWeaponName() const;
-
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
 	ACharacter* GetHoldingPlayer() const;
+
+	// only on server, generate stuff like damage, buff and so on
+	virtual void GenerateDamageLike(class AActor* DamagedActor);
 
 protected:
 	virtual void CheckInitilization();
@@ -76,8 +77,6 @@ protected:
 	virtual void DisplayCaseCollisionSetActive(bool IsActive);
 	// should be only on client
 	virtual void GenerateAttackHitEffect();
-	// only on server, generate stuff like damage, buff and so on
-	virtual void GenerateDamageLike(class AActor* DamagedActor);
 	// should only be called on server
 	virtual void SpawnProjectile();
 
