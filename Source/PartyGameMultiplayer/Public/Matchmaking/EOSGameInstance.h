@@ -54,6 +54,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void UI_ShowMainMenu();
 
+	bool GetIsLoggedIn();
+
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

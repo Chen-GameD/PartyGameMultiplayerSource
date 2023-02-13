@@ -176,6 +176,11 @@ void UEOSGameInstance::UI_ShowMainMenu()
 	}
 }
 
+bool UEOSGameInstance::GetIsLoggedIn()
+{
+	return bIsLoggedIn;
+}
+
 void UEOSGameInstance::JoinSession(int32 index)
 {
 	if(bIsLoggedIn)
