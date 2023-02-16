@@ -12,6 +12,8 @@
 #include "GameFramework/DamageType.h"
 #include "GameFramework/Character.h"
 #include "Particles/ParticleSystem.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -19,9 +21,9 @@
 ABaseProjectile::ABaseProjectile()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
 	bReplicates = true;
 
+	bAttackHit = false;
 	
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
 	StaticMesh->SetupAttachment(RootComponent);
@@ -42,13 +44,19 @@ ABaseProjectile::ABaseProjectile()
 	ProjectileMovementComponent->MaxSpeed = 1500.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
-	
-	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultAttackHitEffect(TEXT("/Game/StarterContent/Particles/P_Explosion.P_Explosion"));
-	if (DefaultAttackHitEffect.Succeeded())
-	{
-		AttackHitEffect = DefaultAttackHitEffect.Object;
-	}
+
+	//AttackHitEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackHitEffect_NSComponent"));
+	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
 }
+
+
+void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABaseProjectile, bAttackHit);
+}
+
 
 void ABaseProjectile::BeginPlay()
 {
@@ -63,10 +71,25 @@ void ABaseProjectile::BeginPlay()
 }
 
 
+void ABaseProjectile::OnRep_bAttackHit()
+{
+	//if (bAttackHit)
+	//{
+	//	AttackHitEffect_NSComponent->Activate();
+	//}
+	//else
+	//{
+	//	AttackHitEffect_NSComponent->Deactivate();
+	//}
+}
+
+
 void ABaseProjectile::Destroyed()
 {
-	FVector spawnLocation = GetActorLocation();
-	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	
+	/*FVector spawnLocation = GetActorLocation();
+	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);*/
 }
 
 
@@ -83,11 +106,18 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	{
 		// What will happen if the weapon hit another player
 		if ((Cast<ACharacter>(OtherActor) && OtherActor != pHoldingPlayer) ||
-			(Cast<AMinigameMainObjective>(OtherActor)))
+			Cast<AMinigameMainObjective>(OtherActor))
 		{
 			pWeapon->GenerateDamageLike(OtherActor);
 
+			//bAttackHit = true;
+			//if (GetNetMode() == NM_ListenServer)
+			//{
+			//	OnRep_bAttackHit();
+			//}
+			//FTimerHandle TimerHandle;
+			//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 2.0f, false);
 			Destroy();
-		}
+		}		
 	}
 }

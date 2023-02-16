@@ -178,6 +178,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* SpawnProjectilePointMesh;
 
 	/*	PrimitiveComponent(has OnWeaponOverlapBegin&OnWeaponOverlapEnd) used to test collision
 			UPrimitiveComponent->UMeshComponent->UStaticMeshComponent

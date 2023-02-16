@@ -46,6 +46,10 @@ ABaseWeapon::ABaseWeapon()
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	WeaponMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 
+	SpawnProjectilePointMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpawnProjectilePointMesh"));
+	SpawnProjectilePointMesh->SetCollisionProfileName(TEXT("Trigger"));
+	SpawnProjectilePointMesh->SetupAttachment(WeaponMesh);
+
 	AttackOnEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect"));
 	AttackOnEffect->SetupAttachment(WeaponMesh);
 

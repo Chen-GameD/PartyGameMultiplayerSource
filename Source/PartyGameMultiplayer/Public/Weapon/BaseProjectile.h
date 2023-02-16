@@ -15,6 +15,9 @@ class PARTYGAMEMULTIPLAYER_API ABaseProjectile : public AActor
 public:
 	ABaseProjectile();
 
+	/** Property replication */
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
@@ -23,6 +26,10 @@ protected:
 	UFUNCTION(Category = "Projectile")
 		virtual void OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/* RepNotify Functions */
+	UFUNCTION()
+		virtual void OnRep_bAttackHit();
 private:
 
 // MEMBER VARIABLES
@@ -33,7 +40,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UProjectileMovementComponent* ProjectileMovementComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
-		class UParticleSystem* AttackHitEffect;
+		class UNiagaraComponent* AttackHitEffect_NSComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraSystem* AttackHitEffect_NSSystem;
+	
+
+	UPROPERTY(ReplicatedUsing = OnRep_bAttackHit)
+		bool bAttackHit;
 private:
 
 };

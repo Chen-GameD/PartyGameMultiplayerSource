@@ -89,8 +89,8 @@ void AWeaponAlarmgun::SpawnProjectile()
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
 	{
-		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
-		FRotator spawnRotation = pCharacter->GetActorRotation();  // horizontal
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
+		FRotator spawnRotation = SpawnProjectilePointMesh->GetComponentRotation();
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();

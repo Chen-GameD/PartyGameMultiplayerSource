@@ -12,7 +12,7 @@
 
 AProjectileAlarmgun::AProjectileAlarmgun()
 {
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Fork/Fork_2.Fork_2"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/Alarmpin.Alarmpin"));
 	if (DefaultMesh.Succeeded())
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
