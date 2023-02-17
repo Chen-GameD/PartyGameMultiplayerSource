@@ -516,7 +516,9 @@ void AMCharacter::OnCombineWeapon()
 
 		ABaseWeapon* spawnedCombineWeapon = GetWorld()->SpawnActor<ABaseWeapon>(combineWeaponRef, FVector(0,0,0), FRotator::ZeroRotator);
 		CombineWeapon = spawnedCombineWeapon;
-		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower);
+		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower || 
+							CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
+							CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 

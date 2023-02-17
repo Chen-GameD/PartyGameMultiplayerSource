@@ -61,6 +61,7 @@ void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& Out
 void ABaseProjectile::BeginPlay()
 {
 	Super::BeginPlay();
+
 	// Server duty
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -86,10 +87,19 @@ void ABaseProjectile::OnRep_bAttackHit()
 
 void ABaseProjectile::Destroyed()
 {
-	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-	
-	/*FVector spawnLocation = GetActorLocation();
-	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);*/
+	AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	if (AttackHitEffect_NSComponent && AttackHitEffect_NSSystem)
+	{
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				AttackHitEffect_NSComponent->Deactivate();
+				AttackHitEffect_NSComponent = nullptr;
+			}, 2.0f, false);
+
+		/*FVector spawnLocation = GetActorLocation();
+		UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);*/
+	}	
 }
 
 
@@ -105,19 +115,22 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	if (GetOwner() && pWeapon->IsPickedUp)
 	{
 		// What will happen if the weapon hit another player
-		if ((Cast<ACharacter>(OtherActor) && OtherActor != pHoldingPlayer) ||
-			Cast<AMinigameMainObjective>(OtherActor))
-		{
-			pWeapon->GenerateDamageLike(OtherActor);
+		if (Cast<ABaseWeapon>(OtherActor))
+			return;
+		if (Cast<ACharacter>(OtherActor) && OtherActor == pHoldingPlayer)
+			return;
 
-			//bAttackHit = true;
-			//if (GetNetMode() == NM_ListenServer)
-			//{
-			//	OnRep_bAttackHit();
-			//}
-			//FTimerHandle TimerHandle;
-			//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 2.0f, false);
-			Destroy();
-		}		
+		pWeapon->GenerateDamageLike(OtherActor);
+
+		//bAttackHit = true;
+		//if (GetNetMode() == NM_ListenServer)
+		//{
+		//	OnRep_bAttackHit();
+		//}
+		//FTimerHandle TimerHandle;
+		//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 2.0f, false);
+
+		Destroy();
+		
 	}
 }

@@ -88,7 +88,7 @@ void AWeaponCannon::SpawnProjectile()
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
 	{
-		FVector spawnLocation = GetActorLocation() + (GetActorRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
 		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() * 1.73f + pCharacter->GetActorUpVector()).Rotation();  // character up 30 degree
 
 		FActorSpawnParameters spawnParameters;

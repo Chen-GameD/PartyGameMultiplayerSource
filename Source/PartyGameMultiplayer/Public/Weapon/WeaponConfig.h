@@ -74,9 +74,9 @@ private:
 		{EnumWeaponType::Flamethrower, 4},
 		{EnumWeaponType::Flamefork, 0},
 		{EnumWeaponType::Taser, 1},
-		{EnumWeaponType::Alarmgun, 1},
+		{EnumWeaponType::Alarmgun, 4},
 		{EnumWeaponType::Bomb, 0},
-		{EnumWeaponType::Cannon, 1}
+		{EnumWeaponType::Cannon, 4}
 	};
 
 private:
