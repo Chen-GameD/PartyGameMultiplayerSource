@@ -17,6 +17,7 @@ AWeaponCannon::AWeaponCannon()
 {
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Cannon;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Cannon/Cannon.Cannon"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -41,11 +42,6 @@ AWeaponCannon::AWeaponCannon()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Cannon";
-
 }
 
 

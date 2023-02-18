@@ -22,6 +22,7 @@ AWeaponBlower::AWeaponBlower()
 
 	IsCombined = false;
 	WeaponType = EnumWeaponType::Blower;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Blower/Blower.Blower"));
@@ -52,27 +53,4 @@ AWeaponBlower::AWeaponBlower()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 3.0f;
-
-	AccumulatedTimeToGenerateDamage = 0.2f;
-
-	// WeaponName
-	WeaponName = "Blower";
 }
-
-
-//void AWeaponBlower::GenerateAttackHitEffect()
-//{
-//	FVector spawnLocation = GetActorLocation();
-//	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-//}
-//
-//
-//void AWeaponBlower::GenerateDamage(class AActor* DamagedActor)
-//{
-//	// Note: The 3rd parameter is EventInstigator, be careful if the weapon has an instigator or not.
-//	// if it doesn't and the 3rd parameter is set to GetInstigator()->Controller, the game would crash when overlap happens
-//	// (The projectile in the demo has an instigator, because the instigator parameter is assigned when the the character spawns it in HandleFire function)
-//	check(GetInstigator()->Controller);
-//	UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//}

@@ -13,6 +13,7 @@ AWeaponTaser::AWeaponTaser()
 {
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Taser;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	// Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Body.Taser_Body"));
@@ -46,10 +47,6 @@ AWeaponTaser::AWeaponTaser()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 25.0f;
-
-	// WeaponName
-	WeaponName = "Taser";
 
 	bStretching = true;
 	originalX = TaserForkMesh->GetRelativeLocation().X;

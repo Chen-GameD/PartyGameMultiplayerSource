@@ -20,6 +20,7 @@ AWeaponFlamethrower::AWeaponFlamethrower()
 
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Flamethrower;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Flamethrower/Flame.Flame"));
@@ -50,11 +51,6 @@ AWeaponFlamethrower::AWeaponFlamethrower()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 20.0f;
-	AccumulatedTimeToGenerateDamage = 0.5f;
-
-	// WeaponName
-	WeaponName = "Flamethrower";
 }
 
 void AWeaponFlamethrower::CheckInitilization()

@@ -21,6 +21,7 @@ AWeaponLighter::AWeaponLighter()
 
 	IsCombined = false;
 	WeaponType = EnumWeaponType::Lighter;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Lighter/Lighter.Lighter"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -45,10 +46,6 @@ AWeaponLighter::AWeaponLighter()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 25.0f;
-
-	// WeaponName
-	WeaponName = "Lighter";
 }
 
 

@@ -110,6 +110,8 @@ private:
 
 /* MEMBER VARIABLES */
 public:
+	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
+
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
 	bool IsCombined;
@@ -119,16 +121,27 @@ public:
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
 
-	// TODO: Assgin them one time by an external class(like damage manager)
-	UPROPERTY(EditAnywhere, Category = "Damage")
+	// Damage related
+	UPROPERTY(BlueprintReadOnly, Category = "Damage")
 		float Damage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
+	UPROPERTY(BlueprintReadOnly, Category = "Damage")
 		float MiniGameDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
+	UPROPERTY(BlueprintReadOnly, Category = "Damage")
 		float AccumulatedTimeToGenerateDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float MiniGameAccumulatedTimeToGenerateDamage;
-
+				//UPROPERTY(BlueprintReadOnly, Category = "Damage")
+				//	float MiniGameAccumulatedTimeToGenerateDamage;
+	// CoolDown related(CD_LeftEnergy needs to replicate so the client can show the correct cd UI)
+	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
+		float CD_MaxEnergy;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
+		float CD_MinEnergyToAttak;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
+		float CD_LeftEnergy;	
+	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
+		float CD_DropSpeed;
+	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
+		float CD_RecoverSpeed;
+	
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
 

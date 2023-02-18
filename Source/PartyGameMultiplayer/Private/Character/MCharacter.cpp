@@ -15,7 +15,8 @@
 #include "NiagaraComponent.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/JsonFactory.h"
-#include "Weapon/DamageManagerNew.h"
+#include "Weapon/DamageManager.h"
+#include "Weapon/WeaponDataHelper.h"
 #include <Character/animUtils.h>
 
 #include "Character/MPlayerController.h"
@@ -1109,6 +1110,9 @@ void AMCharacter::Tick(float DeltaTime)
 float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
 	AController* EventInstigator, ABaseWeapon* DamageCauser)
 {
+	if (!AWeaponDataHelper::DamageManagerDataAsset)
+		return 0.0f;
+
 	if (!BuffMap.Contains(BuffType))
 	{
 		BuffMap.Add(BuffType);
@@ -1131,8 +1135,8 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
 			float BurningBuffAddTimeOnce = 5.0f;
 			FString ParName = "BurningBuffAddTimeOnce";
-			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				BurningBuffAddTimeOnce = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 			buffRemainedTime += BurningBuffAddTimeOnce;
 		}
 	}
@@ -1143,8 +1147,8 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 			buffPoints = 1.0f;
 			float ParalysisBuffAddTimeOnce = 5.0f;
 			FString ParName = "ParalysisBuffAddTimeOnce";
-			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				ParalysisBuffAddTimeOnce = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 			buffRemainedTime = ParalysisBuffAddTimeOnce;
 		}		
 	}
@@ -1172,6 +1176,9 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 
 void AMCharacter::ActByBuff(float DeltaTime)
 {
+	if (!AWeaponDataHelper::DamageManagerDataAsset)
+		return;
+
 	EnumAttackBuff buffType;
 	/*  Burning */
 	buffType = EnumAttackBuff::Burning;
@@ -1185,8 +1192,8 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			// key value
 			float BurningBuffDamagePerSecond = 5.0f;
 			FString ParName = "BurningBuffDamagePerSecond";
-			if (ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				BurningBuffDamagePerSecond = ADamageManagerNew::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
 			buffRemainedTime -= DeltaTime;
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));

@@ -2,26 +2,42 @@
 
 
 #include "Weapon/BaseWeapon.h"
-#include "Weapon/DamageTypeToCharacter.h"
+
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/PrimitiveComponent.h"
 //#include "Components/CapsuleComponent.h"
 //#include "Particles/ParticleSystem.h"
+//#include "UObject/ConstructorHelpers.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
-//#include "UObject/ConstructorHelpers.h"
-#include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
+
+#include "Weapon/DamageTypeToCharacter.h"
+#include "Weapon/DamageManager.h"
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/WeaponDataHelper.h"
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
-#include "Weapon/DamageManager.h"
-#include "Weapon/DamageManagerNew.h"
-#include "Weapon/BaseProjectile.h"
 
+TMap<EnumWeaponType, FString> ABaseWeapon::WeaponEnumToString_Map = 
+{
+	{EnumWeaponType::None, "None"},
+	{EnumWeaponType::Fork, "Fork"},
+	{EnumWeaponType::Blower, "Blower"},
+	{EnumWeaponType::Lighter, "Lighter"},
+	{EnumWeaponType::Alarm, "Alarm"},
+	{EnumWeaponType::Flamethrower, "Flamethrower"},
+	{EnumWeaponType::Flamefork, "Flamefork"},
+	{EnumWeaponType::Taser, "Taser"},
+	{EnumWeaponType::Alarmgun, "Alarmgun"},
+	{EnumWeaponType::Bomb, "Bomb"},
+	{EnumWeaponType::Cannon, "Cannon"},
+};
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -58,9 +74,11 @@ ABaseWeapon::ABaseWeapon()
 	AccumulatedTimeToGenerateDamage = TNumericLimits<float>::Max();
 	DamageGenerationCounter = 0;
 
+	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
+
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	MiniGameDamage = 0.0f;
-	MiniGameAccumulatedTimeToGenerateDamage = TNumericLimits<float>::Max();
+	//MiniGameAccumulatedTimeToGenerateDamage = TNumericLimits<float>::Max();
 }
 
 
@@ -80,8 +98,33 @@ void ABaseWeapon::Tick(float DeltaTime)
 		}
 		else
 		{
+			
+			// If the weapon has cd
+			if (0 < CD_MaxEnergy)
+			{
+				if (bAttackOn)
+				{
+					if (0 < CD_LeftEnergy)
+					{
+						CD_LeftEnergy -= CD_DropSpeed * DeltaTime;
+						CD_LeftEnergy = FMath::Max(CD_LeftEnergy, 0.0f);
+						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
+					}					
+				}
+				else
+				{
+					if (CD_LeftEnergy < CD_MaxEnergy)
+					{
+						CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
+						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
+						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
+					}					
+				}	
+				if (CD_LeftEnergy < CD_MinEnergyToAttak)
+					AttackStop();
+			}
 			// Apply constant damage
-			if (AttackType == EnumAttackType::Constant)
+			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 			{
 				for (auto& Elem : AttackObjectMap)
 				{
@@ -96,18 +139,17 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					else if (Cast<AMinigameMainObjective>(Elem.Key))
 					{
-						if (MiniGameAccumulatedTimeToGenerateDamage < Elem.Value)
+						//if (MiniGameAccumulatedTixmeToGenerateDamage < Elem.Value)
+						if (AccumulatedTimeToGenerateDamage < Elem.Value)
 						{
 							GenerateDamageLike(Elem.Key);
 							Elem.Value = 0;
 						}
 					}
 				}
-
 			}
 		}		
 	}
-
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
@@ -125,7 +167,7 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	//Replicate specific variables
-	//DOREPLIFETIME(ABaseWeapon, HoldingPlayer);
+	DOREPLIFETIME(ABaseWeapon, CD_LeftEnergy);
 	DOREPLIFETIME(ABaseWeapon, bAttackOn);
 	DOREPLIFETIME(ABaseWeapon, bAttackOverlap);
 	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
@@ -183,6 +225,8 @@ void ABaseWeapon::AttackStart()
 {
 	if (bAttackOn || !GetOwner())
 		return;
+	if (AttackType == EnumAttackType::Constant && CD_LeftEnergy <= 0)
+		return;
 
 	bAttackOn = true;
 	// Listen server
@@ -213,6 +257,7 @@ void ABaseWeapon::AttackStop()
 	}
 	ApplyDamageCounter = 0;
 
+	AttackObjectMap.Empty();
 	SetActorEnableCollision(bAttackOn);
 	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
@@ -235,6 +280,27 @@ void ABaseWeapon::BeginPlay()
 	// Server: Register collision callback functions
 	if (GetLocalRole() == ROLE_Authority)
 	{
+		// Assign some member variables
+		if (AWeaponDataHelper::DamageManagerDataAsset)
+		{
+			// AccumulatedTimeToGenerateDamage
+			FString ParName = WeaponName;
+			if (AWeaponDataHelper::DamageManagerDataAsset->AccumulatedTimeToGenerateDamage_Map.Contains(ParName))
+				AccumulatedTimeToGenerateDamage = AWeaponDataHelper::DamageManagerDataAsset->AccumulatedTimeToGenerateDamage_Map[ParName];
+			// CoolDown
+			ParName = WeaponName + "_" + "CD_MaxEnergy";
+			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+				CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+			ParName = WeaponName + "_" + "CD_DropSpeed";
+			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+				CD_DropSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+			ParName = WeaponName + "_" + "CD_RecoverSpeed";
+			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+				CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+			ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
+			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+				CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		}
 		//  Set DisplayCaseCollision to active
 		DisplayCaseCollisionSetActive(true);
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);
@@ -336,7 +402,7 @@ void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor)
 	//}
 
 	//bool success = DamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor);
-	bool success = ADamageManagerNew::DealDamageAndBuffBetweenActors(this, DamagedActor);
+	bool success = ADamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor);
 	if (success)
 	{
 		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;

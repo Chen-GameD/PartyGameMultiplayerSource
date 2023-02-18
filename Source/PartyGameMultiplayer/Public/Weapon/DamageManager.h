@@ -3,26 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+
 #include "BaseWeapon.h"
 #include "Character/MCharacter.h"
 #include "DamageManagerDataAsset.h"
 
-class UDamageManagerDataAsset;
+#include "DamageManager.generated.h"
 
-class PARTYGAMEMULTIPLAYER_API DamageManager
+UCLASS()
+class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 {
+	GENERATED_BODY()
+
 public:
-	DamageManager();
-	~DamageManager();
+	ADamageManager() {};
 
 	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor);
 	static bool ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor);
-protected:
-private:	
-	static UDamageManagerDataAsset* DamageManagerDataAsset;
 
 public:
-protected:
 private:
-
+private:
 };

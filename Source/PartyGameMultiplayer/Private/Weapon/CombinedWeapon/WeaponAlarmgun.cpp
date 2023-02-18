@@ -17,6 +17,7 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 {
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Alarmgun;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -41,11 +42,6 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Alarmgun";
-
 }
 
 

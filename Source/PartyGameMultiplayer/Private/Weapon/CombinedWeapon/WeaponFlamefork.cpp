@@ -21,6 +21,7 @@ AWeaponFlamefork::AWeaponFlamefork()
 
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Flamefork;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Flamefork/FlameFork.FlameFork"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -45,10 +46,6 @@ AWeaponFlamefork::AWeaponFlamefork()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Flamefork";
 }
 
 

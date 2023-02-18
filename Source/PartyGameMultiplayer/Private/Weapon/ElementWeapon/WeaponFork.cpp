@@ -19,6 +19,7 @@ AWeaponFork::AWeaponFork()
 
 	IsCombined = false;
 	WeaponType = EnumWeaponType::Fork;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Fork/Fork.Fork"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -36,10 +37,7 @@ AWeaponFork::AWeaponFork()
 	}
 
 	DamageType = UDamageType::StaticClass();
-	Damage = 25.0f;
 
-	// WeaponName
-	WeaponName = "Fork";
 }
 
 

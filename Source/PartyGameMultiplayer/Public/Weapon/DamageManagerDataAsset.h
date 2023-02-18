@@ -21,10 +21,18 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
 	TMap<FString, float> Character_Damage_Map;
+	
+	UPROPERTY(EditAnywhere, Category = "Damage Manager")
+		TMap<FString, float> AccumulatedTimeToGenerateDamage_Map;
+
+	UPROPERTY(EditAnywhere, Category = "Damage Manager")
+		TMap<FString, float> CoolDown_Map;
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
 	TMap<FString, float> Character_Buff_Map;
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
 	TMap<FString, float> MiniGame_Damage_Map;
+
+	
 };
