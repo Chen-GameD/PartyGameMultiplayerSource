@@ -18,6 +18,7 @@ AWeaponAlarm::AWeaponAlarm()
 	IsCombined = false;
 	WeaponType = EnumWeaponType::Alarm;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -26,7 +27,7 @@ AWeaponAlarm::AWeaponAlarm()
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())

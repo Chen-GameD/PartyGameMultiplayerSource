@@ -18,6 +18,7 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Alarmgun;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -26,7 +27,7 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -42,41 +43,6 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	}
 
 	DamageType = UDamageType::StaticClass();
-}
-
-
-void AWeaponAlarmgun::AttackStart()
-{
-	if (bAttackOn || !GetOwner())
-		return;
-
-	bAttackOn = true;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-
-	SpawnProjectile();
-}
-
-
-void AWeaponAlarmgun::AttackStop()
-{
-	if (!bAttackOn || !GetOwner())
-		return;
-
-	check(GetOwner() != nullptr);
-
-	bAttackOn = false;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-
 }
 
 

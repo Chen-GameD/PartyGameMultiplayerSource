@@ -25,7 +25,8 @@ enum EnumWeaponType
 enum EnumAttackType
 {
 	OneHit,
-	Constant
+	Constant,
+	SpawnProjectile
 };
 
 enum EnumAttackBuff

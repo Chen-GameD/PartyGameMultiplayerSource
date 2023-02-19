@@ -97,18 +97,16 @@ void ABaseWeapon::Tick(float DeltaTime)
 			DisplayCaseScale = DisplayCase->GetComponentScale();
 		}
 		else
-		{
-			
+		{			
 			// If the weapon has cd
 			if (0 < CD_MaxEnergy)
 			{
 				if (bAttackOn)
 				{
-					if (0 < CD_LeftEnergy)
+					if (0 < CD_LeftEnergy && AttackType == EnumAttackType::Constant)
 					{
 						CD_LeftEnergy -= CD_DropSpeed * DeltaTime;
 						CD_LeftEnergy = FMath::Max(CD_LeftEnergy, 0.0f);
-						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
 					}					
 				}
 				else
@@ -117,11 +115,12 @@ void ABaseWeapon::Tick(float DeltaTime)
 					{
 						CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
 						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
-						GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
 					}					
 				}	
 				if (CD_LeftEnergy < CD_MinEnergyToAttak)
 					AttackStop();
+				if(WeaponType == EnumWeaponType::Alarmgun)
+					GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
 			}
 			// Apply constant damage
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
@@ -224,10 +223,24 @@ void ABaseWeapon::GetThrewAway()
 void ABaseWeapon::AttackStart()
 {
 	if (bAttackOn || !GetOwner())
-		return;
-	if (AttackType == EnumAttackType::Constant && CD_LeftEnergy <= 0)
-		return;
+		return;	
 
+	// If the weapon has cd
+	if (0 < CD_MaxEnergy)
+	{
+		if (AttackType == EnumAttackType::Constant)
+		{
+			if (CD_LeftEnergy <= 0)
+				return;
+		}
+		else
+		{
+			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+				CD_LeftEnergy -= CD_MinEnergyToAttak;
+			else
+				return;
+		}		
+	}
 	bAttackOn = true;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -235,10 +248,17 @@ void ABaseWeapon::AttackStart()
 		OnRep_bAttackOn();
 	}
 	ApplyDamageCounter = 0;
-
-	SetActorEnableCollision(bAttackOn);
-	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//AttackDetectComponent->OnActorEnableCollisionChanged();
+	
+	if (AttackType != EnumAttackType::SpawnProjectile)
+	{
+		SetActorEnableCollision(bAttackOn);
+		//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		//AttackDetectComponent->OnActorEnableCollisionChanged();
+	}
+	else
+	{
+		SpawnProjectile();
+	}
 }
 
 
@@ -256,10 +276,13 @@ void ABaseWeapon::AttackStop()
 		OnRep_bAttackOn();
 	}
 	ApplyDamageCounter = 0;
-
 	AttackObjectMap.Empty();
-	SetActorEnableCollision(bAttackOn);
-	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (AttackType != EnumAttackType::SpawnProjectile)
+	{
+		SetActorEnableCollision(bAttackOn);
+		//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
 }
 
 
@@ -301,6 +324,7 @@ void ABaseWeapon::BeginPlay()
 			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 				CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 		}
+
 		//  Set DisplayCaseCollision to active
 		DisplayCaseCollisionSetActive(true);
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);

@@ -17,6 +17,7 @@ AWeaponBomb::AWeaponBomb()
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Bomb;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Bomb/Bomb.Bomb"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -26,7 +27,7 @@ AWeaponBomb::AWeaponBomb()
 	}
 	WeaponMesh->SetRelativeScale3D(FVector(10.0f, 10.0f, 10.0f));
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())

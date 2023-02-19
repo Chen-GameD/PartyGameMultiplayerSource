@@ -18,6 +18,7 @@ AWeaponCannon::AWeaponCannon()
 	IsCombined = true;
 	WeaponType = EnumWeaponType::Cannon;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Cannon/Cannon.Cannon"));
 	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
@@ -26,7 +27,7 @@ AWeaponCannon::AWeaponCannon()
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
