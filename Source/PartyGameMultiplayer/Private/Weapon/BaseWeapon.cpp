@@ -313,7 +313,12 @@ void ABaseWeapon::BeginPlay()
 				CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 			ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
 			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			{
+				// When it is SpawnProjectile attack type, do not set CD_MinEnergyToAttak as 0! 
+				// Set it as a number slightly bigger, like 0.01f
 				CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+				check(0.0f < CD_MinEnergyToAttak);
+			}				
 		}
 
 		//  Set DisplayCaseCollision to active
