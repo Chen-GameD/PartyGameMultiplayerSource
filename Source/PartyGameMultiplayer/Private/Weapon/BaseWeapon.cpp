@@ -128,7 +128,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
 					}
 				}							
-				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
 			}
 			// Apply constant damage
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
@@ -262,8 +262,6 @@ void ABaseWeapon::AttackStop()
 {
 	if (!bAttackOn || !GetOwner())
 		return;
-
-	check(GetOwner() != nullptr);
 
 	bAttackOn = false;
 	// Listen server
@@ -496,9 +494,10 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
 
-			if (AttackType == EnumAttackType::OneHit && ApplyDamageCounter == 0)
+			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
+				&& ApplyDamageCounter == 0 )
 			{
-				GenerateDamageLike(OtherActor);
+				GenerateDamageLike(OtherActor, -1.0f);  // DeltaTime as -1.0f suggests it is one-hit type damge
 				ApplyDamageCounter++;
 			}
 			// Listen server

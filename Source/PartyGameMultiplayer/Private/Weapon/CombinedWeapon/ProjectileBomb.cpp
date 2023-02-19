@@ -16,7 +16,7 @@
 
 AProjectileBomb::AProjectileBomb()
 {
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Bomb/AlarmBomb.AlarmBomb"));
 	if (DefaultMesh.Succeeded())
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);

@@ -42,6 +42,12 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
 			Damage *= DeltaTime;
+		// Special situation: bomb's fork
+		if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DeltaTime == -1.0f)
+		{
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
+				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
+		}
 		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
 		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
 

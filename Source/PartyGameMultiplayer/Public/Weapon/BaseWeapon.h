@@ -93,7 +93,7 @@ protected:
 	UFUNCTION()
 		virtual void OnRep_DamageGenerationCounter();
 
-	// only is called on server
+	// only is called on server, deal with damage applied by the AttackDetectComponent
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

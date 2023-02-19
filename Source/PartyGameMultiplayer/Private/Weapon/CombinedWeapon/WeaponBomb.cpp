@@ -33,6 +33,7 @@ AWeaponBomb::AWeaponBomb()
 
 	WeaponMesh_WithoutBomb = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh_WithoutBomb"));
 	WeaponMesh_WithoutBomb->SetupAttachment(DisplayCase);
+	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_2(TEXT("/Game/ArtAssets/Models/Fork/Fork.Fork"));
 	if (DefaultMesh_2.Succeeded())
 	{
@@ -41,7 +42,7 @@ AWeaponBomb::AWeaponBomb()
 	WeaponMesh_WithoutBomb->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	WeaponMesh_WithoutBomb->SetVisibility(false);
 
-	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
+	AttackDetectComponent = WeaponMesh_WithoutBomb;  // Bomb is special, Projectile and WeaponMesh_WithoutBomb can both apply damage
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -58,21 +59,48 @@ AWeaponBomb::AWeaponBomb()
 }
 
 
-void AWeaponBomb::OnRep_bAttackOn()
+void AWeaponBomb::AttackStart()
 {
-	Super::OnRep_bAttackOn();
+	if (bAttackOn || !GetOwner())
+		return;
 
-	if (bAttackOn)
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
 	{
-		WeaponMesh->SetVisibility(false);
-		WeaponMesh_WithoutBomb->SetVisibility(true);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-			{
-				WeaponMesh->SetVisibility(true);
-				WeaponMesh_WithoutBomb->SetVisibility(false);
-			}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+		OnRep_bAttackOn();
 	}	
+	ApplyDamageCounter = 0;
+
+	SetActorEnableCollision(bAttackOn);
+	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	//AttackDetectComponent->OnActorEnableCollisionChanged();
+
+	// Whether spawn a projectile
+	check(0 < CD_MaxEnergy);
+	if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+	{
+		CD_LeftEnergy -= CD_MinEnergyToAttak;
+		SpawnProjectile();
+	}
+}
+
+
+void AWeaponBomb::AttackStop()
+{
+	if (!bAttackOn || !GetOwner())
+		return;
+
+	bAttackOn = false;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+	AttackObjectMap.Empty();
+
+	SetActorEnableCollision(bAttackOn);
 }
 
 
@@ -92,3 +120,22 @@ void AWeaponBomb::SpawnProjectile()
 		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }
+
+void AWeaponBomb::OnRep_bAttackOn()
+{
+	Super::OnRep_bAttackOn();
+
+	if (bAttackOn && WeaponMesh->IsVisible())
+	{
+		WeaponMesh->SetVisibility(false);
+		//WeaponMesh_WithoutBomb->SetVisibility(true);
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				WeaponMesh->SetVisibility(true);
+				//WeaponMesh_WithoutBomb->SetVisibility(false);
+			}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+	}	
+}
+
+
