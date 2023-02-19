@@ -525,7 +525,9 @@ void AMCharacter::OnCombineWeapon()
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
+		LeftWeapon->HasBeenCombined = true;
 		RightWeapon->SetActorHiddenInGame(true);
+		RightWeapon->HasBeenCombined = true;
 
 		// If combine successfully, always set isLeftHeld Anim State to false, 
 		// this will be reset to true when picking up new item in PickUp_Implementation

@@ -57,7 +57,7 @@ public:
 	// should only be called on server
 	virtual void GetThrewAway();
 	// should only be called on server
-	virtual int AttackStart();
+	virtual void AttackStart();
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
@@ -115,7 +115,9 @@ public:
 
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
-	bool IsCombined;
+	bool IsCombineWeapon;  // if it is a combine type weapon or not
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
+	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* textureUI;
 	// Ele: short for Element

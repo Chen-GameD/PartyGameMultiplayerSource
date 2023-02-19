@@ -11,7 +11,7 @@
 
 AWeaponFork::AWeaponFork()
 {
-	IsCombined = false;
+	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Fork;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 

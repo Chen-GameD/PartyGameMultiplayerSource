@@ -15,7 +15,7 @@
 // Sets default values
 AWeaponAlarm::AWeaponAlarm()
 {
-	IsCombined = false;
+	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Alarm;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
@@ -43,17 +43,17 @@ AWeaponAlarm::AWeaponAlarm()
 }
 
 
-int AWeaponAlarm::AttackStart()
+void AWeaponAlarm::OnRep_bAttackOn()
 {
-	int result = Super::AttackStart();
-	if (result == 0)
-	{
-		SetActorHiddenInGame(true);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { SetActorHiddenInGame(false); }, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
-		return 0;
-	}	
-	return -1;
+	Super::OnRep_bAttackOn();
+
+	SetActorHiddenInGame(true);
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
+		{ 
+			if(!HasBeenCombined)
+				SetActorHiddenInGame(false); 
+		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
 }
 
 

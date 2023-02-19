@@ -45,24 +45,25 @@ ABaseWeapon::ABaseWeapon()
 	PrimaryActorTick.bCanEverTick = true;  // Can turn this off to improve performance if you don't need it.
 
 	IsPickedUp = false;
+	HasBeenCombined = false;
 	WeaponType = EnumWeaponType::None;
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
+	DisplayCase->SetupAttachment(RootComponent);
 	// DisplayCase->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
-	DisplayCase->SetupAttachment(RootComponent);
-
+	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));
-	WeaponMesh->SetupAttachment(DisplayCase);	
+	WeaponMesh->SetupAttachment(DisplayCase);
+	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));	
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	WeaponMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 
 	SpawnProjectilePointMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpawnProjectilePointMesh"));
-	SpawnProjectilePointMesh->SetCollisionProfileName(TEXT("Trigger"));
 	SpawnProjectilePointMesh->SetupAttachment(WeaponMesh);
+	SpawnProjectilePointMesh->SetCollisionProfileName(TEXT("Trigger"));	
 
 	AttackOnEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect"));
 	AttackOnEffect->SetupAttachment(WeaponMesh);
@@ -164,6 +165,7 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABaseWeapon, bAttackOn);
 	DOREPLIFETIME(ABaseWeapon, bAttackOverlap);
 	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
+	DOREPLIFETIME(ABaseWeapon, HasBeenCombined);	
 	DOREPLIFETIME(ABaseWeapon, MovementComponent);
 	DOREPLIFETIME(ABaseWeapon, DamageGenerationCounter);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseLocation);
@@ -214,10 +216,10 @@ void ABaseWeapon::GetThrewAway()
 }
 
 
-int ABaseWeapon::AttackStart()
+void ABaseWeapon::AttackStart()
 {
 	if (bAttackOn || !GetOwner())
-		return -1;	
+		return;	
 
 	// If the weapon has cd
 	if (0 < CD_MaxEnergy)
@@ -225,14 +227,14 @@ int ABaseWeapon::AttackStart()
 		if (AttackType == EnumAttackType::Constant)
 		{
 			if (CD_LeftEnergy <= 0)
-				return -1;
+				return;
 		}
 		else
 		{
 			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
 				CD_LeftEnergy -= CD_MinEnergyToAttak;
 			else
-				return -1;
+				return;
 		}		
 	}
 	bAttackOn = true;
@@ -253,7 +255,6 @@ int ABaseWeapon::AttackStart()
 	{
 		SpawnProjectile();
 	}
-	return 0;
 }
 
 
@@ -295,32 +296,32 @@ void ABaseWeapon::BeginPlay()
 
 	CheckInitilization();
 
+	// Assign some member variables(we want both the server and client have these values)
+	if (AWeaponDataHelper::DamageManagerDataAsset)
+	{
+		// CoolDown
+		FString ParName = WeaponName + "_" + "CD_MaxEnergy";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		ParName = WeaponName + "_" + "CD_DropSpeed";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			CD_DropSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		ParName = WeaponName + "_" + "CD_RecoverSpeed";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+		{
+			// When it is SpawnProjectile attack type, do not set CD_MinEnergyToAttak as 0 in the table! 
+			// Set it as a number slightly bigger, like 0.01f
+			CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+			check(0.0f < CD_MinEnergyToAttak);
+		}
+	}
+
 	// Server: Register collision callback functions
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		// Assign some member variables
-		if (AWeaponDataHelper::DamageManagerDataAsset)
-		{
-			// CoolDown
-			FString ParName = WeaponName + "_" + "CD_MaxEnergy";
-			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-				CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-			ParName = WeaponName + "_" + "CD_DropSpeed";
-			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-				CD_DropSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-			ParName = WeaponName + "_" + "CD_RecoverSpeed";
-			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-				CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-			ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
-			if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-			{
-				// When it is SpawnProjectile attack type, do not set CD_MinEnergyToAttak as 0! 
-				// Set it as a number slightly bigger, like 0.01f
-				CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-				check(0.0f < CD_MinEnergyToAttak);
-			}				
-		}
-
 		//  Set DisplayCaseCollision to active
 		DisplayCaseCollisionSetActive(true);
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);

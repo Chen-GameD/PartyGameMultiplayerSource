@@ -15,7 +15,7 @@
 // Sets default values
 AWeaponCannon::AWeaponCannon()
 {
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Cannon;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;

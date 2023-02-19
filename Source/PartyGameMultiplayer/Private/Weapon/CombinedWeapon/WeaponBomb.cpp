@@ -2,29 +2,44 @@
 
 
 #include "Weapon/CombinedWeapon/WeaponBomb.h"
+
 #include "Components/StaticMeshComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Components/BoxComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
-#include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
+
+#include "Weapon/CombinedWeapon/ProjectileBomb.h"
+
 
 // Sets default values
 AWeaponBomb::AWeaponBomb()
 {
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Bomb;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Bomb/Bomb.Bomb"));
-	if (DefaultMesh.Succeeded())
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_1(TEXT("/Game/ArtAssets/Models/Bomb/Bomb.Bomb"));
+	if (DefaultMesh_1.Succeeded())
 	{
-		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
+		WeaponMesh->SetStaticMesh(DefaultMesh_1.Object);
 	}
 	WeaponMesh->SetRelativeScale3D(FVector(10.0f, 10.0f, 10.0f));
+
+	WeaponMesh_WithoutBomb = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh_WithoutBomb"));
+	WeaponMesh_WithoutBomb->SetupAttachment(DisplayCase);
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_2(TEXT("/Game/ArtAssets/Models/Fork/Fork.Fork"));
+	if (DefaultMesh_2.Succeeded())
+	{
+		WeaponMesh_WithoutBomb->SetStaticMesh(DefaultMesh_2.Object);
+	}
+	WeaponMesh_WithoutBomb->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	WeaponMesh_WithoutBomb->SetVisibility(false);
 
 	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
@@ -39,5 +54,41 @@ AWeaponBomb::AWeaponBomb()
 	if (DefaultAttackHitEffect.Succeeded())
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
+	}
+}
+
+
+void AWeaponBomb::OnRep_bAttackOn()
+{
+	Super::OnRep_bAttackOn();
+
+	if (bAttackOn)
+	{
+		WeaponMesh->SetVisibility(false);
+		WeaponMesh_WithoutBomb->SetVisibility(true);
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				WeaponMesh->SetVisibility(true);
+				WeaponMesh_WithoutBomb->SetVisibility(false);
+			}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+	}	
+}
+
+
+void AWeaponBomb::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
+		FRotator spawnRotation = pCharacter->GetActorRotation();
+
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }

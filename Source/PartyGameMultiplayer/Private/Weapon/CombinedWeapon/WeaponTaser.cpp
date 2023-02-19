@@ -11,7 +11,7 @@
 
 AWeaponTaser::AWeaponTaser()
 {
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Taser;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 
@@ -89,16 +89,11 @@ void AWeaponTaser::Tick(float DeltaTime)
 
 
 // should only be called on server
-int AWeaponTaser::AttackStart()
+void AWeaponTaser::AttackStart()
 {
-	int result = Super::AttackStart();
-	if (result == 0)
-	{
-		bStretching = true;
-		//OnRep_bAttackOn();
-		return 0;
-	}	
-	return -1;
+	Super::AttackStart();
+	bStretching = true;
+	//OnRep_bAttackOn();
 }
 
 // should only be called on server

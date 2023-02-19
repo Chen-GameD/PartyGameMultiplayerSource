@@ -19,11 +19,10 @@ public:
 	AWeaponAlarm();
 
 	// should only be called on server
-	virtual int AttackStart() override;
-	// should only be called on server
 	virtual void SpawnProjectile() override;
 
 protected:
+	virtual void OnRep_bAttackOn() override;
 private:
 
 // MEMBER VARIABLES

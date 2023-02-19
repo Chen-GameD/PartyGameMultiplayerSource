@@ -14,7 +14,7 @@
 
 AWeaponBlower::AWeaponBlower()
 {
-	IsCombined = false;
+	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Blower;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;

@@ -13,7 +13,7 @@
 
 AWeaponLighter::AWeaponLighter()
 {
-	IsCombined = false;
+	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Lighter;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 

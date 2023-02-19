@@ -12,7 +12,7 @@
 
 AWeaponFlamethrower::AWeaponFlamethrower()
 {
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Flamethrower;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;

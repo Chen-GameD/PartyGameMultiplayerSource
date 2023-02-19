@@ -19,7 +19,7 @@ AWeaponFlamefork::AWeaponFlamefork()
 	*/
 	//PrimaryActorTick.bCanEverTick = false;
 
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Flamefork;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 
