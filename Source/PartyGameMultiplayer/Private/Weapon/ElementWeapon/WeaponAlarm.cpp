@@ -21,13 +21,12 @@ AWeaponAlarm::AWeaponAlarm()
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	//AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -41,46 +40,20 @@ AWeaponAlarm::AWeaponAlarm()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-
 }
 
 
-void AWeaponAlarm::AttackStart()
+int AWeaponAlarm::AttackStart()
 {
-	if (bAttackOn || !GetOwner())
-		return;
-
-	bAttackOn = true;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
+	int result = Super::AttackStart();
+	if (result == 0)
 	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-	
-	SetActorHiddenInGame(bAttackOn);
-	SpawnProjectile();
-}
-
-
-void AWeaponAlarm::AttackStop()
-{
-	if (!bAttackOn || !GetOwner())
-		return;
-
-	check(GetOwner() != nullptr);
-
-	bAttackOn = false;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-
-	SetActorHiddenInGame(bAttackOn);
+		SetActorHiddenInGame(true);
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { SetActorHiddenInGame(false); }, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+		return 0;
+	}	
+	return -1;
 }
 
 

@@ -21,13 +21,12 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	//AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -41,8 +40,6 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
 }
 
 

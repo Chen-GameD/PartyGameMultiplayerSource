@@ -19,9 +19,7 @@ public:
 	AWeaponAlarm();
 
 	// should only be called on server
-	virtual void AttackStart() override;
-	// should only be called on server
-	virtual void AttackStop() override;
+	virtual int AttackStart() override;
 	// should only be called on server
 	virtual void SpawnProjectile() override;
 

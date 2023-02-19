@@ -11,7 +11,7 @@
 #include "LevelInteraction/MinigameMainObjective.h"
 
 
-bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor)
+bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
 {
 	if (!AttackingWeapon || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
@@ -36,14 +36,14 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 			return false;
 
 		EnumWeaponType WeaponType = AttackingWeapon->WeaponType;
-		if (AttackingWeapon->Damage <= 0)
-		{
-			FString ParName = AttackingWeapon->GetWeaponName();
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-				AttackingWeapon->Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
-		}		
+		float Damage = 0.0f;
+		FString ParName = AttackingWeapon->GetWeaponName();
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
+			Damage *= DeltaTime;
 		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
-		pCharacter->TakeDamageRe(AttackingWeapon->Damage, WeaponType, EventInstigator, AttackingWeapon);
+		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
 
 		if (AttackingWeapon->WeaponType == EnumWeaponType::None)
 		{
@@ -83,13 +83,13 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 	}
 	else if (dynamic_cast<AMinigameMainObjective*>(DamagedActor))
 	{
-		if (AttackingWeapon->MiniGameDamage <= 0)
-		{
-			FString ParName = AttackingWeapon->GetWeaponName();
-			if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(ParName))
-				AttackingWeapon->MiniGameDamage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
-		}		
-		UGameplayStatics::ApplyDamage(DamagedActor, AttackingWeapon->MiniGameDamage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, UDamageType::StaticClass());
+		float Damage = 0.0f;
+		FString ParName = AttackingWeapon->GetWeaponName();
+		if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(ParName))
+			Damage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
+		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
+			Damage *= DeltaTime;
+		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, UDamageType::StaticClass());
 	}
 	else
 	{

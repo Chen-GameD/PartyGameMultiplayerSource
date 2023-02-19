@@ -15,7 +15,6 @@ AWeaponTaser::AWeaponTaser()
 	WeaponType = EnumWeaponType::Taser;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 
-	// Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Body.Taser_Body"));
 	if (DefaultMesh.Succeeded())
 	{
@@ -45,8 +44,6 @@ AWeaponTaser::AWeaponTaser()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
 
 	bStretching = true;
 	originalX = TaserForkMesh->GetRelativeLocation().X;
@@ -92,11 +89,16 @@ void AWeaponTaser::Tick(float DeltaTime)
 
 
 // should only be called on server
-void AWeaponTaser::AttackStart()
+int AWeaponTaser::AttackStart()
 {
-	Super::AttackStart();
-	bStretching = true;
-	//OnRep_bAttackOn();
+	int result = Super::AttackStart();
+	if (result == 0)
+	{
+		bStretching = true;
+		//OnRep_bAttackOn();
+		return 0;
+	}	
+	return -1;
 }
 
 // should only be called on server

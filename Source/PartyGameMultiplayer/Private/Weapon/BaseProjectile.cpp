@@ -87,6 +87,8 @@ void ABaseProjectile::OnRep_bAttackHit()
 
 void ABaseProjectile::Destroyed()
 {
+	if (!AttackHitEffect_NSSystem)
+		return;
 	AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
 	if (AttackHitEffect_NSComponent && AttackHitEffect_NSSystem)
 	{
@@ -112,9 +114,9 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	auto pHoldingPlayer = pWeapon->GetInstigator();
 	if (!pHoldingPlayer)
 		return;
+
 	if (GetOwner() && pWeapon->IsPickedUp)
 	{
-		// What will happen if the weapon hit another player
 		if (Cast<ABaseWeapon>(OtherActor))
 			return;
 		if (Cast<ACharacter>(OtherActor) && OtherActor == pHoldingPlayer)
@@ -130,7 +132,6 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 		//FTimerHandle TimerHandle;
 		//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 2.0f, false);
 
-		Destroy();
-		
+		Destroy();		
 	}
 }

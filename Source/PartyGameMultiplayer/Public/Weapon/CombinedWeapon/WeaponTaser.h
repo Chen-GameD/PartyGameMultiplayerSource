@@ -18,7 +18,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	// should only be called on server
-	virtual void AttackStart() override;
+	virtual int AttackStart() override;
 	// should only be called on server
 	virtual void AttackStop() override;
 

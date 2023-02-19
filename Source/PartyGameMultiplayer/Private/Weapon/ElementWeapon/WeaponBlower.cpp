@@ -14,19 +14,12 @@
 
 AWeaponBlower::AWeaponBlower()
 {
-	/*
-		bCanEverTick is set to true in BaseWeapon Class.
-		You can uncomment the following line and turn this off to improve performance if you don't need it.
-	*/
-	//PrimaryActorTick.bCanEverTick = false;
-
 	IsCombined = false;
 	WeaponType = EnumWeaponType::Blower;
 	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Blower/Blower.Blower"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
@@ -34,9 +27,9 @@ AWeaponBlower::AWeaponBlower()
 
 	BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("WindCollisionArea"));
 	BoxComponent->SetRelativeLocation(FVector(-280.0f, 0.0f, 20.5f));
-	//BoxComponent->SetBoxExtent(FVector3d(80.0f, 20.0f, 20.0f));
 	BoxComponent->SetBoxExtent(FVector3d(225.0f, 75.0f, 75.0f));
 	BoxComponent->SetupAttachment(WeaponMesh);
+
 	AttackDetectComponent = BoxComponent;
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_Wind.NS_Wind"));
@@ -51,6 +44,4 @@ AWeaponBlower::AWeaponBlower()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
 }

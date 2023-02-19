@@ -21,13 +21,12 @@ AWeaponCannon::AWeaponCannon()
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Cannon/Cannon.Cannon"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	//AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -41,42 +40,6 @@ AWeaponCannon::AWeaponCannon()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-}
-
-
-void AWeaponCannon::AttackStart()
-{
-	if (bAttackOn || !GetOwner())
-		return;
-
-	bAttackOn = true;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-
-	SpawnProjectile();
-}
-
-
-void AWeaponCannon::AttackStop()
-{
-	if (!bAttackOn || !GetOwner())
-		return;
-
-	check(GetOwner() != nullptr);
-
-	bAttackOn = false;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
 }
 
 

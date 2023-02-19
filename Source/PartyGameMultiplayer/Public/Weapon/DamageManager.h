@@ -19,7 +19,7 @@ class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 public:
 	ADamageManager() {};
 
-	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor);
+	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor, float DeltaTime=0.0f);
 	static bool ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor);
 
 public:

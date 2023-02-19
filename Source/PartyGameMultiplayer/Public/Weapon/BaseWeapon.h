@@ -57,7 +57,7 @@ public:
 	// should only be called on server
 	virtual void GetThrewAway();
 	// should only be called on server
-	virtual void AttackStart();
+	virtual int AttackStart();
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
@@ -67,7 +67,7 @@ public:
 	ACharacter* GetHoldingPlayer() const;
 
 	// only on server, generate stuff like damage, buff and so on
-	virtual void GenerateDamageLike(class AActor* DamagedActor);
+	virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
 
 protected:
 	virtual void CheckInitilization();
@@ -123,25 +123,15 @@ public:
 	ABaseWeapon* EleWeapon_2;
 
 	// Damage related
-	UPROPERTY(BlueprintReadOnly, Category = "Damage")
-		float Damage;
-	UPROPERTY(BlueprintReadOnly, Category = "Damage")
-		float MiniGameDamage;
-	UPROPERTY(BlueprintReadOnly, Category = "Damage")
-		float AccumulatedTimeToGenerateDamage;
-				//UPROPERTY(BlueprintReadOnly, Category = "Damage")
-				//	float MiniGameAccumulatedTimeToGenerateDamage;
+	//float Damage;
+	//float MiniGameDamage;
 	// CoolDown related(CD_LeftEnergy needs to replicate so the client can show the correct cd UI)
-	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
-		float CD_MaxEnergy;
+	float CD_MaxEnergy;
+	float CD_MinEnergyToAttak;
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
-		float CD_MinEnergyToAttak;
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
-		float CD_LeftEnergy;	
-	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
-		float CD_DropSpeed;
-	UPROPERTY(BlueprintReadOnly, Category = "CoolDown")
-		float CD_RecoverSpeed;
+	float CD_LeftEnergy;	
+	float CD_DropSpeed;
+	float CD_RecoverSpeed;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
@@ -216,10 +206,10 @@ protected:
 		class UParticleSystem* AttackHitEffect;
 
 	//The damage type and damage that will be done by this weapon
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
 		TSubclassOf<class UDamageType> DamageType;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
 		TSubclassOf<class UDamageType> MiniGameDamageType;
 
 	UPROPERTY(EditAnywhere)

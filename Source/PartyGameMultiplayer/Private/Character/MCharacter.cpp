@@ -681,15 +681,15 @@ void AMCharacter::OnHealthUpdate()
 	//Client-specific functionality
 	if (IsLocallyControlled())
 	{
-		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		//FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 		
 		if (CurrentHealth <= 0)
 		{
 			// Death
 			// to do
-			FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+			//FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
 			
 			// Force respawn
 			Server_ForceRespawn(5);
@@ -1157,8 +1157,8 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		// key value
 		AttackedDir.Z = 0.0f;
 		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
+		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));*/
 		LaunchCharacter(AttackedDir, true, false);
 	}
 	else if (BuffType == EnumAttackBuff::Blowing)
@@ -1166,8 +1166,8 @@ float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPoi
 		// key value
 		AttackedDir.Z = 0.0f;
 		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+		//	AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
 		LaunchCharacter(AttackedDir, false, false);
 	}
 	return 0.0f;
@@ -1188,7 +1188,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		float& buffRemainedTime = BuffMap[buffType][1];
 		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
+			//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
 			// key value
 			float BurningBuffDamagePerSecond = 5.0f;
 			FString ParName = "BurningBuffDamagePerSecond";
@@ -1201,7 +1201,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 			{
 				buffPoints = 0.0f;
 				buffRemainedTime = 0.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
 			}
 		}
 	}
@@ -1215,7 +1215,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		{
 			if (0.0f < buffRemainedTime)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
+				//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
 
 				// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
 				// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
@@ -1246,7 +1246,7 @@ void AMCharacter::ActByBuff(float DeltaTime)
 				buffPoints = 0.0f;
 				buffRemainedTime = 0.0f;
 				//CustomTimeDilation = 1.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
 			}
 		}
 	}
