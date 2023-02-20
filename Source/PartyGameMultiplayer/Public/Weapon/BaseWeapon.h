@@ -66,8 +66,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	ACharacter* GetHoldingPlayer() const;
 
-	// only on server, generate stuff like damage, buff and so on
-	virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
+	//// only on server, generate stuff like damage, buff and so on
+	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
 
 protected:
 	virtual void CheckInitilization();
@@ -90,8 +90,8 @@ protected:
 		virtual void OnRep_bAttackOverlap();
 	UFUNCTION()
 		virtual void OnRep_IsPickedUp();	
-	UFUNCTION()
-		virtual void OnRep_DamageGenerationCounter();
+	//UFUNCTION()
+	//	virtual void OnRep_DamageGenerationCounter();
 
 	// only is called on server, deal with damage applied by the AttackDetectComponent
 	UFUNCTION(Category = "Weapon")
@@ -165,8 +165,8 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOverlap)
 		bool bAttackOverlap;
 
-	UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
-		unsigned int DamageGenerationCounter;
+	//UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
+	//	unsigned int DamageGenerationCounter;
 
 	// Which actor is being attacked - how long they have been attacked
 	TMap<AActor*, float> AttackObjectMap;

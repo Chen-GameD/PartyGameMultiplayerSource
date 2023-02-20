@@ -14,7 +14,7 @@
 
 FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
 
-bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
+bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
 {
 	if (!AttackingWeapon || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;

@@ -70,7 +70,7 @@ ABaseWeapon::ABaseWeapon()
 
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
-	DamageGenerationCounter = 0;
+	//DamageGenerationCounter = 0;
 	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
@@ -138,7 +138,8 @@ void ABaseWeapon::Tick(float DeltaTime)
 					Elem.Value += DeltaTime;
 					if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 					{
-						GenerateDamageLike(Elem.Key, DeltaTime);
+						//GenerateDamageLike(Elem.Key, DeltaTime);
+						ADamageManager::TryApplyDamageToAnActor(this, Elem.Key, DeltaTime);
 					}
 				}
 			}
@@ -167,7 +168,7 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
 	DOREPLIFETIME(ABaseWeapon, HasBeenCombined);	
 	DOREPLIFETIME(ABaseWeapon, MovementComponent);
-	DOREPLIFETIME(ABaseWeapon, DamageGenerationCounter);
+	//DOREPLIFETIME(ABaseWeapon, DamageGenerationCounter);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseLocation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseRotation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseScale);
@@ -393,45 +394,44 @@ void ABaseWeapon::GenerateAttackHitEffect()
 }
 
 
-void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor, float DeltaTime)
-{
-	check(DamagedActor);
-
-	//if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
-	//{		
-	//	//UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-	//	pCharacter->TakeDamageRe(Damage, WeaponType, GetInstigator()->Controller, this);
-	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-	//	// To transfer
-	//	// knockback
-	//	/*check(HoldingPlayer);
-	//	FRotator AttackerControlRotation = HoldingPlayer->GetControlRotation();
-	//	FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-	//	pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, GetInstigator()->Controller, this);*/
-	//	// paralysis
-	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, 1.0f, FVector3d::Zero(), GetInstigator()->Controller, this);
-	//	// burning
-	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, 0.5f, FVector3d::Zero(), GetInstigator()->Controller, this);
-	//}
-	//else if(dynamic_cast<AMinigameMainObjective*>(DamagedActor))
-	//{
-	//	UGameplayStatics::ApplyDamage(DamagedActor, MiniGameDamage, GetInstigator()->Controller, this, MiniGameDamageType);
-	//	//DamagedActor->TakeDamageRe(Damage, GetInstigator()->Controller, this);
-	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-	//}
-
-	bool success = ADamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor, DeltaTime);
-	if (success)
-	{
-		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-		// Listen Server
-		if (GetNetMode() == NM_ListenServer)
-		{
-			OnRep_DamageGenerationCounter();
-		}
-	}
-		
-}
+//void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor, float DeltaTime)
+//{
+//	check(DamagedActor);
+//
+//	//if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
+//	//{		
+//	//	//UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
+//	//	pCharacter->TakeDamageRe(Damage, WeaponType, GetInstigator()->Controller, this);
+//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
+//	//	// To transfer
+//	//	// knockback
+//	//	/*check(HoldingPlayer);
+//	//	FRotator AttackerControlRotation = HoldingPlayer->GetControlRotation();
+//	//	FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
+//	//	pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, GetInstigator()->Controller, this);*/
+//	//	// paralysis
+//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, 1.0f, FVector3d::Zero(), GetInstigator()->Controller, this);
+//	//	// burning
+//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, 0.5f, FVector3d::Zero(), GetInstigator()->Controller, this);
+//	//}
+//	//else if(dynamic_cast<AMinigameMainObjective*>(DamagedActor))
+//	//{
+//	//	UGameplayStatics::ApplyDamage(DamagedActor, MiniGameDamage, GetInstigator()->Controller, this, MiniGameDamageType);
+//	//	//DamagedActor->TakeDamageRe(Damage, GetInstigator()->Controller, this);
+//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
+//	//}
+//
+//	bool success = ADamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor, DeltaTime);
+//	if (success)
+//	{
+//		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
+//		// Listen Server
+//		if (GetNetMode() == NM_ListenServer)
+//		{
+//			OnRep_DamageGenerationCounter();
+//		}
+//	}		
+//}
 
 void ABaseWeapon::OnRep_DisplayCaseTransform()
 {
@@ -474,10 +474,10 @@ void ABaseWeapon::OnRep_IsPickedUp()
 }
 
 
-void ABaseWeapon::OnRep_DamageGenerationCounter()
-{
-	GenerateAttackHitEffect();
-}
+//void ABaseWeapon::OnRep_DamageGenerationCounter()
+//{
+//	GenerateAttackHitEffect();
+//}
 
 
 void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, 
@@ -497,7 +497,8 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
 				&& ApplyDamageCounter == 0 )
 			{
-				GenerateDamageLike(OtherActor, -1.0f);  // DeltaTime as -1.0f suggests it is one-hit type damge
+				//GenerateDamageLike(OtherActor, -1.0f);  
+				ADamageManager::TryApplyDamageToAnActor(this, OtherActor, -1.0f);  // DeltaTime as -1.0f suggests it is one-hit type damge
 				ApplyDamageCounter++;
 			}
 			// Listen server
