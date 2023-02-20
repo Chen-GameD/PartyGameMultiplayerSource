@@ -14,6 +14,7 @@
 
 FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
 
+
 bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
 {
 	if (!AttackingWeapon || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
@@ -73,34 +74,6 @@ bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActo
 }
 
 
-bool ADamageManager::ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage)
-{
-	if (!AttackingWeapon)
-		return false;
-
-	TArray<AActor*> IgnoredActors;
-	// TODO: Add teammates
-	IgnoredActors.Add(AttackingWeapon->GetHoldingPlayer());
-
-	UGameplayStatics::ApplyRadialDamage(
-		AttackingWeapon,   //const UObject* WorldContextObject
-		BaseDamage,
-		Origin,
-		DamageRadius,
-		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
-		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
-		AttackingWeapon,		//AActor* DamageCauser
-		AttackingWeapon->GetHoldingPlayer()->GetController(), //AController* InstigatedByController
-		true			  // bDoFullDamage
-		//ECC_Visibility	  // DamagePreventionChannel
-	);
-	if (AttackingWeapon)
-		DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
-
-	return true;
-}
-
-
 bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Origin)
 {
 	if (!AttackingWeapon)
@@ -151,7 +124,7 @@ bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector 
 
 bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
 {	
-	if (AttackingWeapon->WeaponType == EnumWeaponType::None || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!AttackingWeapon || AttackingWeapon->WeaponType == EnumWeaponType::None || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	TArray<EnumAttackBuff> AttackBuffs;
@@ -214,5 +187,33 @@ bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamage
 			return false;
 		}
 	}	
+	return true;
+}
+
+
+bool ADamageManager::ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage)
+{
+	if (!AttackingWeapon)
+		return false;
+
+	TArray<AActor*> IgnoredActors;
+	// TODO: Add teammates
+	IgnoredActors.Add(AttackingWeapon->GetHoldingPlayer());
+
+	UGameplayStatics::ApplyRadialDamage(
+		AttackingWeapon,   //const UObject* WorldContextObject
+		BaseDamage,
+		Origin,
+		DamageRadius,
+		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
+		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
+		AttackingWeapon,		//AActor* DamageCauser
+		AttackingWeapon->GetHoldingPlayer()->GetController(), //AController* InstigatedByController
+		true			  // bDoFullDamage
+		//ECC_Visibility	  // DamagePreventionChannel
+	);
+	if (AttackingWeapon)
+		DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+
 	return true;
 }
