@@ -127,6 +127,10 @@ public:
 	// Damage related
 	//float Damage;
 	//float MiniGameDamage;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> DamageType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> MiniGameDamageType;
 	// CoolDown related(CD_LeftEnergy needs to replicate so the client can show the correct cd UI)
 	float CD_MaxEnergy;
 	float CD_MinEnergyToAttak;
@@ -206,13 +210,6 @@ protected:
 	// Particle System that may be necessary(for instance, exposion)
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UParticleSystem* AttackHitEffect;
-
-	//The damage type and damage that will be done by this weapon
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> DamageType;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> MiniGameDamageType;
 
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class ABaseProjectile> SpecificProjectileClass;

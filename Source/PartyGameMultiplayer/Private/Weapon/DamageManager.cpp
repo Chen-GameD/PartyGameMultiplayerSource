@@ -49,7 +49,8 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
 		}
 		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
-		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
+		//pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
+		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, AttackingWeapon->DamageType);
 
 		if (AttackingWeapon->WeaponType == EnumWeaponType::None)
 		{
@@ -96,7 +97,7 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
 		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
 			Damage *= DeltaTime;
-		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, UDamageType::StaticClass());
+		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, AttackingWeapon->MiniGameDamageType);
 	}
 	else
 	{
