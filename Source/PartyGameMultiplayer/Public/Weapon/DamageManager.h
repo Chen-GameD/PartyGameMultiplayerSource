@@ -22,10 +22,12 @@ public:
 	// The damaged actors are determined when entering this function( however, they can be teammates )
 	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor, float DeltaTime=0.0f);
 	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
+	static bool ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage);
 	static bool TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter);
 	static bool ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedActor);
 
 public:
+	static FTimerHandle* TimerHandle_Loop;
 private:
 private:
 };

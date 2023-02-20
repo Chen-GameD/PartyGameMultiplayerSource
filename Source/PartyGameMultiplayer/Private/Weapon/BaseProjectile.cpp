@@ -4,6 +4,7 @@
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/DamageManager.h"
+#include "Weapon/WeaponDataHelper.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 #include "Character/MCharacter.h"
 
@@ -48,6 +49,8 @@ ABaseProjectile::ABaseProjectile()
 
 	//AttackHitEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackHitEffect_NSComponent"));
 	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
+
+	TotalTime_ApplyDamage = 0.0f;
 }
 
 
@@ -62,6 +65,13 @@ void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& Out
 void ABaseProjectile::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Assign TotalTime_ApplyDamage by map
+	auto pWeapon = Cast<ABaseWeapon>(GetOwner());
+	check(pWeapon);
+	FString ParName = pWeapon->GetWeaponName() + "_TotalTime";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 
 	// Server duty
 	if (GetLocalRole() == ROLE_Authority)
@@ -98,14 +108,18 @@ void ABaseProjectile::Destroyed()
 
 	if (!AttackHitEffect_NSSystem)
 		return;
-	UNiagaraComponent* StoredNSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-	if (StoredNSComponent)
+	AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	if (0.0f < TotalTime_ApplyDamage)
 	{
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [StoredNSComponent]()
-			{
-				StoredNSComponent->Deactivate();
-			}, 2.0f, false);
+		if (AttackHitEffect_NSComponent)
+		{
+			FTimerHandle TimerHandle;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+				{
+					AttackHitEffect_NSComponent->Deactivate();
+					AttackHitEffect_NSComponent = nullptr;
+				}, TotalTime_ApplyDamage, false);
+		}
 	}	
 }
 
@@ -130,25 +144,19 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 			return;
 
 		bAttackHit = true;
-		SetActorHiddenInGame(true);
 		pWeapon->GenerateDamageLike(OtherActor);
-
-		// Apply damage once
-		//ADamageManager::TryApplyRadialDamage(pWeapon, this);
+		ADamageManager::TryApplyRadialDamage(pWeapon, this->GetActorLocation());
 	
 		// Apply damage multiple times
-		FVector Epicenter = this->GetActorLocation();
-
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_Loop, [pWeapon, Epicenter]()
-			{
-				ADamageManager::TryApplyRadialDamage(pWeapon, Epicenter);
-			}, 1.0f, true);  // the bool paramter determines if the function will be called in loop or not
-
-		FTimerHandle TimerHandle_SelfDestroy;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle_SelfDestroy, [this]()
-			{
-				GetWorldTimerManager().ClearTimer(TimerHandle_Loop);
-			}, 3.01f, false);
+		//GetWorld()->GetTimerManager().SetTimer(TimerHandle_Loop, [pWeapon, this->GetActorLocation()]()
+		//	{
+		//		ADamageManager::TryApplyRadialDamage(pWeapon, Epicenter);
+		//	}, 1.0f, true);  // the bool paramter determines if the function will be called in loop or not
+		//FTimerHandle TimerHandle_SelfDestroy;
+		//GetWorld()->GetTimerManager().SetTimer(TimerHandle_SelfDestroy, [this]()
+		//	{
+		//		GetWorldTimerManager().ClearTimer(TimerHandle_Loop);
+		//	}, 3.01f, false);
 
 		Destroy();		
 	}

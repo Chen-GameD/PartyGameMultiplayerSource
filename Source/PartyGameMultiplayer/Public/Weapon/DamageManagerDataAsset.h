@@ -23,7 +23,7 @@ public:
 	TMap<FString, float> Character_Damage_Map;
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
-		TMap<FString, float> CoolDown_Map;
+	TMap<FString, float> CoolDown_Map;
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
 	TMap<FString, float> Character_Buff_Map;

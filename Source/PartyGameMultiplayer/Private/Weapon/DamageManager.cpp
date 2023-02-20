@@ -12,6 +12,7 @@
 #include "Character/MCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
+FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
 
 bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
 {
@@ -71,20 +72,16 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 	return true;
 }
 
-bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter)
+
+bool ADamageManager::ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage)
 {
 	if (!AttackingWeapon)
 		return false;
-
-	FVector Origin = Epicenter;
-	float DamageRadius = 500.0f;
-	float BaseDamage = 30.0f;
 
 	TArray<AActor*> IgnoredActors;
 	// TODO: Add teammates
 	IgnoredActors.Add(AttackingWeapon->GetHoldingPlayer());
 
-	// Apply radial damage and impulse to all actors within the explosion radius
 	UGameplayStatics::ApplyRadialDamage(
 		AttackingWeapon,   //const UObject* WorldContextObject
 		BaseDamage,
@@ -97,11 +94,60 @@ bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector 
 		true			  // bDoFullDamage
 		//ECC_Visibility	  // DamagePreventionChannel
 	);
-	if(AttackingWeapon)
+	if (AttackingWeapon)
 		DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 
 	return true;
 }
+
+
+bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Origin)
+{
+	if (!AttackingWeapon)
+		return false;
+	
+	/* Get the following from map */
+	float TotalTime_ApplyDamage = 0.0f;
+	float TotalDamage_ForTotalTime = 0.0f;
+	float DamageRadius = 0.0f;
+	bool bApplyConstantDamage = false;
+	// total time
+	FString ParName = "";
+	ParName = AttackingWeapon->GetWeaponName() + "_TotalTime";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	// total damage
+	ParName = AttackingWeapon->GetWeaponName() + "_TotalDamage";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		TotalDamage_ForTotalTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	// damage radius
+	ParName = AttackingWeapon->GetWeaponName() + "_DamageRadius";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	if (0.0f < TotalTime_ApplyDamage)
+		bApplyConstantDamage = true;
+	
+	float interval_ApplyDamage = 0.1f; // preset value
+	float numIntervals = TotalTime_ApplyDamage / interval_ApplyDamage;
+	float BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
+	ADamageManager::ApplyRadialDamageOnce(AttackingWeapon, Origin, DamageRadius, BaseDamage);
+	if (bApplyConstantDamage)
+	{
+		TimerHandle_Loop = new FTimerHandle;
+		AttackingWeapon->GetWorld()->GetTimerManager().SetTimer(*TimerHandle_Loop, [AttackingWeapon, Origin, DamageRadius, BaseDamage]()
+			{
+				ADamageManager::ApplyRadialDamageOnce(AttackingWeapon, Origin, DamageRadius, BaseDamage);
+			}, interval_ApplyDamage, true);  // the bool paramter determines if the function will be called in loop or not
+
+		FTimerHandle TimerHandle_SelfDestroy;
+		AttackingWeapon->GetWorld()->GetTimerManager().SetTimer(TimerHandle_SelfDestroy, [AttackingWeapon]()
+			{
+				AttackingWeapon->GetWorldTimerManager().ClearTimer(*TimerHandle_Loop);
+			}, TotalTime_ApplyDamage + 0.01f, false);
+	}
+	return true;
+}
+
 
 bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
 {	

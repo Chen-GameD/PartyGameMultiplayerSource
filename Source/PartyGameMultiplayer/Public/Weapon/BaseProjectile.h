@@ -44,10 +44,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraSystem* AttackHitEffect_NSSystem;
 	
-
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackHit)
 		bool bAttackHit;
-	FTimerHandle TimerHandle_Loop;
+	float TotalTime_ApplyDamage;
+	//FTimerHandle TimerHandle_Loop;
 
 private:
 
