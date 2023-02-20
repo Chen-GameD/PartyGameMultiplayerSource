@@ -23,6 +23,7 @@ public:
 	static bool TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor, float DeltaTime=0.0f);
 	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
 	static bool TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter);
+	// Will be called each time the character takes damage
 	static bool ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedActor);
 private:
 	static bool ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage);

@@ -104,6 +104,7 @@ bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector 
 	float numIntervals = TotalTime_ApplyDamage / interval_ApplyDamage;
 	float BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 	ADamageManager::ApplyRadialDamageOnce(AttackingWeapon, Origin, DamageRadius, BaseDamage);
+	DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, bApplyConstantDamage ? TotalTime_ApplyDamage : 5.0f);
 	if (bApplyConstantDamage)
 	{
 		TimerHandle_Loop = new FTimerHandle;
@@ -124,67 +125,91 @@ bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector 
 
 bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
 {	
-	if (!AttackingWeapon || AttackingWeapon->WeaponType == EnumWeaponType::None || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!AttackingWeapon || !DamagedCharacter || AttackingWeapon->WeaponType == EnumWeaponType::None || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	TArray<EnumAttackBuff> AttackBuffs;
-	// Fork
 	if (AttackingWeapon->WeaponType == EnumWeaponType::Fork)
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	// Bomb's fork
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UDamageType::StaticClass())
-	{
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	}
-	// Blower
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Blower)
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	// Lighter
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Lighter)
 		AttackBuffs.Add(EnumAttackBuff::Burning);
-	// Flamethrower
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamethrower)
 	{
 		AttackBuffs.Add(EnumAttackBuff::Burning);
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
 	}
-	// Flamefork
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamefork)
 		AttackBuffs.Add(EnumAttackBuff::Burning);
-	// Taser
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Taser)
 		AttackBuffs.Add(EnumAttackBuff::Paralysis);
 
 	for (int32 i = 0; i < AttackBuffs.Num(); i++)
 	{
 		EnumAttackBuff AttackBuff = AttackBuffs[i];
+
+		if (!DamagedCharacter->BuffMap.Contains(AttackBuff))
+		{
+			DamagedCharacter->BuffMap.Add(AttackBuff);
+			TArray<float> buffParArr;
+			buffParArr.Add(0.0f);
+			buffParArr.Add(0.0f);
+			DamagedCharacter->BuffMap[AttackBuff] = buffParArr;
+		}
+		check(DamagedCharacter->BuffMap[AttackBuff].Num() == 2);
+		float& buffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
+		float& buffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
+
+		float buffPointsAdded = 0.0f;
+		check(AttackingWeapon->GetHoldingPlayer());
+		FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
+		FVector3d AttackedDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
+		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
+		ABaseWeapon* DamageCauser = AttackingWeapon;
+		FString ParName = "";
 		if (AttackBuff == EnumAttackBuff::Burning)
 		{
-			float buffPoints = 0.0f;
-			FString ParName = "BurningBuffPoints";
+			ParName = "BurningBuffPoints";
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				buffPoints = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, buffPoints, FVector3d::Zero(),
-				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
+				buffPointsAdded = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+
+			float oldBuffPoints = buffPoints;
+			buffPoints += buffPointsAdded;
+			if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)  // buff points has increased to the next integer
+			{
+				float BurningBuffAddTimeOnce = 0.0f;
+				ParName = "BurningBuffAddTimeOnce";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				buffRemainedTime += BurningBuffAddTimeOnce;
+			}
 		}
 		else if (AttackBuff == EnumAttackBuff::Paralysis)
 		{
-			float buffPoints = 1.0f;
-			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, buffPoints, FVector3d::Zero(),
-				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
+			buffPointsAdded = 1.0f;
+			buffPoints += buffPointsAdded;
+			buffPoints = FMath::Min(buffPoints, 1.0f);
+			if (buffPoints < 1.0f)
+			{
+				buffPoints = 1.0f;
+				float ParalysisBuffAddTimeOnce = 0.0f;
+				ParName = "ParalysisBuffAddTimeOnce";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				buffRemainedTime = ParalysisBuffAddTimeOnce;
+			}
 		}
-		else if (AttackBuff == EnumAttackBuff::Knockback)
+		else if (AttackBuff == EnumAttackBuff::Knockback || AttackBuff == EnumAttackBuff::Blowing)
 		{
-			float buffPoints = 1.0f;
-			check(AttackingWeapon->GetHoldingPlayer());
-			FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
-			FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, buffPoints, AttackerControlDir,
-				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-		}
-		else
-		{
-			return false;
+			buffPointsAdded = 1.0f;	
+			buffPoints += buffPointsAdded;
+			buffPoints = FMath::Min(buffPoints, 1.0f);
+			AttackedDir.Z = 0.0f;
+			AttackedDir *= 300.0f;
+			DamagedCharacter->LaunchCharacter(AttackedDir, true, false);
 		}
 	}	
 	return true;
@@ -212,8 +237,6 @@ bool ADamageManager::ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector
 		true			  // bDoFullDamage
 		//ECC_Visibility	  // DamagePreventionChannel
 	);
-	if (AttackingWeapon)
-		DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 
 	return true;
 }

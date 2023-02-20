@@ -1112,71 +1112,71 @@ void AMCharacter::Tick(float DeltaTime)
 }
 #pragma endregion Engine life cycle function
 
-float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
-	AController* EventInstigator, ABaseWeapon* DamageCauser)
-{
-	if (!AWeaponDataHelper::DamageManagerDataAsset)
-		return 0.0f;
-
-	if (!BuffMap.Contains(BuffType))
-	{
-		BuffMap.Add(BuffType);
-		TArray<float> buffParArr;
-		buffParArr.Add(0.0f);
-		buffParArr.Add(0.0f);
-		BuffMap[BuffType] = buffParArr;
-	}
-	check(BuffMap[BuffType].Num() == 2);
-
-	float& buffPoints = BuffMap[BuffType][0];
-	float& buffRemainedTime = BuffMap[BuffType][1];
-
-	if (BuffType == EnumAttackBuff::Burning)
-	{
-		float oldBuffPoints = buffPoints;
-		buffPoints += BuffPointsReceived;
-		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
-			float BurningBuffAddTimeOnce = 5.0f;
-			FString ParName = "BurningBuffAddTimeOnce";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			buffRemainedTime += BurningBuffAddTimeOnce;
-		}
-	}
-	else if (BuffType == EnumAttackBuff::Paralysis)
-	{
-		if (buffPoints < 1.0f)
-		{
-			buffPoints = 1.0f;
-			float ParalysisBuffAddTimeOnce = 5.0f;
-			FString ParName = "ParalysisBuffAddTimeOnce";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			buffRemainedTime = ParalysisBuffAddTimeOnce;
-		}		
-	}
-	else if (BuffType == EnumAttackBuff::Knockback)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));*/
-		LaunchCharacter(AttackedDir, true, false);
-	}
-	else if (BuffType == EnumAttackBuff::Blowing)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-		//	AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
-		LaunchCharacter(AttackedDir, false, false);
-	}
-	return 0.0f;
-}
+//float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
+//	AController* EventInstigator, ABaseWeapon* DamageCauser)
+//{
+//	if (!AWeaponDataHelper::DamageManagerDataAsset)
+//		return 0.0f;
+//
+//	if (!BuffMap.Contains(BuffType))
+//	{
+//		BuffMap.Add(BuffType);
+//		TArray<float> buffParArr;
+//		buffParArr.Add(0.0f);
+//		buffParArr.Add(0.0f);
+//		BuffMap[BuffType] = buffParArr;
+//	}
+//	check(BuffMap[BuffType].Num() == 2);
+//
+//	float& buffPoints = BuffMap[BuffType][0];
+//	float& buffRemainedTime = BuffMap[BuffType][1];
+//
+//	if (BuffType == EnumAttackBuff::Burning)
+//	{
+//		float oldBuffPoints = buffPoints;
+//		buffPoints += BuffPointsReceived;
+//		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
+//		{
+//			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
+//			float BurningBuffAddTimeOnce = 5.0f;
+//			FString ParName = "BurningBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			buffRemainedTime += BurningBuffAddTimeOnce;
+//		}
+//	}
+//	else if (BuffType == EnumAttackBuff::Paralysis)
+//	{
+//		if (buffPoints < 1.0f)
+//		{
+//			buffPoints = 1.0f;
+//			float ParalysisBuffAddTimeOnce = 5.0f;
+//			FString ParName = "ParalysisBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			buffRemainedTime = ParalysisBuffAddTimeOnce;
+//		}		
+//	}
+//	else if (BuffType == EnumAttackBuff::Knockback)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));*/
+//		LaunchCharacter(AttackedDir, true, false);
+//	}
+//	else if (BuffType == EnumAttackBuff::Blowing)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//		//	AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
+//		LaunchCharacter(AttackedDir, false, false);
+//	}
+//	return 0.0f;
+//}
 
 
 void AMCharacter::ActByBuff(float DeltaTime)
