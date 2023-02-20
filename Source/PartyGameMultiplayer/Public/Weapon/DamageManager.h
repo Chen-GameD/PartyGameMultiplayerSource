@@ -19,8 +19,11 @@ class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 public:
 	ADamageManager() {};
 
+	// The damaged actors are determined when entering this function( however, they can be teammates )
 	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor, float DeltaTime=0.0f);
-	static bool ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor);
+	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
+	static bool TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter);
+	static bool ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedActor);
 
 public:
 private:

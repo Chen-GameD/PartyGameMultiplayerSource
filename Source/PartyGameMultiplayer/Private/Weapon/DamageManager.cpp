@@ -5,6 +5,8 @@
 #include "Kismet/GameplayStatics.h"
 
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/CombinedWeapon/WeaponBomb.h"
 //#include "Weapon/JsonFactory.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "Character/MCharacter.h"
@@ -51,45 +53,8 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
 		//pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, AttackingWeapon->DamageType);
-
-		if (AttackingWeapon->WeaponType == EnumWeaponType::None)
-		{
-			return false;
-		}
-		// Fork(or Bomb's fork)
-		else if ( (AttackingWeapon->WeaponType == EnumWeaponType::Fork) ||  
-			(AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DeltaTime == -1.0f) )
-		{
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Blower
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Blower)
-		{
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Lighter
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Lighter)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-		}
-		// Flamethrower
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamethrower)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Flamefork
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamefork)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-		}
-		// Taser
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Taser)
-		{
-			ApplyBuff(EnumAttackBuff::Paralysis, AttackingWeapon, pCharacter);
-		}
 	}
-	else if (dynamic_cast<AMinigameMainObjective*>(DamagedActor))
+	else if (Cast<AMinigameMainObjective>(DamagedActor))
 	{
 		float Damage = 0.0f;
 		FString ParName = AttackingWeapon->GetWeaponName();
@@ -106,38 +71,102 @@ bool ADamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon
 	return true;
 }
 
-bool ADamageManager::ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor)
+bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter)
 {
-	if (!AWeaponDataHelper::DamageManagerDataAsset)
+	if (!AttackingWeapon)
 		return false;
 
-	if (AttackBuff == EnumAttackBuff::Burning)
-	{
-		float buffPoints = 0.0f;
-		FString ParName = "BurningBuffPoints";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPoints = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Burning, buffPoints, FVector3d::Zero(),
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else if (AttackBuff == EnumAttackBuff::Paralysis)
-	{
-		float buffPoints = 1.0f;
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, buffPoints, FVector3d::Zero(),
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else if (AttackBuff == EnumAttackBuff::Knockback)
-	{
-		float buffPoints = 1.0f;
-		check(AttackingWeapon->GetHoldingPlayer());
-		FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
-		FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Knockback, buffPoints, AttackerControlDir,
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else
-	{
+	FVector Origin = Epicenter;
+	float DamageRadius = 500.0f;
+	float BaseDamage = 30.0f;
+
+	TArray<AActor*> IgnoredActors;
+	// TODO: Add teammates
+	IgnoredActors.Add(AttackingWeapon->GetHoldingPlayer());
+
+	// Apply radial damage and impulse to all actors within the explosion radius
+	UGameplayStatics::ApplyRadialDamage(
+		AttackingWeapon,   //const UObject* WorldContextObject
+		BaseDamage,
+		Origin,
+		DamageRadius,
+		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
+		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
+		AttackingWeapon,		//AActor* DamageCauser
+		AttackingWeapon->GetHoldingPlayer()->GetController(), //AController* InstigatedByController
+		true			  // bDoFullDamage
+		//ECC_Visibility	  // DamagePreventionChannel
+	);
+	if(AttackingWeapon)
+		DrawDebugSphere(AttackingWeapon->GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+
+	return true;
+}
+
+bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
+{	
+	if (AttackingWeapon->WeaponType == EnumWeaponType::None || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
+
+	TArray<EnumAttackBuff> AttackBuffs;
+	// Fork
+	if (AttackingWeapon->WeaponType == EnumWeaponType::Fork)
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	// Bomb's fork
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UDamageType::StaticClass())
+	{
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
 	}
+	// Blower
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Blower)
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	// Lighter
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Lighter)
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+	// Flamethrower
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamethrower)
+	{
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	}
+	// Flamefork
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamefork)
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+	// Taser
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Taser)
+		AttackBuffs.Add(EnumAttackBuff::Paralysis);
+
+	for (int32 i = 0; i < AttackBuffs.Num(); i++)
+	{
+		EnumAttackBuff AttackBuff = AttackBuffs[i];
+		if (AttackBuff == EnumAttackBuff::Burning)
+		{
+			float buffPoints = 0.0f;
+			FString ParName = "BurningBuffPoints";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				buffPoints = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, buffPoints, FVector3d::Zero(),
+				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
+		}
+		else if (AttackBuff == EnumAttackBuff::Paralysis)
+		{
+			float buffPoints = 1.0f;
+			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, buffPoints, FVector3d::Zero(),
+				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
+		}
+		else if (AttackBuff == EnumAttackBuff::Knockback)
+		{
+			float buffPoints = 1.0f;
+			check(AttackingWeapon->GetHoldingPlayer());
+			FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
+			FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
+			DamagedCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, buffPoints, AttackerControlDir,
+				AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
+		}
+		else
+		{
+			return false;
+		}
+	}	
 	return true;
 }

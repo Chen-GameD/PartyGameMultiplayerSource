@@ -384,12 +384,12 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 
 void ABaseWeapon::GenerateAttackHitEffect()
 {
-	// TODO: assign a new variable(decided by AttackDetectComponent or Projectile) to spawnLocation
-	if (AttackDetectComponent)
-	{
-		FVector spawnLocation = AttackDetectComponent->GetComponentLocation();
-		UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-	}	
+	//// TODO: assign a new variable(decided by AttackDetectComponent or Projectile) to spawnLocation
+	//if (AttackDetectComponent)
+	//{
+	//	FVector spawnLocation = AttackDetectComponent->GetComponentLocation();
+	//	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+	//}	
 }
 
 

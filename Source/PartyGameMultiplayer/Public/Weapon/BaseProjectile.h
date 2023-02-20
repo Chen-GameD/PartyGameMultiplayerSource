@@ -47,6 +47,8 @@ protected:
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackHit)
 		bool bAttackHit;
+	FTimerHandle TimerHandle_Loop;
+
 private:
 
 };

@@ -886,6 +886,8 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	//if(DamageEvent.DamageTypeClass == UDamageType::StaticClass())
+
 	if (!IsDead)
 	{
 		float damageApplied = CurrentHealth - DamageTaken;

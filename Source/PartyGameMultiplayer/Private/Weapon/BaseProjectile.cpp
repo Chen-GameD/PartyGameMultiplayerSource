@@ -3,6 +3,7 @@
 
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/DamageManager.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 #include "Character/MCharacter.h"
 
@@ -29,13 +30,13 @@ ABaseProjectile::ABaseProjectile()
 	StaticMesh->SetupAttachment(RootComponent);
 	StaticMesh->SetCollisionProfileName(TEXT("Trigger"));
 
-	/*static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
 	if (DefaultMesh.Succeeded())
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
 		StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
-	}	*/
+	}	
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
@@ -68,7 +69,13 @@ void ABaseProjectile::BeginPlay()
 		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}
 	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 3.0f, false);
+	// In most cases, we expect the projectile to be destoryed way much shorter than MaxLiveTime, 
+	// because it will overlap with something soon or get below the KillZ value quickly.
+	float MaxLiveTime = 10.0f;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
+		{ 
+			Destroy(); 
+		}, MaxLiveTime, false);
 }
 
 
@@ -87,20 +94,18 @@ void ABaseProjectile::OnRep_bAttackHit()
 
 void ABaseProjectile::Destroyed()
 {
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Enter Destroyed")));
+
 	if (!AttackHitEffect_NSSystem)
 		return;
-	AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-	if (AttackHitEffect_NSComponent && AttackHitEffect_NSSystem)
+	UNiagaraComponent* StoredNSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	if (StoredNSComponent)
 	{
 		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [StoredNSComponent]()
 			{
-				AttackHitEffect_NSComponent->Deactivate();
-				AttackHitEffect_NSComponent = nullptr;
+				StoredNSComponent->Deactivate();
 			}, 2.0f, false);
-
-		/*FVector spawnLocation = GetActorLocation();
-		UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);*/
 	}	
 }
 
@@ -108,6 +113,8 @@ void ABaseProjectile::Destroyed()
 void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (bAttackHit)
+		return;
 	auto pWeapon = Cast<ABaseWeapon>(GetOwner());
 	if (!pWeapon)
 		return;
@@ -122,15 +129,26 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 		if (Cast<ACharacter>(OtherActor) && OtherActor == pHoldingPlayer)
 			return;
 
+		bAttackHit = true;
+		SetActorHiddenInGame(true);
 		pWeapon->GenerateDamageLike(OtherActor);
 
-		//bAttackHit = true;
-		//if (GetNetMode() == NM_ListenServer)
-		//{
-		//	OnRep_bAttackHit();
-		//}
-		//FTimerHandle TimerHandle;
-		//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() { Destroy(); }, 2.0f, false);
+		// Apply damage once
+		//ADamageManager::TryApplyRadialDamage(pWeapon, this);
+	
+		// Apply damage multiple times
+		FVector Epicenter = this->GetActorLocation();
+
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_Loop, [pWeapon, Epicenter]()
+			{
+				ADamageManager::TryApplyRadialDamage(pWeapon, Epicenter);
+			}, 1.0f, true);  // the bool paramter determines if the function will be called in loop or not
+
+		FTimerHandle TimerHandle_SelfDestroy;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle_SelfDestroy, [this]()
+			{
+				GetWorldTimerManager().ClearTimer(TimerHandle_Loop);
+			}, 3.01f, false);
 
 		Destroy();		
 	}
