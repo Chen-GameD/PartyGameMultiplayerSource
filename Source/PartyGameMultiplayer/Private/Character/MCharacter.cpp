@@ -899,8 +899,6 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	//if(DamageEvent.DamageTypeClass == UDamageType::StaticClass())
-
 	if (!IsDead)
 	{
 		float damageApplied = CurrentHealth - DamageTaken;
@@ -908,7 +906,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 
 		ABaseWeapon* AttackingWeapon = Cast<ABaseWeapon>(DamageCauser);
 		check(AttackingWeapon);
-		ADamageManager::ApplyBuff(AttackingWeapon, UDamageType::StaticClass(), this);
+		ADamageManager::ApplyBuff(AttackingWeapon, DamageEvent.DamageTypeClass, this);
 
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority()) {

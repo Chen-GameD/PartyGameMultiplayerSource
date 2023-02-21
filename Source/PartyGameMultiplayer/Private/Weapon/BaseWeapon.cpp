@@ -17,6 +17,7 @@
 #include "GameFramework/Character.h"
 
 #include "Weapon/DamageTypeToCharacter.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponDataHelper.h"
@@ -509,7 +510,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				&& ApplyDamageCounter == 0 )
 			{
 				//GenerateDamageLike(OtherActor, -1.0f);  
-				ADamageManager::TryApplyDamageToAnActor(this, UDamageType::StaticClass(), OtherActor);
+				ADamageManager::TryApplyDamageToAnActor(this, UMeleeDamageType::StaticClass(), OtherActor);
 				ApplyDamageCounter++;
 			}
 			// Listen server

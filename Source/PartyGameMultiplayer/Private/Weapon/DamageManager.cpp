@@ -9,6 +9,7 @@
 #include "Weapon/CombinedWeapon/WeaponBomb.h"
 //#include "Weapon/JsonFactory.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
 #include "Character/MCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
@@ -48,7 +49,7 @@ bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, TSubc
 		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
 			Damage *= interval_ApplyDamage;
 		// Special situation: Bomb's fork
-		if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UDamageType::StaticClass())
+		if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
 		{
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
@@ -131,7 +132,7 @@ bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamage
 	TArray<EnumAttackBuff> AttackBuffs;
 	if (AttackingWeapon->WeaponType == EnumWeaponType::Fork)
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	else if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UDamageType::StaticClass())
+	else if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
 	else if (AttackingWeapon->WeaponType == EnumWeaponType::Blower)
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
