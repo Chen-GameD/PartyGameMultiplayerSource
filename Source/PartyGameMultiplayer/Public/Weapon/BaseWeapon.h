@@ -112,6 +112,7 @@ private:
 /* MEMBER VARIABLES */
 public:
 	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
+	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
 
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
@@ -138,7 +139,7 @@ public:
 	float CD_LeftEnergy;	
 	float CD_DropSpeed;
 	float CD_RecoverSpeed;
-	
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
 

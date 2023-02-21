@@ -145,7 +145,7 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 
 		bAttackHit = true;
 		//pWeapon->GenerateDamageLike(OtherActor);
-		ADamageManager::TryApplyDamageToAnActor(pWeapon, OtherActor);
+		ADamageManager::TryApplyDamageToAnActor(pWeapon, UDamageType::StaticClass(), OtherActor);
 		ADamageManager::TryApplyRadialDamage(pWeapon, this->GetActorLocation());
 	
 		// Apply damage multiple times

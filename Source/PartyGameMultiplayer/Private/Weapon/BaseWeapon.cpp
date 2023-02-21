@@ -39,6 +39,14 @@ TMap<EnumWeaponType, FString> ABaseWeapon::WeaponEnumToString_Map =
 	{EnumWeaponType::Cannon, "Cannon"},
 };
 
+TMap<EnumAttackBuff, FString> ABaseWeapon::AttackBuffEnumToString_Map =
+{
+	{EnumAttackBuff::Burning, "Burning"},
+	{EnumAttackBuff::Paralysis, "Paralysis"},
+	{EnumAttackBuff::Blowing, "Blowing"},
+	{EnumAttackBuff::Knockback, "Knockback"},
+};
+
 ABaseWeapon::ABaseWeapon()
 {
 	bReplicates = true;	
@@ -138,8 +146,11 @@ void ABaseWeapon::Tick(float DeltaTime)
 					Elem.Value += DeltaTime;
 					if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 					{
-						//GenerateDamageLike(Elem.Key, DeltaTime);
-						ADamageManager::TryApplyDamageToAnActor(this, Elem.Key, DeltaTime);
+						if (ADamageManager::interval_ApplyDamage < Elem.Value)
+						{
+							ADamageManager::TryApplyDamageToAnActor(this, UDamageType::StaticClass(), Elem.Key);
+							Elem.Value -= ADamageManager::interval_ApplyDamage;
+						}						
 					}
 				}
 			}
@@ -498,7 +509,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				&& ApplyDamageCounter == 0 )
 			{
 				//GenerateDamageLike(OtherActor, -1.0f);  
-				ADamageManager::TryApplyDamageToAnActor(this, OtherActor, -1.0f);  // DeltaTime as -1.0f suggests it is one-hit type damge
+				ADamageManager::TryApplyDamageToAnActor(this, UDamageType::StaticClass(), OtherActor);
 				ApplyDamageCounter++;
 			}
 			// Listen server

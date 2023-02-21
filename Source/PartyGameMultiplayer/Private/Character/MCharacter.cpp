@@ -701,8 +701,8 @@ void AMCharacter::OnHealthUpdate()
 	//Server-specific functionality
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		//FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 
 		if (CurrentHealth <= 0)
 		{
@@ -835,6 +835,19 @@ void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 	playerController->SetCanMove(i_CanMove);
 }
 
+bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
+{
+	if (!BuffMap.Contains(AttackBuff))
+	{
+		BuffMap.Add(AttackBuff);
+		TArray<float> buffParArr;
+		for(int i = 0; i < 3; i++)
+			buffParArr.Add(0.0f);
+		BuffMap[AttackBuff] = buffParArr;
+	}
+	return(BuffMap[AttackBuff].Num() == 3);
+}
+
 // RepNotify function
 void AMCharacter::OnRep_CurrentHealth()
 {
@@ -892,11 +905,14 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 	{
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);
-		ADamageManager::ApplyBuff(Cast<ABaseWeapon>(DamageCauser), UDamageType::StaticClass(), this);
+
+		ABaseWeapon* AttackingWeapon = Cast<ABaseWeapon>(DamageCauser);
+		check(AttackingWeapon);
+		ADamageManager::ApplyBuff(AttackingWeapon, UDamageType::StaticClass(), this);
 
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority()) {
-			if (auto killer = Cast<AMCharacter>((Cast<ABaseWeapon>(DamageCauser))->GetHoldingPlayer())) {
+			if (auto killer = Cast<AMCharacter>(AttackingWeapon->GetHoldingPlayer())) {
 				if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
 					killerPS->addScore(5);
 					killerPS->addKill(1);
@@ -1072,10 +1088,14 @@ void AMCharacter::Tick(float DeltaTime)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		ActByBuff(DeltaTime);
-		// client-only
-		if (GetLocalRole() != ROLE_Authority)
-		// For EffectJump
+
+		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (GetNetMode() == NM_ListenServer)
+		{
+			if (oldIsOnGround != IsOnGround)
+				OnRep_IsOnGround();
+		}
 	}
 
 	// Client(Listen Server)
@@ -1097,18 +1117,7 @@ void AMCharacter::Tick(float DeltaTime)
 			}				
 		}
 	}
-
-	// server-only
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		bool oldIsOnGround = IsOnGround;
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-		if (GetNetMode() == NM_ListenServer)
-		{
-			if (oldIsOnGround != IsOnGround)
-				OnRep_IsOnGround();
-		}
-	}
+	KnockbackDirection_DuringLastFrame = FVector::ZeroVector;
 }
 #pragma endregion Engine life cycle function
 
@@ -1128,33 +1137,33 @@ void AMCharacter::Tick(float DeltaTime)
 //	}
 //	check(BuffMap[BuffType].Num() == 2);
 //
-//	float& buffPoints = BuffMap[BuffType][0];
-//	float& buffRemainedTime = BuffMap[BuffType][1];
+//	float& BuffPoints = BuffMap[BuffType][0];
+//	float& BuffRemainedTime = BuffMap[BuffType][1];
 //
 //	if (BuffType == EnumAttackBuff::Burning)
 //	{
-//		float oldBuffPoints = buffPoints;
-//		buffPoints += BuffPointsReceived;
-//		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
+//		float oldBuffPoints = BuffPoints;
+//		BuffPoints += BuffPointsReceived;
+//		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= BuffPoints)
 //		{
 //			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
 //			float BurningBuffAddTimeOnce = 5.0f;
 //			FString ParName = "BurningBuffAddTimeOnce";
 //			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 //				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-//			buffRemainedTime += BurningBuffAddTimeOnce;
+//			BuffRemainedTime += BurningBuffAddTimeOnce;
 //		}
 //	}
 //	else if (BuffType == EnumAttackBuff::Paralysis)
 //	{
-//		if (buffPoints < 1.0f)
+//		if (BuffPoints < 1.0f)
 //		{
-//			buffPoints = 1.0f;
+//			BuffPoints = 1.0f;
 //			float ParalysisBuffAddTimeOnce = 5.0f;
 //			FString ParName = "ParalysisBuffAddTimeOnce";
 //			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 //				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-//			buffRemainedTime = ParalysisBuffAddTimeOnce;
+//			BuffRemainedTime = ParalysisBuffAddTimeOnce;
 //		}		
 //	}
 //	else if (BuffType == EnumAttackBuff::Knockback)
@@ -1185,90 +1194,57 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		return;
 
 	EnumAttackBuff buffType;
-	/*  Burning */
+	/*  Burning */	
 	buffType = EnumAttackBuff::Burning;
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
-	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
+	if (CheckBuffMap(buffType))
+	{		
+		float& BuffRemainedTime = BuffMap[buffType][1];
+		if (0.0f < BuffRemainedTime)
 		{
-			//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
-			// key value
-			float BurningBuffDamagePerSecond = 5.0f;
+			float BurningBuffDamagePerSecond = 0.0f;
 			FString ParName = "BurningBuffDamagePerSecond";
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 				BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
-			buffRemainedTime -= DeltaTime;
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));
-			if (buffRemainedTime <= 0.0f)
-			{
-				buffPoints = 0.0f;
-				buffRemainedTime = 0.0f;
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
-			}
+			BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
+			/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), BuffRemainedTime));*/
 		}
 	}
 	/* Paralysis */
-	buffType = EnumAttackBuff::Paralysis;	
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
-	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints)
-		{
-			if (0.0f < buffRemainedTime)
-			{
-				//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
-
-				// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
-				// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
-				/*float targetCustomTimeDilation = 1.0f / 1000.0f;
-				if (CustomTimeDilation != targetCustomTimeDilation)
-				{
-					CustomTimeDilation = targetCustomTimeDilation;
-					buffRemainedTime -= DeltaTime;
-				}
-				else
-				{
-					buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
-				}*/
-				if (CanMove)
-				{
-					Server_SetCanMove(false);
-					CanMove = false;
-				}				
-				buffRemainedTime -= DeltaTime;
-			}
-			else
-			{
-				if (!CanMove)
-				{
-					Server_SetCanMove(true);
-					CanMove = true;
-				}
-				buffPoints = 0.0f;
-				buffRemainedTime = 0.0f;
-				//CustomTimeDilation = 1.0f;
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
-			}
-		}
-	}
-	// Knockback	
-	/*
+	//buffType = EnumAttackBuff::Paralysis;	
+	//if (CheckBuffMap(buffType))
+	//{
+	//	float& BuffPoints = BuffMap[buffType][0];
+	//	if (1.0f <= BuffPoints)
+	//	{
+	//		if (CanMove)
+	//		{
+	//			Server_SetCanMove(false);
+	//			CanMove = false;
+	//		}
+	//	}			
+	//	else
+	//	{
+	//		if (!CanMove)
+	//		{
+	//			Server_SetCanMove(true);
+	//			CanMove = true;
+	//		}
+	//	}
+	//}
+	/* Knockback */
 	buffType = EnumAttackBuff::Knockback;
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
+	if (CheckBuffMap(buffType))
 	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints)
+		float& BuffPoints = BuffMap[buffType][0];
+		if (1.0f <= BuffPoints)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Knockback"));
-			// TODO: be knocked back
-			buffPoints = 0.0f;
-			buffRemainedTime = 0.0f;
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Knockback"));
+			KnockbackDirection_DuringLastFrame.Z = 0.0f;
+			KnockbackDirection_DuringLastFrame *= 300.0f;
+			LaunchCharacter(KnockbackDirection_DuringLastFrame, true, false);
+			BuffPoints = 0.0f;
 		}
 	}
-	*/	
+		
 }

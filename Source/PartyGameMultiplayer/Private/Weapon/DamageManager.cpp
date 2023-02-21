@@ -13,9 +13,10 @@
 #include "LevelInteraction/MinigameMainObjective.h"
 
 FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
+float ADamageManager::interval_ApplyDamage = 0.1f; // preset value for all constant damage
 
 
-bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActor* DamagedActor, float DeltaTime)
+bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor)
 {
 	if (!AttackingWeapon || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
@@ -45,9 +46,9 @@ bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActo
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
-			Damage *= DeltaTime;
+			Damage *= interval_ApplyDamage;
 		// Special situation: Bomb's fork
-		if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DeltaTime == -1.0f)
+		if (AttackingWeapon->WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UDamageType::StaticClass())
 		{
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
@@ -63,7 +64,7 @@ bool ADamageManager::TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, AActo
 		if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(ParName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
 		if (AttackingWeapon->AttackType == EnumAttackType::Constant)
-			Damage *= DeltaTime;
+			Damage *= interval_ApplyDamage;
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, AttackingWeapon->MiniGameDamageType);
 	}
 	else
@@ -100,7 +101,6 @@ bool ADamageManager::TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector 
 	if (0.0f < TotalTime_ApplyDamage)
 		bApplyConstantDamage = true;
 	
-	float interval_ApplyDamage = 0.1f; // preset value
 	float numIntervals = TotalTime_ApplyDamage / interval_ApplyDamage;
 	float BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 	ADamageManager::ApplyRadialDamageOnce(AttackingWeapon, Origin, DamageRadius, BaseDamage);
@@ -151,65 +151,50 @@ bool ADamageManager::ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamage
 	{
 		EnumAttackBuff AttackBuff = AttackBuffs[i];
 
-		if (!DamagedCharacter->BuffMap.Contains(AttackBuff))
-		{
-			DamagedCharacter->BuffMap.Add(AttackBuff);
-			TArray<float> buffParArr;
-			buffParArr.Add(0.0f);
-			buffParArr.Add(0.0f);
-			DamagedCharacter->BuffMap[AttackBuff] = buffParArr;
-		}
-		check(DamagedCharacter->BuffMap[AttackBuff].Num() == 2);
-		float& buffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
-		float& buffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
+		check(DamagedCharacter->CheckBuffMap(AttackBuff));
+		float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
+		float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
+		float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
 
-		float buffPointsAdded = 0.0f;
-		check(AttackingWeapon->GetHoldingPlayer());
-		FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
-		FVector3d AttackedDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
-		ABaseWeapon* DamageCauser = AttackingWeapon;
+		float buffPointsToAdd = 0.0f;
+		float buffTimeToAdd = 0.0f;
+		if (AttackBuff == EnumAttackBuff::Knockback)
+		{
+			ACharacter* AttakingPlayer = AttackingWeapon->GetHoldingPlayer();
+			check(AttakingPlayer);
+			FVector3d AttackingDirection = AttakingPlayer->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			DamagedCharacter->KnockbackDirection_DuringLastFrame += AttackingDirection;
+		}		
+		
 		FString ParName = "";
-		if (AttackBuff == EnumAttackBuff::Burning)
+		// points to add
+		ParName = ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		ParName = ABaseWeapon::WeaponEnumToString_Map[AttackingWeapon->WeaponType] + "_" + 
+				ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		ParName = ABaseWeapon::WeaponEnumToString_Map[AttackingWeapon->WeaponType] + "_" +
+			ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		BuffPoints += buffPointsToAdd;
+		if(AttackBuff == EnumAttackBuff::Burning)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("BuffPoints: %f"), BuffPoints));
+		if (1.0f <= BuffPoints)
 		{
-			ParName = "BurningBuffPoints";
+			// time to add		
+			ParName = ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
+			// when it is time-based buff(burning), we add the time and substract 1 from BuffPoints; 
+			// otherwise(paralysis, knockback), we will neither add the time nor touch the BuffPoints
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				buffPointsAdded = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-
-			float oldBuffPoints = buffPoints;
-			buffPoints += buffPointsAdded;
-			if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)  // buff points has increased to the next integer
 			{
-				float BurningBuffAddTimeOnce = 0.0f;
-				ParName = "BurningBuffAddTimeOnce";
-				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-					BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				buffRemainedTime += BurningBuffAddTimeOnce;
-			}
-		}
-		else if (AttackBuff == EnumAttackBuff::Paralysis)
-		{
-			buffPointsAdded = 1.0f;
-			buffPoints += buffPointsAdded;
-			buffPoints = FMath::Min(buffPoints, 1.0f);
-			if (buffPoints < 1.0f)
-			{
-				buffPoints = 1.0f;
-				float ParalysisBuffAddTimeOnce = 0.0f;
-				ParName = "ParalysisBuffAddTimeOnce";
-				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-					ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				buffRemainedTime = ParalysisBuffAddTimeOnce;
-			}
-		}
-		else if (AttackBuff == EnumAttackBuff::Knockback || AttackBuff == EnumAttackBuff::Blowing)
-		{
-			buffPointsAdded = 1.0f;	
-			buffPoints += buffPointsAdded;
-			buffPoints = FMath::Min(buffPoints, 1.0f);
-			AttackedDir.Z = 0.0f;
-			AttackedDir *= 300.0f;
-			DamagedCharacter->LaunchCharacter(AttackedDir, true, false);
+				buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+				BuffPoints -= floorf(BuffPoints);
+			}				
 		}
 	}	
 	return true;
@@ -225,16 +210,20 @@ bool ADamageManager::ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector
 	// TODO: Add teammates
 	IgnoredActors.Add(AttackingWeapon->GetHoldingPlayer());
 
-	UGameplayStatics::ApplyRadialDamage(
+	bool bDoFullDamage = true;
+	float DamageFalloff = bDoFullDamage ? 0.f : 1.f;
+	UGameplayStatics::ApplyRadialDamageWithFalloff(
 		AttackingWeapon,   //const UObject* WorldContextObject
-		BaseDamage,
+		BaseDamage,	
+		0.0f,			// float MinDamage
 		Origin,
+		0.f,			// float DamageInnerRadius
 		DamageRadius,
+		DamageFalloff,
 		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
 		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
 		AttackingWeapon,		//AActor* DamageCauser
-		AttackingWeapon->GetHoldingPlayer()->GetController(), //AController* InstigatedByController
-		true			  // bDoFullDamage
+		AttackingWeapon->GetHoldingPlayer()->GetController() //AController* InstigatedByController
 		//ECC_Visibility	  // DamagePreventionChannel
 	);
 
