@@ -11,6 +11,7 @@
 #include "GameBase/MGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
+#include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
 
 // Constructor
@@ -128,6 +129,16 @@ void AMPlayerController::BeginPlay()
 	// 	bShowMouseCursor = true;
 	// 	DefaultMouseCursor = EMouseCursor::Default;
 	// }
+}
+
+void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
+{
+	UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
+	if(GameInstanceRef)
+	{
+		GameInstanceRef->DestroySession();
+	}
+	Super::OnNetCleanup(Connection);
 }
 
 // Input

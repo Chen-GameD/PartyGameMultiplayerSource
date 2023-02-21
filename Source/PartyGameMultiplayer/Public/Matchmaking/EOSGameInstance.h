@@ -42,7 +42,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void JoinSession(int32 index);
 	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void DestroySession();
 
 	UFUNCTION(BlueprintCallable)
@@ -53,6 +53,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void UI_ShowMainMenu();
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsLoggedIn();
 
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 

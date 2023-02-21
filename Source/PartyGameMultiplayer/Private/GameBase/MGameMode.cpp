@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Math/TransformCalculus3D.h"
 #include "Character/MCharacter.h"
+#include "Matchmaking/EOSGameInstance.h"
 #include "Weapon/JsonFactory.h"
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -101,7 +102,7 @@ void AMGameMode::CheckGameStart()
 	bool CanStart = true;
 
 	// Test
-	CurrentPlayerNum = 2;
+	//CurrentPlayerNum = 2;
 	// Test
 	
 	if (TeamOnePlayerNum + TeamTwoPlayerNum == CurrentPlayerNum && CurrentPlayerNum == PlayerNum)
@@ -123,7 +124,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 0.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 5, false);
 			}
 		}
 		else
@@ -175,13 +176,22 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 
 	if (NewPlayer)
 	{
-		/*FUniqueNetIdRepl UniqueNetIdRepl;
-		if(NewPlayer->IsLocalController())
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
 		{
-			ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
-			if(LocalPlayer)
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			if(NewPlayer->IsLocalController())
 			{
-				UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
+				if(LocalPlayer)
+				{
+					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+				}
+				else
+				{
+					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+					check(IsValid(NetConnectionRef));
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				}
 			}
 			else
 			{
@@ -189,26 +199,19 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				check(IsValid(NetConnectionRef));
 				UniqueNetIdRepl = NetConnectionRef->PlayerId;
 			}
-		}
-		else
-		{
-			UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-			check(IsValid(NetConnectionRef));
-			UniqueNetIdRepl = NetConnectionRef->PlayerId;
-		}
 		
-		TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-		if(UniqueNetId == nullptr)
-			return;
-		IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-		IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-		bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
-		if(bRegistrationSuccess)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
-			UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
-		}*/
-		
+			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+			if(UniqueNetId == nullptr)
+				return;
+			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
+			if(bRegistrationSuccess)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
+			}
+		}
 		CurrentPlayerNum++;
 
 		for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
@@ -230,12 +233,50 @@ void AMGameMode::Logout(AController* Exiting)
 
 	if (Exiting)
 	{
+		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
+		{
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			if(NewPlayer->IsLocalController())
+			{
+				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
+				if(LocalPlayer)
+				{
+					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+				}
+				else
+				{
+					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+					check(IsValid(NetConnectionRef));
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				}
+			}
+			else
+			{
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				check(IsValid(NetConnectionRef));
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+			}
+		
+			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+			if(UniqueNetId == nullptr)
+				return;
+			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
+			if(bRegistrationSuccess)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+			}
+		}
+
 		CurrentPlayerNum--;
 
 		if (CurrentPlayerNum <= 0)
 		{
 			// Need to restart the server level
-			UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+			//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
 		}
 	}
 }
