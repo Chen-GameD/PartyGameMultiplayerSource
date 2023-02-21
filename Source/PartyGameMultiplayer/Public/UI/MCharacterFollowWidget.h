@@ -55,7 +55,7 @@ protected:
 	UCanvasPanel* InGame_WeaponEnergyCanvasHolder;
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* InGame_WeaponEnergyCanvas;
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UImage* InGame_WeaponEnergy;
 
 public:
