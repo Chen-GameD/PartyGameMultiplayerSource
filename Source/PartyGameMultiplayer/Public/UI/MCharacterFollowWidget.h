@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Character/MCharacter.h"
+#include "Components/CanvasPanel.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -27,6 +29,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void SetWeaponEnergyProgressBar(float Percent);
+	UFUNCTION()
+	void SetWeaponEnergyUIVisibility(bool IsVisible);
 
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
@@ -48,5 +52,12 @@ protected:
 	UTextBlock* Tip_Right_Text;
 
 	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* InGame_WeaponEnergyCanvasHolder;
+	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* InGame_WeaponEnergyCanvas;
+	UPROPERTY(meta = (BindWidget))
 	UImage* InGame_WeaponEnergy;
+
+public:
+	AMCharacter* OwningPawn;
 };
