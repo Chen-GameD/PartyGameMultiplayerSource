@@ -7,13 +7,13 @@
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
-#include "HealthBar.generated.h"
+#include "MCharacterFollowWidget.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class PARTYGAMEMULTIPLAYER_API UHealthBar : public UUserWidget
+class PARTYGAMEMULTIPLAYER_API UMCharacterFollowWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
@@ -22,13 +22,20 @@ public:
 	void SetHealthToProgressBar(float percentage);
 	void ShowTip();
 	void HideTip();
+	UFUNCTION()
+	void SetPlayerName(FString i_PlayerName);
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetWeaponEnergyProgressBar(float Percent);
+
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+	
 protected:
 	UPROPERTY(meta = (BindWidget))
-	UProgressBar* healthBar;
-
+	UProgressBar* HealthBar;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* healthText;
+	UTextBlock* PlayerName;
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* Tip_Left;
@@ -39,4 +46,7 @@ protected:
 	UTextBlock* Tip_Left_Text;
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Tip_Right_Text;
+
+	UPROPERTY(meta = (BindWidget))
+	UImage* InGame_WeaponEnergy;
 };

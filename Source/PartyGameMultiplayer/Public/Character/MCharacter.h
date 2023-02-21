@@ -116,6 +116,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetCanMove(bool i_CanMove);
+
+	UFUNCTION()
+	float GetCurrentEnergyWeaponUIUpdatePercent();
 	
 protected:
 

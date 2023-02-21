@@ -20,7 +20,7 @@
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
-#include "UI/HealthBar.h"
+#include "UI/MCharacterFollowWidget.h"
 
 // Constructor
 // ===================================================
@@ -775,13 +775,13 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 {
 	if (isVisible)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Hidden);
 	}
@@ -791,14 +791,14 @@ void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
 {
 	if (isVisible)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
 		healthBar->SetLocalControlledUI();
 	}
 	else
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Hidden);
 	}
@@ -825,6 +825,14 @@ void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
 	playerController->SetCanMove(i_CanMove);
+}
+
+float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
+{
+	if (CombineWeapon)
+	{
+		
+	}
 }
 
 // RepNotify function
@@ -932,7 +940,7 @@ float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AC
 
 void AMCharacter::SetHealthBarUI()
 {
-	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+	UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 	healthBar->SetHealthToProgressBar(CurrentHealth/MaxHealth);
 }
 #pragma endregion Health
@@ -962,7 +970,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		if (isShowing)
 		{
 			healthBar->ShowTip();
@@ -1030,7 +1038,7 @@ void AMCharacter::BeginPlay()
 	
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 		if (MyGameState)
