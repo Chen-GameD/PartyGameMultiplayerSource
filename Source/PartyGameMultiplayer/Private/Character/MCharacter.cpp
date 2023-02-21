@@ -22,7 +22,7 @@
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
-#include "UI/HealthBar.h"
+#include "UI/MCharacterFollowWidget.h"
 
 // Constructor
 // ===================================================
@@ -70,8 +70,8 @@ AMCharacter::AMCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	//Create HealthBar UI Widget
-	HealthWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
-	HealthWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -783,13 +783,13 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 {
 	if (isVisible)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Hidden);
 	}
@@ -799,14 +799,14 @@ void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
 {
 	if (isVisible)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
 		healthBar->SetLocalControlledUI();
 	}
 	else
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Hidden);
 	}
@@ -846,6 +846,40 @@ bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
 		BuffMap[AttackBuff] = buffParArr;
 	}
 	return(BuffMap[AttackBuff].Num() == 3);
+}
+
+
+float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
+{
+	float retValue = -1;
+	
+	if (CombineWeapon)
+	{
+		if (CombineWeapon->CD_MaxEnergy > 0)
+		{
+			// Need to show cd UI
+			retValue = CombineWeapon->CD_LeftEnergy / CombineWeapon->CD_MaxEnergy;
+		}
+	}
+	else
+	{
+		if (LeftWeapon)
+		{
+			if (LeftWeapon->CD_MaxEnergy > 0)
+			{
+				retValue = LeftWeapon->CD_LeftEnergy / LeftWeapon->CD_MaxEnergy;
+			}
+		}
+		else if (RightWeapon)
+		{
+			if (RightWeapon->CD_MaxEnergy > 0)
+			{
+				retValue = RightWeapon->CD_LeftEnergy / RightWeapon->CD_MaxEnergy;
+			}
+		}
+	}
+
+	return retValue;
 }
 
 // RepNotify function
@@ -957,7 +991,7 @@ float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AC
 
 void AMCharacter::SetHealthBarUI()
 {
-	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+	UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 	healthBar->SetHealthToProgressBar(CurrentHealth/MaxHealth);
 }
 #pragma endregion Health
@@ -987,7 +1021,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		if (isShowing)
 		{
 			healthBar->ShowTip();
@@ -1055,7 +1089,7 @@ void AMCharacter::BeginPlay()
 	
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 		if (MyGameState)

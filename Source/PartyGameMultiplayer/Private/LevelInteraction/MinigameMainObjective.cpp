@@ -11,7 +11,7 @@
 #include "NiagaraFunctionLibrary.h"
 //#include "GeometryCacheComponent.h"
 
-#include "UI/HealthBar.h"
+#include "UI/MCharacterFollowWidget.h"
 #include "Components/WidgetComponent.h"
 #include "Character/MCharacter.h"
 #include "GameBase/MGameMode.h"
@@ -113,7 +113,7 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 void AMinigameMainObjective::BeginPlay()
 {
 	Super::BeginPlay();
-	if (UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject()))
+	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
 	{
 		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
 		healthBar->HideTip();
@@ -126,7 +126,7 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
 
-	if (UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject()))
+	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
 	{
 		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
 	}
