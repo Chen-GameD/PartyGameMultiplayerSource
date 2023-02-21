@@ -5,7 +5,7 @@
 
 #include <string>
 
-UMGameStatusWidget::UMGameStatusWidget(const FObjectInitializer& ObjectInitializer)
+UMGameStatusWidget::UMGameStatusWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
 {
 }
 
