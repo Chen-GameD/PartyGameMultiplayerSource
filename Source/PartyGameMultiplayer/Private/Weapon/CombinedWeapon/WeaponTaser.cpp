@@ -11,22 +11,17 @@
 
 AWeaponTaser::AWeaponTaser()
 {
-	/*
-		bCanEverTick is set to true in BaseWeapon Class.
-		You can uncomment the following line and turn this off to improve performance if you don't need it.
-	*/
-	//PrimaryActorTick.bCanEverTick = false;
-
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Taser;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Body.Taser_Body"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
+	// create a secondary weapon mesh which is specific for Taser
 	TaserForkMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TaserForkMesh"));
 	TaserForkMesh->SetCollisionProfileName(TEXT("Trigger"));
 	/*TaserForkMesh->SetCollisionProfileName(TEXT("Custom"));
@@ -49,12 +44,6 @@ AWeaponTaser::AWeaponTaser()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-	Damage = 25.0f;
-
-	// WeaponName
-	WeaponName = "Taser";
 
 	bStretching = true;
 	originalX = TaserForkMesh->GetRelativeLocation().X;
@@ -121,30 +110,4 @@ void AWeaponTaser::CheckInitilization()
 	Super::CheckInitilization();
 	// do something specific to this weapon
 	check(AttackHitEffect);
-}
-
-
-//void AWeaponTaser::GenerateAttackHitEffect()
-//{
-//	FVector spawnLocation = GetActorLocation();
-//	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-//}
-//
-//
-//void AWeaponTaser::GenerateDamage(class AActor* DamagedActor)
-//{
-//	// Note: The 3rd parameter is EventInstigator, be careful if the weapon has an instigator or not.
-//	// if it doesn't and the 3rd parameter is set to GetInstigator()->Controller, the game would crash when overlap happens
-//	// (The projectile in the demo has an instigator, because the instigator parameter is assigned when the the character spawns it in HandleFire function)
-//	check(GetInstigator()->Controller);
-//	UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//}
-
-void AWeaponTaser::OnRep_bAttackOn()
-{
-	Super::OnRep_bAttackOn();
-	/*if(bAttackOn)
-		TaserForkMesh->SetRelativeLocation(TaserForkMesh->GetRelativeLocation() + FVector3d(-150.0f, 0, 0));
-	else
-		TaserForkMesh->SetRelativeLocation(TaserForkMesh->GetRelativeLocation() - FVector3d(-150.0f, 0, 0));*/
 }

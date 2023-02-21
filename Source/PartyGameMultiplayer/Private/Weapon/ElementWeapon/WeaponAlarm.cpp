@@ -2,6 +2,7 @@
 
 
 #include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/ElementWeapon/ProjectileAlarm.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
@@ -14,17 +15,18 @@
 // Sets default values
 AWeaponAlarm::AWeaponAlarm()
 {
-	IsCombined = true;
+	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Alarm;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
+	AttackType = EnumAttackType::SpawnProjectile;
 
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -38,12 +40,36 @@ AWeaponAlarm::AWeaponAlarm()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Alarm";
-
 }
 
+
+void AWeaponAlarm::OnRep_bAttackOn()
+{
+	Super::OnRep_bAttackOn();
+
+	SetActorHiddenInGame(true);
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
+		{ 
+			if(!HasBeenCombined)
+				SetActorHiddenInGame(false); 
+		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+}
+
+
+void AWeaponAlarm::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree
+
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
+}

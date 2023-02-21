@@ -13,10 +13,10 @@ enum EnumWeaponType
 	Fork,
 	Blower,
 	Lighter,
+	Alarm,
 	Flamethrower,
 	Flamefork,
 	Taser,
-	Alarm,
 	Alarmgun,
 	Bomb,
 	Cannon
@@ -25,7 +25,8 @@ enum EnumWeaponType
 enum EnumAttackType
 {
 	OneHit,
-	Constant
+	Constant,
+	SpawnProjectile
 };
 
 enum EnumAttackBuff
@@ -59,13 +60,14 @@ public:
 	virtual void AttackStart();
 	// should only be called on server
 	virtual void AttackStop();
-
 	//Get weapon name
 	virtual FString GetWeaponName() const;
-
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
 	ACharacter* GetHoldingPlayer() const;
+
+	//// only on server, generate stuff like damage, buff and so on
+	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
 
 protected:
 	virtual void CheckInitilization();
@@ -76,8 +78,8 @@ protected:
 	virtual void DisplayCaseCollisionSetActive(bool IsActive);
 	// should be only on client
 	virtual void GenerateAttackHitEffect();
-	// only on server, generate stuff like damage, buff and so on
-	virtual void GenerateDamageLike(class AActor* DamagedActor);
+	// should only be called on server
+	virtual void SpawnProjectile();
 
 	/* RepNotify Functions */
 	UFUNCTION()
@@ -88,10 +90,10 @@ protected:
 		virtual void OnRep_bAttackOverlap();
 	UFUNCTION()
 		virtual void OnRep_IsPickedUp();	
-	UFUNCTION()
-		virtual void OnRep_DamageGenerationCounter();
+	//UFUNCTION()
+	//	virtual void OnRep_DamageGenerationCounter();
 
-	// only is called on server
+	// only is called on server, deal with damage applied by the AttackDetectComponent
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -109,24 +111,36 @@ private:
 
 /* MEMBER VARIABLES */
 public:
+	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
+
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
-	bool IsCombined;
+	bool IsCombineWeapon;  // if it is a combine type weapon or not
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
+	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* textureUI;
 	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
 
-	// TODO: Assgin them one time by an external class(like damage manager)
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float Damage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float MiniGameDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float AccumulatedTimeToGenerateDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float MiniGameAccumulatedTimeToGenerateDamage;
+	// Damage related
+	//float Damage;
+	//float MiniGameDamage;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> DamageType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> MiniGameDamageType;
+	// CoolDown related(CD_LeftEnergy needs to replicate so the client can show the correct cd UI)
+	float CD_MaxEnergy;
+	float CD_MinEnergyToAttak;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
+	float CD_LeftEnergy;	
+	float CD_DropSpeed;
+	float CD_RecoverSpeed;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
+		bool IsPickedUp;
 
 protected:
 	// Might be necessary if there are multiple weapons of the same type
@@ -142,8 +156,8 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseScale;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
-		bool IsPickedUp;
+	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
+	int ApplyDamageCounter;
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOn)
 		bool bAttackOn;
@@ -151,8 +165,8 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOverlap)
 		bool bAttackOverlap;
 
-	UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
-		unsigned int DamageGenerationCounter;
+	//UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
+	//	unsigned int DamageGenerationCounter;
 
 	// Which actor is being attacked - how long they have been attacked
 	TMap<AActor*, float> AttackObjectMap;
@@ -174,6 +188,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* SpawnProjectilePointMesh;
 
 	/*	PrimitiveComponent(has OnWeaponOverlapBegin&OnWeaponOverlapEnd) used to test collision
 			UPrimitiveComponent->UMeshComponent->UStaticMeshComponent
@@ -195,12 +211,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UParticleSystem* AttackHitEffect;
 
-	//The damage type and damage that will be done by this weapon
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> DamageType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> MiniGameDamageType;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class ABaseProjectile> SpecificProjectileClass;
 
 	//WeaponName
 	FString WeaponName;

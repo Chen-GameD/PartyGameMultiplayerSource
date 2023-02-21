@@ -72,10 +72,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	// customized TakeDamge Function
 	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
 
-	float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
-		AController* EventInstigator, ABaseWeapon* DamageCauser);
+	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
+		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
 	/**	Update HealthBar UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -277,6 +278,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
 
+	// Buff Map
+	// BuffName: BuffPoints, BuffRemainedTime
+	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
@@ -286,10 +291,6 @@ protected:
 	/** The player's current health. When reduced to 0, they are considered dead.*/
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
-
-	// Buff Map
-	// BuffName: BuffPoints, BuffRemainedTime
-	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 
 	UPROPERTY(Replicated)
 	bool IsDead;
@@ -306,9 +307,9 @@ protected:
 	float OriginalMaxWalkSpeed;
 	float DashSpeed;
 	FTimerHandle DashingTimer;
-	// Buff
-	UPROPERTY(EditAnywhere, Category = "Buff")
-	float BurningBuffDamagePerSecond;
+
+	// buff
+	bool CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
 	// to do

@@ -35,8 +35,8 @@ void ATriggerBoxJumpPad::BeginPlay()
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = dynamic_cast<ACharacter*>(OtherActor);
-    if (OtherActor && (OtherActor != this) && pCharacter) {
+    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
+    if (OtherActor && OtherActor != this && pCharacter) {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character enters the Jump Pad"));
         pCharacter->LaunchCharacter(LaunchVelocity, bXYOverride, bZOverride);
     }
@@ -44,8 +44,8 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, cl
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = dynamic_cast<ACharacter*>(OtherActor);
-    if (OtherActor && (OtherActor != this) && pCharacter) {
+    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
+    if (OtherActor && OtherActor != this && pCharacter) {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character exits the Jump Pad"));
         //pCharacter->StopJumping();
     }

@@ -15,6 +15,8 @@
 #include "NiagaraComponent.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/JsonFactory.h"
+#include "Weapon/DamageManager.h"
+#include "Weapon/WeaponDataHelper.h"
 #include <Character/animUtils.h>
 
 #include "Character/MPlayerController.h"
@@ -104,6 +106,8 @@ AMCharacter::AMCharacter()
 	EffectLand = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectLand"));
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
+
+	CanMove = true;
 }
 
 void AMCharacter::Restart()
@@ -513,13 +517,17 @@ void AMCharacter::OnCombineWeapon()
 
 		ABaseWeapon* spawnedCombineWeapon = GetWorld()->SpawnActor<ABaseWeapon>(combineWeaponRef, FVector(0,0,0), FRotator::ZeroRotator);
 		CombineWeapon = spawnedCombineWeapon;
-		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower);
+		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower || 
+							CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
+							CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
+		LeftWeapon->HasBeenCombined = true;
 		RightWeapon->SetActorHiddenInGame(true);
+		RightWeapon->HasBeenCombined = true;
 
 		// If combine successfully, always set isLeftHeld Anim State to false, 
 		// this will be reset to true when picking up new item in PickUp_Implementation
@@ -675,15 +683,15 @@ void AMCharacter::OnHealthUpdate()
 	//Client-specific functionality
 	if (IsLocallyControlled())
 	{
-		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		//FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 		
 		if (CurrentHealth <= 0)
 		{
 			// Death
 			// to do
-			FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+			//FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
 			
 			// Force respawn
 			Server_ForceRespawn(5);
@@ -886,10 +894,13 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	//if(DamageEvent.DamageTypeClass == UDamageType::StaticClass())
+
 	if (!IsDead)
 	{
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);
+		ADamageManager::ApplyBuff(Cast<ABaseWeapon>(DamageCauser), UDamageType::StaticClass(), this);
 
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority()) {
@@ -1109,82 +1120,77 @@ void AMCharacter::Tick(float DeltaTime)
 }
 #pragma endregion Engine life cycle function
 
-float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
-	AController* EventInstigator, ABaseWeapon* DamageCauser)
-{
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::AccumulateAttackedBuff()!");
-		return false;
-	}
-
-	if (!BuffMap.Contains(BuffType))
-	{
-		BuffMap.Add(BuffType);
-		TArray<float> buffParArr;
-		buffParArr.Add(0.0f);
-		buffParArr.Add(0.0f);
-		BuffMap[BuffType] = buffParArr;
-	}
-	check(BuffMap[BuffType].Num() == 2);
-
-	float& buffPoints = BuffMap[BuffType][0];
-	float& buffRemainedTime = BuffMap[BuffType][1];
-	if (BuffType == EnumAttackBuff::Burning)
-	{
-		float oldBuffPoints = buffPoints;
-		buffPoints += BuffPointsReceived;
-		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
-			float burningBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffAddTimeOnce", burningBuffAddTimeOnce))
-				burningBuffAddTimeOnce = 0.0f;
-			buffRemainedTime += burningBuffAddTimeOnce;
-		}
-	}
-	else if (BuffType == EnumAttackBuff::Paralysis)
-	{
-		if (buffPoints < 1.0f)
-		{
-			buffPoints = 1.0f;
-			float paralysisBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("paralysisBuffAddTimeOnce", paralysisBuffAddTimeOnce))
-				paralysisBuffAddTimeOnce = 0.0f;
-			buffRemainedTime = paralysisBuffAddTimeOnce;
-		}		
-	}
-	else if (BuffType == EnumAttackBuff::Knockback)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
-		LaunchCharacter(AttackedDir, true, false);
-	}
-	else if (BuffType == EnumAttackBuff::Blowing)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
-		LaunchCharacter(AttackedDir, false, false);
-	}
-	return 0.0f;
-}
+//float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
+//	AController* EventInstigator, ABaseWeapon* DamageCauser)
+//{
+//	if (!AWeaponDataHelper::DamageManagerDataAsset)
+//		return 0.0f;
+//
+//	if (!BuffMap.Contains(BuffType))
+//	{
+//		BuffMap.Add(BuffType);
+//		TArray<float> buffParArr;
+//		buffParArr.Add(0.0f);
+//		buffParArr.Add(0.0f);
+//		BuffMap[BuffType] = buffParArr;
+//	}
+//	check(BuffMap[BuffType].Num() == 2);
+//
+//	float& buffPoints = BuffMap[BuffType][0];
+//	float& buffRemainedTime = BuffMap[BuffType][1];
+//
+//	if (BuffType == EnumAttackBuff::Burning)
+//	{
+//		float oldBuffPoints = buffPoints;
+//		buffPoints += BuffPointsReceived;
+//		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
+//		{
+//			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
+//			float BurningBuffAddTimeOnce = 5.0f;
+//			FString ParName = "BurningBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			buffRemainedTime += BurningBuffAddTimeOnce;
+//		}
+//	}
+//	else if (BuffType == EnumAttackBuff::Paralysis)
+//	{
+//		if (buffPoints < 1.0f)
+//		{
+//			buffPoints = 1.0f;
+//			float ParalysisBuffAddTimeOnce = 5.0f;
+//			FString ParName = "ParalysisBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			buffRemainedTime = ParalysisBuffAddTimeOnce;
+//		}		
+//	}
+//	else if (BuffType == EnumAttackBuff::Knockback)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));*/
+//		LaunchCharacter(AttackedDir, true, false);
+//	}
+//	else if (BuffType == EnumAttackBuff::Blowing)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//		//	AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
+//		LaunchCharacter(AttackedDir, false, false);
+//	}
+//	return 0.0f;
+//}
 
 
 void AMCharacter::ActByBuff(float DeltaTime)
 {
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::ActByBuff()!");
+	if (!AWeaponDataHelper::DamageManagerDataAsset)
 		return;
-	}
 
 	EnumAttackBuff buffType;
 	/*  Burning */
@@ -1195,19 +1201,20 @@ void AMCharacter::ActByBuff(float DeltaTime)
 		float& buffRemainedTime = BuffMap[buffType][1];
 		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
+			//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
 			// key value
-			float burningBuffDamagePerSecond = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffDamagePerSecond", burningBuffDamagePerSecond))
-				burningBuffDamagePerSecond = 0.0f;
-			SetCurrentHealth(CurrentHealth - DeltaTime * burningBuffDamagePerSecond);
+			float BurningBuffDamagePerSecond = 5.0f;
+			FString ParName = "BurningBuffDamagePerSecond";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
 			buffRemainedTime -= DeltaTime;
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));
 			if (buffRemainedTime <= 0.0f)
 			{
 				buffPoints = 0.0f;
 				buffRemainedTime = 0.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
 			}
 		}
 	}
@@ -1217,27 +1224,42 @@ void AMCharacter::ActByBuff(float DeltaTime)
 	{
 		float& buffPoints = BuffMap[buffType][0];
 		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
+		if (1.0f <= buffPoints)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
-			// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
-			// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
-			float targetCustomTimeDilation = 1.0f / 1000.0f;
-			if (CustomTimeDilation != targetCustomTimeDilation)
+			if (0.0f < buffRemainedTime)
 			{
-				CustomTimeDilation = targetCustomTimeDilation;
+				//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
+
+				// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
+				// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
+				/*float targetCustomTimeDilation = 1.0f / 1000.0f;
+				if (CustomTimeDilation != targetCustomTimeDilation)
+				{
+					CustomTimeDilation = targetCustomTimeDilation;
+					buffRemainedTime -= DeltaTime;
+				}
+				else
+				{
+					buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
+				}*/
+				if (CanMove)
+				{
+					Server_SetCanMove(false);
+					CanMove = false;
+				}				
 				buffRemainedTime -= DeltaTime;
 			}
 			else
 			{
-				buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
-			}			
-			if (buffRemainedTime <= 0.0f)
-			{
+				if (!CanMove)
+				{
+					Server_SetCanMove(true);
+					CanMove = true;
+				}
 				buffPoints = 0.0f;
 				buffRemainedTime = 0.0f;
-				CustomTimeDilation = 1.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
+				//CustomTimeDilation = 1.0f;
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
 			}
 		}
 	}

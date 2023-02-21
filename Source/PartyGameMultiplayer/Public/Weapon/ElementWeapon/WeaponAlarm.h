@@ -18,12 +18,15 @@ class PARTYGAMEMULTIPLAYER_API AWeaponAlarm : public ABaseWeapon
 public:
 	AWeaponAlarm();
 
+	// should only be called on server
+	virtual void SpawnProjectile() override;
+
 protected:
+	virtual void OnRep_bAttackOn() override;
 private:
 
 // MEMBER VARIABLES
 public:
 protected:
 private:
-	
 };

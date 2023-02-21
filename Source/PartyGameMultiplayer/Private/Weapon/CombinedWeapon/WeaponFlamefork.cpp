@@ -19,11 +19,11 @@ AWeaponFlamefork::AWeaponFlamefork()
 	*/
 	//PrimaryActorTick.bCanEverTick = false;
 
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Flamefork;
+	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Flamefork/FlameFork.FlameFork"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
@@ -43,12 +43,6 @@ AWeaponFlamefork::AWeaponFlamefork()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Flamefork";
 }
 
 
@@ -58,20 +52,3 @@ void AWeaponFlamefork::CheckInitilization()
 	// do something specific to this weapon
 	check(AttackHitEffect);
 }
-
-
-//void AWeaponFlamefork::GenerateAttackHitEffect()
-//{
-//	FVector spawnLocation = GetActorLocation();
-//	UGameplayStatics::SpawnEmitterAtLocation(this, AttackHitEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
-//}
-
-
-//void AWeaponFlamefork::GenerateDamage(class AActor* DamagedActor)
-//{
-//	// Note: The 3rd parameter is EventInstigator, be careful if the weapon has an instigator or not.
-//	// if it doesn't and the 3rd parameter is set to GetInstigator()->Controller, the game would crash when overlap happens
-//	// (The projectile in the demo has an instigator, because the instigator parameter is assigned when the the character spawns it in HandleFire function)
-//	check(GetInstigator()->Controller);
-//	UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//}
