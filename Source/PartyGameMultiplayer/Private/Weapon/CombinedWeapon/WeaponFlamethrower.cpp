@@ -14,7 +14,6 @@ AWeaponFlamethrower::AWeaponFlamethrower()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Flamethrower;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Flamethrower/Flame.Flame"));

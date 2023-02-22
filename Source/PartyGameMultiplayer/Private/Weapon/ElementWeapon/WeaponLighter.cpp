@@ -15,7 +15,6 @@ AWeaponLighter::AWeaponLighter()
 {
 	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Lighter;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Lighter/Lighter.Lighter"));
 	if (DefaultMesh.Succeeded())

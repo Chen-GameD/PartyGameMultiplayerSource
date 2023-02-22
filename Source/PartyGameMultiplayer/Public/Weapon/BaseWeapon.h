@@ -4,38 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Weapon/WeaponDataHelper.h"
+
 #include "BaseWeapon.generated.h"
-
-
-enum EnumWeaponType
-{
-	None,
-	Fork,
-	Blower,
-	Lighter,
-	Alarm,
-	Flamethrower,
-	Flamefork,
-	Taser,
-	Alarmgun,
-	Bomb,
-	Cannon
-};
-
-enum EnumAttackType
-{
-	OneHit,
-	Constant,
-	SpawnProjectile
-};
-
-enum EnumAttackBuff
-{
-	Burning,
-	Paralysis,
-	Blowing,
-	Knockback
-};
 
 
 UCLASS(Abstract)
@@ -61,7 +33,7 @@ public:
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
-	virtual FString GetWeaponName() const;
+	virtual FString GetWeaponName();
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
 	AController* GetHoldingController() const;
@@ -111,10 +83,6 @@ private:
 
 /* MEMBER VARIABLES */
 public:
-	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
-	static TMap<EnumWeaponType, EnumAttackType> WeaponEnumToAttackTypeEnum_Map;
-	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
-
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
 	bool IsCombineWeapon;  // if it is a combine type weapon or not

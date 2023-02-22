@@ -13,7 +13,6 @@ AWeaponFork::AWeaponFork()
 {
 	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Fork;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Fork/Fork.Fork"));
 	if (DefaultMesh.Succeeded())

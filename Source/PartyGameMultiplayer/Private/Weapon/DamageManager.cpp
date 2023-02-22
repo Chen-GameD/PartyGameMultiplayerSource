@@ -34,10 +34,10 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	if (auto pPawn = Controller->GetPawn())
 	{		
 		float Damage = 0.0f;
-		FString ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType];
+		FString ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
-		if (ABaseWeapon::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
+		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
 			Damage *= interval_ApplyDamage;
 		// Special situation: Bomb's fork
 		if (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
@@ -50,10 +50,10 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	else if (Cast<AMinigameMainObjective>(DamagedActor))
 	{
 		float Damage = 0.0f;
-		FString ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType];
+		FString ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(ParName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
-		if (ABaseWeapon::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
+		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
 			Damage *= interval_ApplyDamage;
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
 	}
@@ -156,15 +156,15 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		
 		FString ParName = "";
 		// points to add
-		ParName = ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_" + 
-				ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" + 
+				AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_" +
-			ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
+		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
+			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		BuffPoints += buffPointsToAdd;
@@ -173,7 +173,7 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		if (1.0f <= BuffPoints)
 		{
 			// time to add		
-			ParName = ABaseWeapon::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
+			ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
 			// when it is time-based buff(burning), we add the time and substract 1 from BuffPoints; 
 			// otherwise(paralysis, knockback), we will neither add the time nor touch the BuffPoints
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))

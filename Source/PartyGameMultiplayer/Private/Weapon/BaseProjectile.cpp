@@ -127,16 +127,17 @@ void ABaseProjectile::BeginPlay()
 
 	/* Assign member variables by map */
 	FString ParName = "";
+	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 	// total time	
-	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_TotalTime";
+	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// total damage
-	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_TotalDamage";
+	ParName = WeaponName + "_TotalDamage";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		TotalDamage_ForTotalTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// damage radius
-	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_DamageRadius";
+	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// Is constant damage

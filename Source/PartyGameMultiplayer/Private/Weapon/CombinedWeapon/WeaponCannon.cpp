@@ -17,7 +17,6 @@ AWeaponCannon::AWeaponCannon()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Cannon;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Cannon/Cannon.Cannon"));

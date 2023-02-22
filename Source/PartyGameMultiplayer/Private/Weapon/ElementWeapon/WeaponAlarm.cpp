@@ -17,7 +17,6 @@ AWeaponAlarm::AWeaponAlarm()
 {
 	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Alarm;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));

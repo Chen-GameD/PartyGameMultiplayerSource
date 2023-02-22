@@ -13,7 +13,6 @@ AWeaponTaser::AWeaponTaser()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Taser;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Body.Taser_Body"));
 	if (DefaultMesh.Succeeded())

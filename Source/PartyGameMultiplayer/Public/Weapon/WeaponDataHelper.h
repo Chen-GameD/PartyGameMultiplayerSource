@@ -9,6 +9,37 @@
 
 #include "WeaponDataHelper.generated.h"
 
+enum EnumWeaponType
+{
+	None,
+	Fork,
+	Blower,
+	Lighter,
+	Alarm,
+	Flamethrower,
+	Flamefork,
+	Taser,
+	Alarmgun,
+	Bomb,
+	Cannon
+};
+
+enum EnumAttackType
+{
+	OneHit,
+	Constant,
+	SpawnProjectile
+};
+
+enum EnumAttackBuff
+{
+	Burning,
+	Paralysis,
+	Blowing,
+	Knockback
+};
+
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AWeaponDataHelper : public AActor
 {
@@ -18,7 +49,10 @@ public:
 	AWeaponDataHelper();
 
 public:
-	static FString RandomFileName;  // useless as of now
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
+
+	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
+	static TMap<EnumWeaponType, EnumAttackType> WeaponEnumToAttackTypeEnum_Map;
+	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
 
 };

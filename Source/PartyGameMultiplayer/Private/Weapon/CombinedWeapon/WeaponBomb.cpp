@@ -21,7 +21,6 @@ AWeaponBomb::AWeaponBomb()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Bomb;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_1(TEXT("/Game/ArtAssets/Models/Bomb/Bomb.Bomb"));

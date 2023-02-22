@@ -25,43 +25,6 @@
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
-TMap<EnumWeaponType, FString> ABaseWeapon::WeaponEnumToString_Map = 
-{
-	{EnumWeaponType::None, "None"},
-	{EnumWeaponType::Fork, "Fork"},
-	{EnumWeaponType::Blower, "Blower"},
-	{EnumWeaponType::Lighter, "Lighter"},
-	{EnumWeaponType::Alarm, "Alarm"},
-	{EnumWeaponType::Flamethrower, "Flamethrower"},
-	{EnumWeaponType::Flamefork, "Flamefork"},
-	{EnumWeaponType::Taser, "Taser"},
-	{EnumWeaponType::Alarmgun, "Alarmgun"},
-	{EnumWeaponType::Bomb, "Bomb"},
-	{EnumWeaponType::Cannon, "Cannon"},
-};
-
-TMap<EnumWeaponType, EnumAttackType> ABaseWeapon::WeaponEnumToAttackTypeEnum_Map =
-{
-	{EnumWeaponType::Fork, EnumAttackType::OneHit},
-	{EnumWeaponType::Blower, EnumAttackType::Constant},
-	{EnumWeaponType::Lighter, EnumAttackType::OneHit},
-	{EnumWeaponType::Alarm, EnumAttackType::SpawnProjectile},
-	{EnumWeaponType::Flamethrower, EnumAttackType::Constant},
-	{EnumWeaponType::Flamefork, EnumAttackType::OneHit},
-	{EnumWeaponType::Taser, EnumAttackType::OneHit},
-	{EnumWeaponType::Alarmgun, EnumAttackType::SpawnProjectile},
-	{EnumWeaponType::Bomb, EnumAttackType::SpawnProjectile},
-	{EnumWeaponType::Cannon, EnumAttackType::SpawnProjectile},
-};
-
-TMap<EnumAttackBuff, FString> ABaseWeapon::AttackBuffEnumToString_Map =
-{
-	{EnumAttackBuff::Burning, "Burning"},
-	{EnumAttackBuff::Paralysis, "Paralysis"},
-	{EnumAttackBuff::Blowing, "Blowing"},
-	{EnumAttackBuff::Knockback, "Knockback"},
-};
-
 ABaseWeapon::ABaseWeapon()
 {
 	bReplicates = true;	
@@ -70,12 +33,12 @@ ABaseWeapon::ABaseWeapon()
 	IsPickedUp = false;
 	HasBeenCombined = false;
 	WeaponType = EnumWeaponType::None;
+	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
-	// DisplayCase->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
@@ -320,11 +283,12 @@ void ABaseWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	CheckInitilization();
+	GetWeaponName(); // to update weapon name
 
 	// Assign some member variables(we want both the server and client have these values)
 	if (AWeaponDataHelper::DamageManagerDataAsset)
 	{
-		// CoolDown
+		// CoolDown		
 		FString ParName = WeaponName + "_" + "CD_MaxEnergy";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
@@ -571,8 +535,10 @@ void ABaseWeapon::OnDisplayCaseOverlapBegin(class UPrimitiveComponent* Overlappe
 	}
 }
 
-FString ABaseWeapon::GetWeaponName() const
+FString ABaseWeapon::GetWeaponName()
 {
+	if (WeaponName == "")
+		WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 	return WeaponName;
 }
 
