@@ -58,6 +58,23 @@ AWeaponBomb::AWeaponBomb()
 }
 
 
+void AWeaponBomb::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (ShouldHideWeapon)
+	{
+		if (CD_MaxEnergy / CD_RecoverSpeed <= TimePassed_SinceLastAttackOn)
+		{
+			WeaponMesh->SetVisibility(true);
+			TimePassed_SinceLastAttackOn = 0.0f;
+			ShouldHideWeapon = false;
+		}
+		TimePassed_SinceLastAttackOn += DeltaTime;
+	}
+}
+
+
 void AWeaponBomb::AttackStart()
 {
 	if (bAttackOn || !GetOwner())
@@ -124,17 +141,10 @@ void AWeaponBomb::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	//if (bAttackOn && WeaponMesh->IsVisible())
-	//{
-	//	WeaponMesh->SetVisibility(false);
-	//	//WeaponMesh_WithoutBomb->SetVisibility(true);
-	//	FTimerHandle TimerHandle;
-	//	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-	//		{
-	//			WeaponMesh->SetVisibility(true);
-	//			//WeaponMesh_WithoutBomb->SetVisibility(false);
-	//		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
-	//}	
+	if (bAttackOn && WeaponMesh->IsVisible())
+		WeaponMesh->SetVisibility(false);
+	TimePassed_SinceLastAttackOn = 0.0f;
+	ShouldHideWeapon = true;
 }
 
 

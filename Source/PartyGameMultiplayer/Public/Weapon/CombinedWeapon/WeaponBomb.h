@@ -18,6 +18,8 @@ class PARTYGAMEMULTIPLAYER_API AWeaponBomb : public ABaseWeapon
 public:
 	AWeaponBomb();
 
+	virtual void Tick(float DeltaTime) override;
+
 	// should only be called on server
 	virtual void AttackStart() override;
 	// should only be called on server
@@ -35,6 +37,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh_WithoutBomb;
 protected:
+	bool ShouldHideWeapon;
+	float TimePassed_SinceLastAttackOn;
 private:
 	
 };
