@@ -78,8 +78,8 @@ void ABaseProjectile::Tick(float DeltaTime)
 			return;
 		}
 
-		// Explosion has started
-		if (HasExploded)
+		// Explosion has started && is constant
+		if (HasExploded && bApplyConstantDamage)
 		{
 			// Explosion is finished
 			if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
