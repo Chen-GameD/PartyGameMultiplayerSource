@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -19,16 +19,18 @@ class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 public:
 	ADamageManager() {};
 
+	// why not pass weapon pointer but AActor* DamageCauser(can be either weapon* or projectile)
+	// because weapon* may be destroyed or transfered to another player when projectile is apply damage
+	
 	// The damaged actors are determined when entering this function( however, they can be teammates )
-	static bool TryApplyDamageToAnActor(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AActor* DamagedActor);
+	static bool TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AActor* DamagedActor);
 	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
-	static bool TryApplyRadialDamage(ABaseWeapon* AttackingWeapon, FVector Epicenter);
-	// Will be called each time the character takes damage
-	static bool ApplyBuff(ABaseWeapon* AttackingWeapon, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedActor);
+	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage);
+	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
+	static bool ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter);
 private:
-	static bool ApplyRadialDamageOnce(ABaseWeapon* AttackingWeapon, FVector Origin, float DamageRadius, float BaseDamage);
+	
 public:
-	static FTimerHandle* TimerHandle_Loop;
 	static float interval_ApplyDamage; // preset value for all constant damage
 private:
 };

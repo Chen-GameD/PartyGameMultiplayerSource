@@ -125,17 +125,17 @@ void AWeaponBomb::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	if (bAttackOn && WeaponMesh->IsVisible())
-	{
-		WeaponMesh->SetVisibility(false);
-		//WeaponMesh_WithoutBomb->SetVisibility(true);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-			{
-				WeaponMesh->SetVisibility(true);
-				//WeaponMesh_WithoutBomb->SetVisibility(false);
-			}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
-	}	
+	//if (bAttackOn && WeaponMesh->IsVisible())
+	//{
+	//	WeaponMesh->SetVisibility(false);
+	//	//WeaponMesh_WithoutBomb->SetVisibility(true);
+	//	FTimerHandle TimerHandle;
+	//	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+	//		{
+	//			WeaponMesh->SetVisibility(true);
+	//			//WeaponMesh_WithoutBomb->SetVisibility(false);
+	//		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+	//}	
 }
 
 

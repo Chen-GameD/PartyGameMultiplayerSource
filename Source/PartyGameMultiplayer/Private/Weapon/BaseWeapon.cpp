@@ -40,6 +40,20 @@ TMap<EnumWeaponType, FString> ABaseWeapon::WeaponEnumToString_Map =
 	{EnumWeaponType::Cannon, "Cannon"},
 };
 
+TMap<EnumWeaponType, EnumAttackType> ABaseWeapon::WeaponEnumToAttackTypeEnum_Map =
+{
+	{EnumWeaponType::Fork, EnumAttackType::OneHit},
+	{EnumWeaponType::Blower, EnumAttackType::Constant},
+	{EnumWeaponType::Lighter, EnumAttackType::OneHit},
+	{EnumWeaponType::Alarm, EnumAttackType::SpawnProjectile},
+	{EnumWeaponType::Flamethrower, EnumAttackType::Constant},
+	{EnumWeaponType::Flamefork, EnumAttackType::OneHit},
+	{EnumWeaponType::Taser, EnumAttackType::OneHit},
+	{EnumWeaponType::Alarmgun, EnumAttackType::SpawnProjectile},
+	{EnumWeaponType::Bomb, EnumAttackType::SpawnProjectile},
+	{EnumWeaponType::Cannon, EnumAttackType::SpawnProjectile},
+};
+
 TMap<EnumAttackBuff, FString> ABaseWeapon::AttackBuffEnumToString_Map =
 {
 	{EnumAttackBuff::Burning, "Burning"},
@@ -147,9 +161,9 @@ void ABaseWeapon::Tick(float DeltaTime)
 					Elem.Value += DeltaTime;
 					if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 					{
-						if (ADamageManager::interval_ApplyDamage < Elem.Value)
+						if (ADamageManager::interval_ApplyDamage < Elem.Value && HoldingController)
 						{
-							ADamageManager::TryApplyDamageToAnActor(this, UDamageType::StaticClass(), Elem.Key);
+							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
 							Elem.Value -= ADamageManager::interval_ApplyDamage;
 						}						
 					}
@@ -191,10 +205,11 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
 	IsPickedUp = true;
 
-	HoldingPlayer = pCharacter;
-	check(HoldingPlayer != nullptr);
-	SetInstigator(HoldingPlayer);
-	SetOwner(HoldingPlayer);
+	check(pCharacter);
+	HoldingController = pCharacter->GetController();
+	check(HoldingController);
+	SetInstigator(pCharacter);
+	SetOwner(pCharacter);
 
 	SetActorEnableCollision(false);
 	//  Set DisplayCaseCollision to inactive
@@ -212,10 +227,9 @@ void ABaseWeapon::GetThrewAway()
 {
 	IsPickedUp = false;
 
-	auto OldHoldingPlayer = HoldingPlayer;
-	HoldingPlayer = nullptr;
-	SetInstigator(HoldingPlayer);
-	SetOwner(HoldingPlayer);
+	HoldingController = nullptr;
+	SetInstigator(nullptr);
+	SetOwner(nullptr);
 
 	SetActorEnableCollision(true);
 	//  Set DisplayCaseCollision to active
@@ -507,10 +521,9 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			bAttackOverlap = true;
 
 			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
-				&& ApplyDamageCounter == 0 )
+				&& ApplyDamageCounter == 0 && HoldingController)
 			{
-				//GenerateDamageLike(OtherActor, -1.0f);  
-				ADamageManager::TryApplyDamageToAnActor(this, UMeleeDamageType::StaticClass(), OtherActor);
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
 				ApplyDamageCounter++;
 			}
 			// Listen server
@@ -563,9 +576,9 @@ FString ABaseWeapon::GetWeaponName() const
 	return WeaponName;
 }
 
-ACharacter* ABaseWeapon::GetHoldingPlayer() const
+AController* ABaseWeapon::GetHoldingController() const
 {
-	return HoldingPlayer;
+	return HoldingController;
 }
 
 

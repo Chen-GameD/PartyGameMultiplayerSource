@@ -24,8 +24,6 @@ ABaseProjectile::ABaseProjectile()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
-
-	bAttackHit = false;
 	
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProjectileMesh"));
 	StaticMesh->SetupAttachment(RootComponent);
@@ -50,15 +48,66 @@ ABaseProjectile::ABaseProjectile()
 	//AttackHitEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackHitEffect_NSComponent"));
 	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
 
+	LiveTime = 0.0f;
+	MaxLiveTime = 10.0f;
+
 	TotalTime_ApplyDamage = 0.0f;
+	TotalDamage_ForTotalTime = 0.0f;
+	Origin = FVector::ZeroVector;
+	DamageRadius = 0.0f;
+	bApplyConstantDamage = false;
+	BaseDamage = 0.0f;
+	HasExploded = false;
+	TimePassed_SinceExplosion = 0.0f;
+	TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
 }
+
+void ABaseProjectile::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);	
+	
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		// In most cases, we expect the projectile to be destoryed way much shorter than MaxLiveTime, 
+		// because it will overlap with something soon or get below the KillZ value quickly.
+		LiveTime += DeltaTime;
+		if (MaxLiveTime < LiveTime)
+		{
+			Destroy();
+			return;
+		}
+
+		// Explosion has started
+		if (HasExploded)
+		{
+			// Explosion is finished
+			if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
+			{
+				Destroy();
+				return;
+			}
+
+			// Explosion is not finished
+			// TryApplyRadialDamage when reaches the timeinterval
+			if (ADamageManager::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
+			{
+				ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+				TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
+			}
+			TimePassed_SinceExplosion += DeltaTime;
+			TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
+		}
+	}
+}
+
 
 
 void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABaseProjectile, bAttackHit);
+	DOREPLIFETIME(ABaseProjectile, HasExploded);	
 }
 
 
@@ -66,99 +115,92 @@ void ABaseProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Assign TotalTime_ApplyDamage by map
-	auto pWeapon = Cast<ABaseWeapon>(GetOwner());
-	check(pWeapon);
-	FString ParName = pWeapon->GetWeaponName() + "_TotalTime";
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		auto pWeapon = Cast<ABaseWeapon>(GetOwner());
+		check(pWeapon && pWeapon->IsPickedUp);
+		WeaponType = pWeapon->WeaponType;
+		Controller = pWeapon->GetHoldingController();
+		check(Controller);
+	}	
+
+	/* Assign member variables by map */
+	FString ParName = "";
+	// total time	
+	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	// total damage
+	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_TotalDamage";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		TotalDamage_ForTotalTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	// damage radius
+	ParName = ABaseWeapon::WeaponEnumToString_Map[WeaponType] + "_DamageRadius";
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
+		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	// Is constant damage
+	if (0.0f < TotalTime_ApplyDamage)
+		bApplyConstantDamage = true;
+	// BaseDamage
+	float numIntervals = TotalTime_ApplyDamage / ADamageManager::interval_ApplyDamage;
+	BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 
 	// Server duty
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}
-	FTimerHandle TimerHandle;
-	// In most cases, we expect the projectile to be destoryed way much shorter than MaxLiveTime, 
-	// because it will overlap with something soon or get below the KillZ value quickly.
-	float MaxLiveTime = 10.0f;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
-		{ 
-			Destroy(); 
-		}, MaxLiveTime, false);
 }
 
 
-void ABaseProjectile::OnRep_bAttackHit()
+void ABaseProjectile::OnRep_HasExploded()
 {
-	//if (bAttackHit)
-	//{
-	//	AttackHitEffect_NSComponent->Activate();
-	//}
-	//else
-	//{
-	//	AttackHitEffect_NSComponent->Deactivate();
-	//}
+	if (HasExploded)
+	{
+		StaticMesh->SetVisibility(false);
+		ProjectileMovementComponent->StopMovementImmediately();		
+		if (AttackHitEffect_NSSystem)
+			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());	
+	}
 }
 
 
 void ABaseProjectile::Destroyed()
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Destroyed")));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Enter Destroyed")));
 
-	if (!AttackHitEffect_NSSystem)
-		return;
-	AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-	if (0.0f < TotalTime_ApplyDamage)
+	if (AttackHitEffect_NSComponent)
 	{
-		if (AttackHitEffect_NSComponent)
-		{
-			FTimerHandle TimerHandle;
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-				{
-					AttackHitEffect_NSComponent->Deactivate();
-					AttackHitEffect_NSComponent = nullptr;
-				}, TotalTime_ApplyDamage, false);
-		}
-	}	
+		AttackHitEffect_NSComponent->Deactivate();
+		AttackHitEffect_NSComponent = nullptr;
+	}
 }
 
 
 void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (bAttackHit)
-		return;
-	auto pWeapon = Cast<ABaseWeapon>(GetOwner());
-	if (!pWeapon)
-		return;
-	auto pHoldingPlayer = pWeapon->GetInstigator();
-	if (!pHoldingPlayer)
+	if (HasExploded)
 		return;
 
-	if (GetOwner() && pWeapon->IsPickedUp)
+	if (Cast<ABaseWeapon>(OtherActor))
+		return;
+	if (Cast<APawn>(OtherActor) && Controller && OtherActor == Controller->GetPawn())
+		return;
+
+	Origin = this->GetActorLocation();
+	HasExploded = true;
+	if (GetNetMode() == NM_ListenServer)
 	{
-		if (Cast<ABaseWeapon>(OtherActor))
-			return;
-		if (Cast<ACharacter>(OtherActor) && OtherActor == pHoldingPlayer)
-			return;
-
-		bAttackHit = true;
-		//pWeapon->GenerateDamageLike(OtherActor);
-		ADamageManager::TryApplyDamageToAnActor(pWeapon, UDamageType::StaticClass(), OtherActor);
-		ADamageManager::TryApplyRadialDamage(pWeapon, this->GetActorLocation());
-	
-		// Apply damage multiple times
-		//GetWorld()->GetTimerManager().SetTimer(TimerHandle_Loop, [pWeapon, this->GetActorLocation()]()
-		//	{
-		//		ADamageManager::TryApplyRadialDamage(pWeapon, Epicenter);
-		//	}, 1.0f, true);  // the bool paramter determines if the function will be called in loop or not
-		//FTimerHandle TimerHandle_SelfDestroy;
-		//GetWorld()->GetTimerManager().SetTimer(TimerHandle_SelfDestroy, [this]()
-		//	{
-		//		GetWorldTimerManager().ClearTimer(TimerHandle_Loop);
-		//	}, 3.01f, false);
-
-		Destroy();		
+		OnRep_HasExploded();
 	}
+
+	// Direct Hit Damage
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+
+	// Range Damage		
+	ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 }

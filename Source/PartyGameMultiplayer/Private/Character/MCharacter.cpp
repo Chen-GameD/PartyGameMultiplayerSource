@@ -13,6 +13,7 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
+#include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/JsonFactory.h"
 #include "Weapon/DamageManager.h"
@@ -931,28 +932,32 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 	}
 }
 
+// DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (!IsDead)
 	{
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+		// Check if it is the attack from self or teammates
+		auto MyController = GetController();
+		if (!MyController)
+			return 0.0f;
+		AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
+		AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+		if (!AttackerPS || !MyPS)
+			return 0.0f;
+		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
+			return 0.0f;
 
-		ABaseWeapon* AttackingWeapon = Cast<ABaseWeapon>(DamageCauser);
-		check(AttackingWeapon);
-		ADamageManager::ApplyBuff(AttackingWeapon, DamageEvent.DamageTypeClass, this);
+		float damageApplied = CurrentHealth - DamageTaken;
+		SetCurrentHealth(damageApplied);		
+		ADamageManager::ApplyBuff(DamageCauser, EventInstigator, DamageEvent.DamageTypeClass, this);
 
 		// Score Kill Death Handling
-		if (CurrentHealth <= 0 && HasAuthority()) {
-			if (auto killer = Cast<AMCharacter>(AttackingWeapon->GetHoldingPlayer())) {
-				if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-					killerPS->addScore(5);
-					killerPS->addKill(1);
-				}
-				if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-					myPS->addDeath(1);
-				}
-			}
+		if (CurrentHealth <= 0 && HasAuthority()) 
+		{
+			AttackerPS->addScore(5);
+			AttackerPS->addKill(1);
+			MyPS->addDeath(1);
 		}
 
 		return damageApplied;
@@ -964,26 +969,26 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 
 float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser)
 {
-	if (!IsDead)
-	{
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+	//if (!IsDead)
+	//{
+	//	float damageApplied = CurrentHealth - DamageTaken;
+	//	SetCurrentHealth(damageApplied);
 
-		// Score Kill Death Handling
-		if (CurrentHealth <= 0 && HasAuthority()) {
-			if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
-				if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-					killerPS->addScore(5);
-					killerPS->addKill(1);
-				}
-				if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-					myPS->addDeath(1);
-				}
-			}
-		}
+	//	// Score Kill Death Handling
+	//	if (CurrentHealth <= 0 && HasAuthority()) {
+	//		if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
+	//			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
+	//				killerPS->addScore(5);
+	//				killerPS->addKill(1);
+	//			}
+	//			if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
+	//				myPS->addDeath(1);
+	//			}
+	//		}
+	//	}
 
-		return damageApplied;
-	}
+	//	return damageApplied;
+	//}
 
 	return 0.0f;
 }

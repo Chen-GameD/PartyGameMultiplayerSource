@@ -47,13 +47,13 @@ void AWeaponAlarm::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	SetActorHiddenInGame(true);
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
-		{ 
-			if(!HasBeenCombined)
-				SetActorHiddenInGame(false); 
-		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+	//SetActorHiddenInGame(true);
+	//FTimerHandle TimerHandle;
+	//GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
+	//	{ 
+	//		if(!HasBeenCombined)
+	//			SetActorHiddenInGame(false); 
+	//	}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
 }
 
 

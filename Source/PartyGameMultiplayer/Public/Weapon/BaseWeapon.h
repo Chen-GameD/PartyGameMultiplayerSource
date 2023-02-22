@@ -64,7 +64,7 @@ public:
 	virtual FString GetWeaponName() const;
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
-	ACharacter* GetHoldingPlayer() const;
+	AController* GetHoldingController() const;
 
 	//// only on server, generate stuff like damage, buff and so on
 	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
@@ -112,6 +112,7 @@ private:
 /* MEMBER VARIABLES */
 public:
 	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
+	static TMap<EnumWeaponType, EnumAttackType> WeaponEnumToAttackTypeEnum_Map;
 	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
 
 	EnumWeaponType WeaponType;
@@ -148,7 +149,7 @@ protected:
 	size_t ID;
 
 	// don't replicate pointers
-	ACharacter* HoldingPlayer;
+	AController* HoldingController;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseLocation;
