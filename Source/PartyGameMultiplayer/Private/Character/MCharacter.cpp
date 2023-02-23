@@ -70,7 +70,7 @@ AMCharacter::AMCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	//Create HealthBar UI Widget
-	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
@@ -456,6 +456,11 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 		}
 		
 		AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
+
+		if (RightWeapon)
+		{
+			RightWeapon->HasBeenCombined = false;
+		}
 	}
 	else if (!isLeft && RightWeapon)
 	{
@@ -481,6 +486,11 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 		
 		// Need to update weapon type for anim
 		AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
+
+		if (LeftWeapon)
+		{
+			LeftWeapon->HasBeenCombined = false;
+		}
 	}
 }
 
