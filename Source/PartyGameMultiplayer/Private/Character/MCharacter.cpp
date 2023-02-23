@@ -878,6 +878,10 @@ float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
 	return retValue;
 }
 
+void AMCharacter::SetElectricShockAnimState(bool i_state) {
+	this->AnimState[8] = i_state;
+}
+
 // RepNotify function
 void AMCharacter::OnRep_CurrentHealth()
 {

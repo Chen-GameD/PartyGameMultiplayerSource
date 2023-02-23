@@ -120,6 +120,9 @@ public:
 
 	UFUNCTION()
 	float GetCurrentEnergyWeaponUIUpdatePercent();
+
+	UFUNCTION(BlueprintCallable)
+	void SetElectricShockAnimState(bool i_state);
 	
 protected:
 
@@ -257,9 +260,9 @@ public:
 	bool isFlamethrowerHeld = false;
 
 	// Anim state vector format: 
-	// [isSingleMelee, isSingleShooting, isDualMelee, isDualShooting, isDualHeavy, isLeftHeld, isRightHeld, isAttack]
+	// [isSingleMelee, isSingleShooting, isDualMelee, isDualShooting, isDualHeavy, isLeftHeld, isRightHeld, isAttack, isShock]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
-	TArray<bool> AnimState = {false, false, false, false, false, false, false, false};
+	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
 	// Scores Kill Death Array Format:
 	// [Scores, Kill, Death]
