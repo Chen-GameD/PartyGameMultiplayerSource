@@ -34,7 +34,7 @@ ABaseProjectile::ABaseProjectile()
 	{
 		StaticMesh->SetStaticMesh(DefaultMesh.Object);
 		StaticMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
+		StaticMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	}	
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));

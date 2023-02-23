@@ -15,4 +15,13 @@ class PARTYGAMEMULTIPLAYER_API AProjectileCannon : public ABaseProjectile
 	GENERATED_BODY()
 public:
 	AProjectileCannon();
+	virtual void Tick(float DeltaTime) override;
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnRep_HasExploded();
+
+public:
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* CannonMesh;
 };
