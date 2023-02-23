@@ -31,12 +31,12 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	if (WeaponType == EnumWeaponType::None)
 		return false;
 
-	if (auto pPawn = Controller->GetPawn())
+	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
 	{		
 		float Damage = 0.0f;
-		FString ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
+			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
 		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
 			Damage *= interval_ApplyDamage;
 		// Special situation: Bomb's fork
@@ -45,16 +45,14 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
 		}
-		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
-	}
-	else if (Cast<AMinigameMainObjective>(DamagedActor))
-	{
-		float Damage = 0.0f;
-		FString ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
-		if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(ParName))
-			Damage = AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[ParName];
-		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
-			Damage *= interval_ApplyDamage;
+
+		// if it is AMinigameMainObjective
+		if (Cast<AMinigameMainObjective>(DamagedActor))
+		{
+			if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
+				Damage *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
+		}
+
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
 	}
 	else

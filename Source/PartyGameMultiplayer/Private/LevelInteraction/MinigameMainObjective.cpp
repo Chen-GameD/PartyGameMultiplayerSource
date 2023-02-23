@@ -38,7 +38,7 @@ AMinigameMainObjective::AMinigameMainObjective()
 	//	Mesh->SetupAttachment(RootMesh);
 	//}
 
-	MaxHealth = 100.0f;
+	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
 
 	//Create HealthBar UI Widget
@@ -70,6 +70,7 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 		return 0.0f;
 	if (CurrentHealth <= 0)
 		return 0.0f;
+
 	CurrentHealth -= DamageTaken;
 	if (CurrentHealth <= 0)
 	{
