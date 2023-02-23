@@ -58,6 +58,8 @@ ABaseWeapon::ABaseWeapon()
 	//Damage = 0.0f;
 	//DamageGenerationCounter = 0;
 	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
+	CD_CanRecover = true;
+	TimePassed_SinceAttackStop = 0.0f;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
@@ -98,7 +100,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					else
 					{
-						if (CD_LeftEnergy < CD_MaxEnergy)
+						if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
 						{
 							CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
 							CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
@@ -108,13 +110,23 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// if the attack type is not constant 
 				else
 				{
-					if (CD_LeftEnergy < CD_MaxEnergy)
+					if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
 					{
 						CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
 						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
 					}
-				}							
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
+				}
+				if (!CD_CanRecover)
+				{
+					float CD_RecoverDelay = 1.0f;
+					if(TimePassed_SinceAttackStop <= CD_RecoverDelay)
+						TimePassed_SinceAttackStop += DeltaTime;
+					if (CD_RecoverDelay < TimePassed_SinceAttackStop)
+					{
+						CD_CanRecover = true;
+						TimePassed_SinceAttackStop = 0.0f;
+					}
+				}				
 			}
 			// Apply constant damage
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
@@ -443,6 +455,9 @@ void ABaseWeapon::OnRep_bAttackOn()
 	else
 	{
 		AttackOnEffect->Deactivate();
+		if(AttackType == EnumAttackType::Constant)
+			CD_CanRecover = false;
+		TimePassed_SinceAttackStop = 0.0f;
 	}
 }
 

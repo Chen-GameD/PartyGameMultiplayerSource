@@ -108,6 +108,8 @@ public:
 	float CD_LeftEnergy;	
 	float CD_DropSpeed;
 	float CD_RecoverSpeed;
+	bool CD_CanRecover;
+	float TimePassed_SinceAttackStop;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
