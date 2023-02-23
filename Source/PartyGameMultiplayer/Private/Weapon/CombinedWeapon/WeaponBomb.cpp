@@ -132,7 +132,6 @@ void AWeaponBomb::SpawnProjectile()
 		spawnParameters.Instigator = GetInstigator();
 		spawnParameters.Owner = this;
 
-		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
 		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }

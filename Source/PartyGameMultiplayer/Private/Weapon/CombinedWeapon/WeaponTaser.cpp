@@ -1,12 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Weapon/CombinedWeapon/WeaponTaser.h"
+
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
+
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/DamageManager.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 
 
 AWeaponTaser::AWeaponTaser()
@@ -20,14 +26,10 @@ AWeaponTaser::AWeaponTaser()
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	// create a secondary weapon mesh which is specific for Taser
+	// Create a fork mesh specific to Taser
 	TaserForkMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TaserForkMesh"));
-	TaserForkMesh->SetCollisionProfileName(TEXT("Trigger"));
-	/*TaserForkMesh->SetCollisionProfileName(TEXT("Custom"));
-	TaserForkMesh->SetSimulatePhysics(true);
-	TaserForkMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	TaserForkMesh->SetCollisionResponseToAllChannels(ECR_Overlap);*/
 	TaserForkMesh->SetupAttachment(WeaponMesh);
+	TaserForkMesh->SetCollisionProfileName(TEXT("Trigger"));	
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultTaserForkMesh(TEXT("/Game/ArtAssets/Models/Taser/Taser_Fork.Taser_Fork"));
 	if (DefaultTaserForkMesh.Succeeded())
 	{
@@ -92,7 +94,6 @@ void AWeaponTaser::AttackStart()
 {
 	Super::AttackStart();
 	bStretching = true;
-	//OnRep_bAttackOn();
 }
 
 // should only be called on server
@@ -100,13 +101,38 @@ void AWeaponTaser::AttackStop()
 {
 	Super::AttackStop();
 	bStretching = false;
-	//OnRep_bAttackOn();
 }
 
 
-void AWeaponTaser::CheckInitilization()
+void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	Super::CheckInitilization();
-	// do something specific to this weapon
-	check(AttackHitEffect);
+	if (IsPickedUp && GetOwner())
+	{
+		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+			Cast<AMinigameMainObjective>(OtherActor))
+		{
+			if (!AttackObjectMap.Contains(OtherActor))
+				AttackObjectMap.Add(OtherActor);
+			AttackObjectMap[OtherActor] = 0.0f;
+			bAttackOverlap = true;
+			// Listen server
+			if (GetNetMode() == NM_ListenServer)
+			{
+				OnRep_bAttackOverlap();
+			}
+
+			if (ApplyDamageCounter == 0 && HoldingController)
+			{
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
+				ApplyDamageCounter++;
+			}
+		}
+		else
+		{
+			// if hit something other than the following(like building, rocks, etc), the attack should stop
+			if(!Cast<ACharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
+				AttackStop();
+		}
+	}
 }

@@ -16,17 +16,13 @@ public:
 	AWeaponTaser();
 
 	virtual void Tick(float DeltaTime) override;
-
-	// should only be called on server
 	virtual void AttackStart() override;
-	// should only be called on server
 	virtual void AttackStop() override;
 
 protected:
-	virtual void CheckInitilization() override;
-	/*virtual void GenerateAttackHitEffect() override;*/
-	//virtual void GenerateDamage(class AActor* DamagedActor) override;
 	//virtual void OnRep_bAttackOn() override;
+	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
 private:
 

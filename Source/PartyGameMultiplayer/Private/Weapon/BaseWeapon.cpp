@@ -274,6 +274,10 @@ void ABaseWeapon::AttackStop()
 	ApplyDamageCounter = 0;
 	AttackObjectMap.Empty();
 
+	if (AttackType == EnumAttackType::Constant)
+		CD_CanRecover = false;
+	TimePassed_SinceAttackStop = 0.0f;
+
 	if (AttackType != EnumAttackType::SpawnProjectile)
 	{
 		SetActorEnableCollision(bAttackOn);
@@ -396,45 +400,6 @@ void ABaseWeapon::GenerateAttackHitEffect()
 }
 
 
-//void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor, float DeltaTime)
-//{
-//	check(DamagedActor);
-//
-//	//if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
-//	//{		
-//	//	//UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//	//	pCharacter->TakeDamageRe(Damage, WeaponType, GetInstigator()->Controller, this);
-//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//	//	// To transfer
-//	//	// knockback
-//	//	/*check(HoldingPlayer);
-//	//	FRotator AttackerControlRotation = HoldingPlayer->GetControlRotation();
-//	//	FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-//	//	pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, GetInstigator()->Controller, this);*/
-//	//	// paralysis
-//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, 1.0f, FVector3d::Zero(), GetInstigator()->Controller, this);
-//	//	// burning
-//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, 0.5f, FVector3d::Zero(), GetInstigator()->Controller, this);
-//	//}
-//	//else if(dynamic_cast<AMinigameMainObjective*>(DamagedActor))
-//	//{
-//	//	UGameplayStatics::ApplyDamage(DamagedActor, MiniGameDamage, GetInstigator()->Controller, this, MiniGameDamageType);
-//	//	//DamagedActor->TakeDamageRe(Damage, GetInstigator()->Controller, this);
-//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//	//}
-//
-//	bool success = ADamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor, DeltaTime);
-//	if (success)
-//	{
-//		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//		// Listen Server
-//		if (GetNetMode() == NM_ListenServer)
-//		{
-//			OnRep_DamageGenerationCounter();
-//		}
-//	}		
-//}
-
 void ABaseWeapon::OnRep_DisplayCaseTransform()
 {
 	if (!IsPickedUp)
@@ -455,9 +420,6 @@ void ABaseWeapon::OnRep_bAttackOn()
 	else
 	{
 		AttackOnEffect->Deactivate();
-		if(AttackType == EnumAttackType::Constant)
-			CD_CanRecover = false;
-		TimePassed_SinceAttackStop = 0.0f;
 	}
 }
 
@@ -490,7 +452,6 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 {
 	if (IsPickedUp && GetOwner())
 	{
-		// What will happen if the weapon hit another player
 		if( (Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor) )
 		{
@@ -498,18 +459,18 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				AttackObjectMap.Add(OtherActor);
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
+			// Listen server
+			if (GetNetMode() == NM_ListenServer)
+			{
+				OnRep_bAttackOverlap();
+			}
 
 			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
 				&& ApplyDamageCounter == 0 && HoldingController)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
 				ApplyDamageCounter++;
-			}
-			// Listen server
-			if (GetNetMode() == NM_ListenServer)
-			{
-				OnRep_bAttackOverlap();
-			}		
+			}	
 		}
 	}
 }
