@@ -13,14 +13,17 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
+#include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/JsonFactory.h"
+#include "Weapon/DamageManager.h"
+#include "Weapon/WeaponDataHelper.h"
 #include <Character/animUtils.h>
 
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
-#include "UI/HealthBar.h"
+#include "UI/MCharacterFollowWidget.h"
 
 // Constructor
 // ===================================================
@@ -68,8 +71,8 @@ AMCharacter::AMCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	//Create HealthBar UI Widget
-	HealthWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
-	HealthWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -104,6 +107,19 @@ AMCharacter::AMCharacter()
 	EffectLand = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectLand"));
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
+
+	CanMove = true;
+}
+
+void AMCharacter::Restart()
+{
+	Super::Restart();
+
+	if (IsLocallyControlled())
+	{
+		AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+		playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+	}
 }
 #pragma endregion Constructor
 
@@ -174,7 +190,7 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 void AMCharacter::SetTextureInUI()
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		if (InventoryMenuWidget)
 		{
@@ -408,13 +424,15 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	IsPickingWeapon = false;
+
+	if (GetNetMode() == NM_ListenServer)
+	{
+		SetTextureInUI();
+	}
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
 {
-	if (IsDead)
-		return;
-	
 	if (isLeft && LeftWeapon)
 	{
 		LeftWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
@@ -500,13 +518,17 @@ void AMCharacter::OnCombineWeapon()
 
 		ABaseWeapon* spawnedCombineWeapon = GetWorld()->SpawnActor<ABaseWeapon>(combineWeaponRef, FVector(0,0,0), FRotator::ZeroRotator);
 		CombineWeapon = spawnedCombineWeapon;
-		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower);
+		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower || 
+							CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
+							CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
+		LeftWeapon->HasBeenCombined = true;
 		RightWeapon->SetActorHiddenInGame(true);
+		RightWeapon->HasBeenCombined = true;
 
 		// If combine successfully, always set isLeftHeld Anim State to false, 
 		// this will be reset to true when picking up new item in PickUp_Implementation
@@ -535,6 +557,13 @@ void AMCharacter::Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
+
+		// Listen Server
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_IsAllowDash();
+		}
+
 		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
@@ -636,26 +665,34 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
+	{
+		if (!IsLocallyControlled())
+		{
+			SetHealthBarUI();
+		}
+		else
+		{
+			AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+			playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+		}
+	}
+	
 	if (IsDead)
 		return;
-	
-	if (!(GetLocalRole() == ROLE_Authority))
-	{
-		SetHealthBarUI();
-	}
 	
 	//Client-specific functionality
 	if (IsLocallyControlled())
 	{
-		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		//FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 		
 		if (CurrentHealth <= 0)
 		{
 			// Death
 			// to do
-			FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+			//FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
 			
 			// Force respawn
 			Server_ForceRespawn(5);
@@ -665,8 +702,8 @@ void AMCharacter::OnHealthUpdate()
 	//Server-specific functionality
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+		//FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
 
 		if (CurrentHealth <= 0)
 		{
@@ -747,13 +784,30 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 {
 	if (isVisible)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		healthBar->HideTip();
+		healthBar->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
+
+void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
+{
+	if (isVisible)
+	{
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		healthBar->HideTip();
+		healthBar->SetVisibility(ESlateVisibility::Visible);
+		healthBar->SetLocalControlledUI();
+	}
+	else
+	{
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		healthBar->SetVisibility(ESlateVisibility::Hidden);
 	}
@@ -774,6 +828,59 @@ void AMCharacter::SetThisCharacterMesh(int TeamIndex)
 	{
 		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
 	}
+}
+
+void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
+{
+	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
+	playerController->SetCanMove(i_CanMove);
+}
+
+bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
+{
+	if (!BuffMap.Contains(AttackBuff))
+	{
+		BuffMap.Add(AttackBuff);
+		TArray<float> buffParArr;
+		for(int i = 0; i < 3; i++)
+			buffParArr.Add(0.0f);
+		BuffMap[AttackBuff] = buffParArr;
+	}
+	return(BuffMap[AttackBuff].Num() == 3);
+}
+
+
+float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
+{
+	float retValue = -1;
+	
+	if (CombineWeapon)
+	{
+		if (CombineWeapon->CD_MaxEnergy > 0)
+		{
+			// Need to show cd UI
+			retValue = CombineWeapon->CD_LeftEnergy / CombineWeapon->CD_MaxEnergy;
+		}
+	}
+	else
+	{
+		if (LeftWeapon)
+		{
+			if (LeftWeapon->CD_MaxEnergy > 0)
+			{
+				retValue = LeftWeapon->CD_LeftEnergy / LeftWeapon->CD_MaxEnergy;
+			}
+		}
+		else if (RightWeapon)
+		{
+			if (RightWeapon->CD_MaxEnergy > 0)
+			{
+				retValue = RightWeapon->CD_LeftEnergy / RightWeapon->CD_MaxEnergy;
+			}
+		}
+	}
+
+	return retValue;
 }
 
 // RepNotify function
@@ -825,24 +932,32 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 	}
 }
 
+// DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (!IsDead)
 	{
+		// Check if it is the attack from self or teammates
+		auto MyController = GetController();
+		if (!MyController)
+			return 0.0f;
+		AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
+		AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+		if (!AttackerPS || !MyPS)
+			return 0.0f;
+		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
+			return 0.0f;
+
 		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+		SetCurrentHealth(damageApplied);		
+		ADamageManager::ApplyBuff(DamageCauser, EventInstigator, DamageEvent.DamageTypeClass, this);
 
 		// Score Kill Death Handling
-		if (CurrentHealth <= 0 && HasAuthority()) {
-			if (auto killer = Cast<AMCharacter>((Cast<ABaseWeapon>(DamageCauser))->GetHoldingPlayer())) {
-				if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-					killerPS->addScore(5);
-					killerPS->addKill(1);
-				}
-				if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-					myPS->addDeath(1);
-				}
-			}
+		if (CurrentHealth <= 0 && HasAuthority()) 
+		{
+			AttackerPS->addScore(5);
+			AttackerPS->addKill(1);
+			MyPS->addDeath(1);
 		}
 
 		return damageApplied;
@@ -854,26 +969,26 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 
 float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser)
 {
-	if (!IsDead)
-	{
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+	//if (!IsDead)
+	//{
+	//	float damageApplied = CurrentHealth - DamageTaken;
+	//	SetCurrentHealth(damageApplied);
 
-		// Score Kill Death Handling
-		if (CurrentHealth <= 0 && HasAuthority()) {
-			if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
-				if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-					killerPS->addScore(5);
-					killerPS->addKill(1);
-				}
-				if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-					myPS->addDeath(1);
-				}
-			}
-		}
+	//	// Score Kill Death Handling
+	//	if (CurrentHealth <= 0 && HasAuthority()) {
+	//		if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
+	//			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
+	//				killerPS->addScore(5);
+	//				killerPS->addKill(1);
+	//			}
+	//			if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
+	//				myPS->addDeath(1);
+	//			}
+	//		}
+	//	}
 
-		return damageApplied;
-	}
+	//	return damageApplied;
+	//}
 
 	return 0.0f;
 }
@@ -881,7 +996,7 @@ float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AC
 
 void AMCharacter::SetHealthBarUI()
 {
-	UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+	UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 	healthBar->SetHealthToProgressBar(CurrentHealth/MaxHealth);
 }
 #pragma endregion Health
@@ -909,9 +1024,9 @@ bool AMCharacter::GetIsDead()
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing)
 {
-	if (IsLocallyControlled())
+	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		if (isShowing)
 		{
 			healthBar->ShowTip();
@@ -976,10 +1091,10 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (!(GetLocalRole() == ROLE_Authority))
+	
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject());
+		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		healthBar->HideTip();
 		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 		if (MyGameState)
@@ -1001,15 +1116,27 @@ void AMCharacter::BeginPlay()
 	}
 }
 
-// Called every frame
+
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	ActByBuff(DeltaTime);
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		ActByBuff(DeltaTime);
 
-	// client-only
-	if (GetLocalRole() != ROLE_Authority)
+		bool oldIsOnGround = IsOnGround;
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (GetNetMode() == NM_ListenServer)
+		{
+			if (oldIsOnGround != IsOnGround)
+				OnRep_IsOnGround();
+		}
+	}
+
+	// Client(Listen Server)
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		// EffectRun
 		if (EffectRun->IsActive() == false)
@@ -1017,183 +1144,144 @@ void AMCharacter::Tick(float DeltaTime)
 			if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
 			{
 				EffectRun->Activate(); 
-			}
-				
+			}				
 		}
 		else
 		{
 			if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
 			{
 				EffectRun->Deactivate();
-			}
-				
+			}				
 		}
 	}
-	// server-only
-	else
-	{
-		// EffectJump
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-	}
-		
+	KnockbackDirection_DuringLastFrame = FVector::ZeroVector;
 }
 #pragma endregion Engine life cycle function
 
-
-
-float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
-	AController* EventInstigator, ABaseWeapon* DamageCauser)
-{
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::AccumulateAttackedBuff()!");
-		return false;
-	}
-
-	if (!BuffMap.Contains(BuffType))
-	{
-		BuffMap.Add(BuffType);
-		TArray<float> buffParArr;
-		buffParArr.Add(0.0f);
-		buffParArr.Add(0.0f);
-		BuffMap[BuffType] = buffParArr;
-	}
-	if (BuffMap[BuffType].Num() != 2)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("BuffMap went wrong!"));
-		return -1.0f;
-	}
-
-	float& buffPoints = BuffMap[BuffType][0];
-	float& buffRemainedTime = BuffMap[BuffType][1];
-	if (BuffType == EnumAttackBuff::Burning)
-	{
-		float oldBuffPoints = buffPoints;
-		buffPoints += BuffPointsReceived;
-		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= buffPoints)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
-			float burningBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffAddTimeOnce", burningBuffAddTimeOnce))
-				burningBuffAddTimeOnce = 0.0f;
-			buffRemainedTime += burningBuffAddTimeOnce;
-		}
-	}
-	else if (BuffType == EnumAttackBuff::Paralysis)
-	{
-		if (buffPoints < 1.0f)
-		{
-			buffPoints = 1.0f;
-			float paralysisBuffAddTimeOnce = 0.0f;
-			if (!jsonObject->TryGetNumberField("paralysisBuffAddTimeOnce", paralysisBuffAddTimeOnce))
-				paralysisBuffAddTimeOnce = 0.0f;
-			buffRemainedTime = paralysisBuffAddTimeOnce;
-		}		
-	}
-	else if (BuffType == EnumAttackBuff::Knockback)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
-		LaunchCharacter(AttackedDir, true, false);
-	}
-	else if (BuffType == EnumAttackBuff::Blowing)
-	{
-		// key value
-		AttackedDir.Z = 0.0f;
-		AttackedDir *= 300.0f;
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
-			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
-		LaunchCharacter(AttackedDir, false, false);
-	}
-
-	return 0.0f;
-}
+//float AMCharacter::AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir,
+//	AController* EventInstigator, ABaseWeapon* DamageCauser)
+//{
+//	if (!AWeaponDataHelper::DamageManagerDataAsset)
+//		return 0.0f;
+//
+//	if (!BuffMap.Contains(BuffType))
+//	{
+//		BuffMap.Add(BuffType);
+//		TArray<float> buffParArr;
+//		buffParArr.Add(0.0f);
+//		buffParArr.Add(0.0f);
+//		BuffMap[BuffType] = buffParArr;
+//	}
+//	check(BuffMap[BuffType].Num() == 2);
+//
+//	float& BuffPoints = BuffMap[BuffType][0];
+//	float& BuffRemainedTime = BuffMap[BuffType][1];
+//
+//	if (BuffType == EnumAttackBuff::Burning)
+//	{
+//		float oldBuffPoints = BuffPoints;
+//		BuffPoints += BuffPointsReceived;
+//		if (oldBuffPoints < ceilf(oldBuffPoints) && ceilf(oldBuffPoints) <= BuffPoints)
+//		{
+//			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Buff gauge becomes full"));
+//			float BurningBuffAddTimeOnce = 5.0f;
+//			FString ParName = "BurningBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				BurningBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			BuffRemainedTime += BurningBuffAddTimeOnce;
+//		}
+//	}
+//	else if (BuffType == EnumAttackBuff::Paralysis)
+//	{
+//		if (BuffPoints < 1.0f)
+//		{
+//			BuffPoints = 1.0f;
+//			float ParalysisBuffAddTimeOnce = 5.0f;
+//			FString ParName = "ParalysisBuffAddTimeOnce";
+//			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+//				ParalysisBuffAddTimeOnce = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+//			BuffRemainedTime = ParalysisBuffAddTimeOnce;
+//		}		
+//	}
+//	else if (BuffType == EnumAttackBuff::Knockback)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//			AttackedDir.X, AttackedDir.Y, AttackedDir.Z));*/
+//		LaunchCharacter(AttackedDir, true, false);
+//	}
+//	else if (BuffType == EnumAttackBuff::Blowing)
+//	{
+//		// key value
+//		AttackedDir.Z = 0.0f;
+//		AttackedDir *= 300.0f;
+//		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AttackedDir: %f, %f, %f"),
+//		//	AttackedDir.X, AttackedDir.Y, AttackedDir.Z));
+//		LaunchCharacter(AttackedDir, false, false);
+//	}
+//	return 0.0f;
+//}
 
 
 void AMCharacter::ActByBuff(float DeltaTime)
 {
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during AMCharacter::ActByBuff()!");
+	if (!AWeaponDataHelper::DamageManagerDataAsset)
 		return;
-	}
 
 	EnumAttackBuff buffType;
-	// Burning
+	/*  Burning */	
 	buffType = EnumAttackBuff::Burning;
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
-	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
+	if (CheckBuffMap(buffType))
+	{		
+		float& BuffRemainedTime = BuffMap[buffType][1];
+		if (0.0f < BuffRemainedTime)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Burning"));
-			// key value
-			float burningBuffDamagePerSecond = 0.0f;
-			if (!jsonObject->TryGetNumberField("burningBuffDamagePerSecond", burningBuffDamagePerSecond))
-				burningBuffDamagePerSecond = 0.0f;
-			SetCurrentHealth(CurrentHealth - DeltaTime * burningBuffDamagePerSecond);
-			buffRemainedTime -= DeltaTime;
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), buffRemainedTime));
-			if (buffRemainedTime <= 0.0f)
-			{
-				buffPoints = 0.0f;
-				buffRemainedTime = 0.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Burning ends"));
-			}
+			float BurningBuffDamagePerSecond = 0.0f;
+			FString ParName = "BurningBuffDamagePerSecond";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
+			BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
+			/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), BuffRemainedTime));*/
 		}
 	}
-	// Paralysis
-	buffType = EnumAttackBuff::Paralysis;	
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
-	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints && 0.0f < buffRemainedTime)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Red, TEXT("Paralysis"));
-			// TODO: right now, the implementation of Paralysis is CustomTimeDilation.
-			// It is likely to be a bad method since it slows down the tick, which may cause many unexpected problems.
-			float targetCustomTimeDilation = 1.0f / 1000.0f;
-			if (CustomTimeDilation != targetCustomTimeDilation)
-			{
-				CustomTimeDilation = targetCustomTimeDilation;
-				buffRemainedTime -= DeltaTime;
-			}
-			else
-			{
-				buffRemainedTime -= (DeltaTime / targetCustomTimeDilation);
-			}			
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Paralysis remain time: %f, %f, %f"), 
-			//	DeltaTime, targetCustomTimeDilation, buffRemainedTime));
-			if (buffRemainedTime <= 0.0f)
-			{
-				buffPoints = 0.0f;
-				buffRemainedTime = 0.0f;
-				CustomTimeDilation = 1.0f;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Paralysis ends"));
-			}
-		}
-	}
-	// Knockback	
-	/*
+	/* Paralysis */
+	//buffType = EnumAttackBuff::Paralysis;	
+	//if (CheckBuffMap(buffType))
+	//{
+	//	float& BuffPoints = BuffMap[buffType][0];
+	//	if (1.0f <= BuffPoints)
+	//	{
+	//		if (CanMove)
+	//		{
+	//			Server_SetCanMove(false);
+	//			CanMove = false;
+	//		}
+	//	}			
+	//	else
+	//	{
+	//		if (!CanMove)
+	//		{
+	//			Server_SetCanMove(true);
+	//			CanMove = true;
+	//		}
+	//	}
+	//}
+	/* Knockback */
 	buffType = EnumAttackBuff::Knockback;
-	if (BuffMap.Contains(buffType) && BuffMap[buffType].Num() == 2)
+	if (CheckBuffMap(buffType))
 	{
-		float& buffPoints = BuffMap[buffType][0];
-		float& buffRemainedTime = BuffMap[buffType][1];
-		if (1.0f <= buffPoints)
+		float& BuffPoints = BuffMap[buffType][0];
+		if (1.0f <= BuffPoints)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Knockback"));
-			// TODO: be knocked back
-			buffPoints = 0.0f;
-			buffRemainedTime = 0.0f;
+			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Knockback"));
+			KnockbackDirection_DuringLastFrame.Z = 0.0f;
+			KnockbackDirection_DuringLastFrame *= 300.0f;
+			LaunchCharacter(KnockbackDirection_DuringLastFrame, true, false);
+			BuffPoints = 0.0f;
 		}
 	}
-	*/	
+		
 }

@@ -11,7 +11,33 @@ void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 	PlayerNameString = i_Name;
 	FString PlayerNameMessage = FString::Printf(TEXT("SetPlayerState Player Name to ")) + PlayerNameString;
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, PlayerNameMessage);
+
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateLobbyUIInformation();
+	}
 }
+
+void AM_PlayerState::UpdatePlayerReadyState_Implementation()
+{
+	if (TeamIndex != 0)
+	{
+		if (IsReady == true)
+		{
+			IsReady = false;
+		}
+		else
+		{
+			IsReady = true;
+		}
+	}
+
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateLobbyUIInformation();
+	}
+}
+
 
 void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
 {
@@ -65,6 +91,10 @@ void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
 	}
 
 	//UpdateLobbyUIInformation();
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateLobbyUIInformation();
+	}
 }
 
 void AM_PlayerState::UpdateLobbyUIInformation()

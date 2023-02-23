@@ -2,6 +2,7 @@
 
 
 #include "Weapon/CombinedWeapon/WeaponCannon.h"
+#include "Weapon/BaseProjectile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
@@ -14,17 +15,17 @@
 // Sets default values
 AWeaponCannon::AWeaponCannon()
 {
-	IsCombined = true;
+	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Cannon;
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Cannon/Cannon.Cannon"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -38,11 +39,22 @@ AWeaponCannon::AWeaponCannon()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
+}
 
-	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
 
-	// WeaponName
-	WeaponName = "Cannon";
+void AWeaponCannon::SpawnProjectile()
+{
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() * 1.73f + pCharacter->GetActorUpVector()).Rotation();  // character up 30 degree
 
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
+
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
 }

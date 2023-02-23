@@ -1,24 +1,37 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+
 #include "BaseWeapon.h"
 #include "Character/MCharacter.h"
+#include "DamageManagerDataAsset.h"
 
-class PARTYGAMEMULTIPLAYER_API DamageManager
+#include "DamageManager.generated.h"
+
+UCLASS()
+class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 {
-public:
-	DamageManager();
-	~DamageManager();
-
-	static bool DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, class AActor* DamagedActor);
-	static bool ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor);
-protected:
-private:
+	GENERATED_BODY()
 
 public:
-protected:
-private:
+	ADamageManager() {};
 
+	// why not pass weapon pointer but AActor* DamageCauser(can be either weapon* or projectile)
+	// because weapon* may be destroyed or transfered to another player when projectile is apply damage
+	
+	// The damaged actors are determined when entering this function( however, they can be teammates )
+	static bool TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AActor* DamagedActor);
+	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
+	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage);
+	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage);
+	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
+	static bool ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter);
+private:
+	
+public:
+	static float interval_ApplyDamage; // preset value for all constant damage
+private:
 };

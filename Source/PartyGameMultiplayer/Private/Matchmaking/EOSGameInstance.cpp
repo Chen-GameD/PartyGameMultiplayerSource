@@ -2,64 +2,71 @@
 
 
 #include "Matchmaking/EOSGameInstance.h"
-
 #include <string>
-
+#include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "OnlineSessionSettings.h"
-#include "OnlineSubsystem.h"
-#include "Kismet/GameplayStatics.h"
+#include "Blueprint/UserWidget.h"
 
-const FName SESSION_NAME = FName("TEST SESSION");
-
-UEOSGameInstance::UEOSGameInstance()
-{
-	
-}
+const FName SESSION_NAME = FName("MAINSESSION");
 
 void UEOSGameInstance::Init()
 {
 	Super::Init();
-
-	OnlineSubsystem = IOnlineSubsystem::Get();
-	Login();
+	
+	// Login();
 }
 
-void UEOSGameInstance::Login()
+void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
 {
-	if(OnlineSubsystem)
+	if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 	{
-		if(IOnlineIdentityPtr Identity = OnlineSubsystem->GetIdentityInterface())
+		IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface();
+		if(IdentityPtr)
 		{
 			FOnlineAccountCredentials Credentials;
-			Credentials.Id = FString("127.0.0.1:5666");
-			Credentials.Token = FString("KD");
-			Credentials.Type = FString("developer");
-
-			Identity->OnLoginCompleteDelegates->AddUObject(this, &UEOSGameInstance::OnLoginComplete);
-			Identity->Login(0, Credentials);
+			Credentials.Id = ID;
+			Credentials.Token = Token;
+			Credentials.Type = LoginType;
+			IdentityPtr->OnLoginCompleteDelegates->AddUObject(this, &UEOSGameInstance::OnLoginComplete);
+			IdentityPtr->Login(0, Credentials);
 		}
 	}
 }
 
-void UEOSGameInstance::CreateSession()
+FString UEOSGameInstance::GetPlayerUsername()
+{
+	if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+	{
+		if(IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface())
+		{
+			if(IdentityPtr->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+			{
+				return IdentityPtr->GetPlayerNickname(0);
+			}
+		}
+	}
+	return FString();
+}
+
+void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections)
 {
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				FOnlineSessionSettings SessionSettings;
-				SessionSettings.bIsDedicated = false;
-				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bIsLANMatch = false;
-				SessionSettings.NumPublicConnections = 8;
-				SessionSettings.bAllowJoinInProgress = true;
-				SessionSettings.bAllowJoinViaPresence = true;
+				SessionSettings.bIsDedicated = IsDedicatedServer;
+				SessionSettings.bAllowInvites = true;
+				SessionSettings.bIsLANMatch = IsLanServer;
+				SessionSettings.NumPublicConnections = NumberOfPublicConnections;
 				SessionSettings.bUsesPresence = true;
 				SessionSettings.bUseLobbiesIfAvailable = true;
+				SessionSettings.bShouldAdvertise = true;
+				SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
@@ -75,16 +82,17 @@ void UEOSGameInstance::CreateSession()
 
 void UEOSGameInstance::FindSession()
 {
+	IsSessionsListAvailable = false;
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
-				SearchSettings->MaxSearchResults = 5000;
-				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+				SearchSettings->MaxSearchResults = 100;
+				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
 				
 				SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnFindSessionComplete);
 				SessionPtr->FindSessions(0, SearchSettings.ToSharedRef());
@@ -101,7 +109,7 @@ void UEOSGameInstance::DestroySession()
 {
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
@@ -116,7 +124,7 @@ void UEOSGameInstance::ShowInviteUI()
 {
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineExternalUIPtr UIPtr = OnlineSubsystem->GetExternalUIInterface())
 			{
@@ -126,18 +134,68 @@ void UEOSGameInstance::ShowInviteUI()
 	}
 }
 
-void UEOSGameInstance::JoinSession()
+TArray<USessionEntry*> UEOSGameInstance::GetSessionsList()
+{
+	TArray<USessionEntry*> sessions = TArray<USessionEntry*>();
+	if(IsSessionsListAvailable)
+	{
+		for (auto session : SearchSettings->SearchResults)
+		{
+			USessionEntry *newEntry = NewObject<USessionEntry>();
+			newEntry->SetSessionData(session.GetSessionIdStr(), session.Session.SessionSettings.NumPublicConnections,
+			              session.Session.SessionSettings.NumPublicConnections-session.Session.NumOpenPublicConnections);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sessions in search result"));
+			UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *session.GetSessionIdStr());
+			sessions.Add(newEntry);
+		}
+	}
+	return sessions;
+}
+
+void UEOSGameInstance::UI_ShowMainMenu()
+{
+	if (WB_MainMenuClass)
+	{
+		if (!WB_MainMenu)
+		{
+			// Create menu
+			APlayerController* currentPlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+			if (currentPlayerController != nullptr)
+			{
+				WB_MainMenu = CreateWidget<UUserWidget>(currentPlayerController, WB_MainMenuClass);
+				//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
+                
+				WB_MainMenu->AddToViewport();
+				FInputModeUIOnly inputMode;
+				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				currentPlayerController->SetInputMode(inputMode);
+				currentPlayerController->SetShowMouseCursor(true);
+			}
+			
+		}
+	}
+}
+
+bool UEOSGameInstance::GetIsLoggedIn()
+{
+	return bIsLoggedIn;
+}
+
+void UEOSGameInstance::JoinSession(int32 index)
 {
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				if(SearchSettings->SearchResults.Num() > 0)
 				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
 					SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
-					SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[0]);
+					UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *SearchSettings->SearchResults[index].Session.OwningUserName);
+					CurrentlyJoiningSessionIndex = index;
+					SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[index]);
 				}
 				else
 				{
@@ -159,7 +217,7 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 	UE_LOG(LogTemp, Warning, TEXT("Success: %d"), bWasSuccessful);
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
@@ -169,7 +227,7 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 	}
 	if(bWasSuccessful)
 	{
-		//UGameplayStatics::OpenLevel(GetWorld(), FName("WhiteboxLevel"));
+		GetWorld()->ServerTravel(LevelText+"?listen", true);
 	}
 }
 
@@ -179,7 +237,7 @@ void UEOSGameInstance::OnDestroySessionComplete(FName sessionName, bool bWasSucc
 	UE_LOG(LogTemp, Warning, TEXT("Success destroy session: %d"), bWasSuccessful);
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
@@ -195,7 +253,7 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 	UE_LOG(LogTemp, Warning, TEXT("Success find session: %d"), bWasSuccessful);
 	if(bIsLoggedIn)
 	{
-		if(OnlineSubsystem)
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
@@ -204,9 +262,12 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 					UE_LOG(LogTemp, Warning, TEXT("Count find session: %d"), SearchSettings->SearchResults.Num());
 					if(SearchSettings->SearchResults.Num() > 0)
 					{
-						//Join
-						JoinSession();
-						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, SearchSettings->SearchResults[0].GetSessionIdStr());
+						IsSessionsListAvailable = true;
+					}
+					else
+					{
+						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("No sessions in search results"));
+						UE_LOG(LogTemp, Warning, TEXT("No sessions in search results"));
 					}
 				}
 				SessionPtr->ClearOnFindSessionsCompleteDelegates(this);
@@ -215,38 +276,46 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 	}
 }
 
-void UEOSGameInstance::OnJoinSessionComplete(FName sessionName, EOnJoinSessionCompleteResult::Type result)
+void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Join Complete"));
-	UE_LOG(LogTemp, Warning, TEXT("Success Join: %d"), result);
+	UE_LOG(LogTemp, Warning, TEXT("Success Join: %d"), Result);
 
-	if(bIsLoggedIn)
+	if(Result == EOnJoinSessionCompleteResult::Success)
 	{
-		if(OnlineSubsystem && result == EOnJoinSessionCompleteResult::Success)
+		if(APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0))
 		{
-			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			FString JoinURL;
+			if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 			{
-				FString connectionInfo = FString();
-				SessionPtr->GetResolvedConnectString(sessionName, connectionInfo);
-				if(!connectionInfo.IsEmpty())
+				if(IOnlineSessionPtr OnlineSessionPtr = OnlineSubsystem->GetSessionInterface())
 				{
-					if(APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0))
+					int32 index = (CurrentlyJoiningSessionIndex == -1) ? 0 : CurrentlyJoiningSessionIndex;
+					OnlineSessionPtr->GetResolvedConnectString(SearchSettings->SearchResults[index], NAME_GamePort, JoinURL);
+					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
+					if(!JoinURL.IsEmpty())
 					{
-						PlayerController->ClientTravel(connectionInfo, TRAVEL_Absolute);
+						//JoinURL.Append("/Game/Level/SessionTest");
+						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_MAPNAME))
+						{
+							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_MAPNAME);
+							UE_LOG(LogTemp, Warning, TEXT("strMapKeys : %s"), *val->ToString());
+							//JoinURL.Append(val->ToString());
+						}
+						PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
+						CurrentlyJoiningSessionIndex = -1;
 					}
 				}
-				SessionPtr->ClearOnJoinSessionCompleteDelegates(this);
 			}
 		}
 	}
 }
 
-void UEOSGameInstance::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId,
-                                       const FString& Error)
+void UEOSGameInstance::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error)
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Login Complete"));
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, bWasSuccessful ? FColor::Green : FColor::Red, TEXT("Login Complete"));
 	UE_LOG(LogTemp, Warning, TEXT("Success login: %d"), bWasSuccessful);
-	if(OnlineSubsystem)
+	if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 	{
 		if(IOnlineIdentityPtr Identity = OnlineSubsystem->GetIdentityInterface())
 		{

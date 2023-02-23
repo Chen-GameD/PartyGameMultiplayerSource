@@ -1,174 +1,193 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Weapon/DamageManager.h"
-#include "Weapon/BaseWeapon.h"
-#include "Weapon/JsonFactory.h"
-#include "Character/MCharacter.h"
-#include "LevelInteraction/MinigameMainObjective.h"
 
 #include "Kismet/GameplayStatics.h"
 
+#include "Weapon/BaseWeapon.h"
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/BaseDamageCauser.h"
+#include "Weapon/CombinedWeapon/WeaponBomb.h"
+//#include "Weapon/JsonFactory.h"
+#include "Weapon/WeaponDataHelper.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
+#include "Character/MCharacter.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 
-DamageManager::DamageManager()
-{
-}
+//FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
+float ADamageManager::interval_ApplyDamage = 0.1f; // preset value for all constant damage
 
-DamageManager::~DamageManager()
-{
-}
 
-bool DamageManager::DealDamageAndBuffBetweenActors(ABaseWeapon* AttackingWeapon, AActor* DamagedActor)
+bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor)
 {
-	if (!AttackingWeapon || !DamagedActor)
+	if (!DamageCauser || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
+
+	EnumWeaponType WeaponType = EnumWeaponType::None;
+	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (WeaponType == EnumWeaponType::None)
+		return false;
+
+	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
+	{		
+		float Damage = 0.0f;
+		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
+			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
+		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
+			Damage *= interval_ApplyDamage;
+		// Special situation: Bomb's fork
+		if (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
+		{
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
+				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
+		}
+
+		// if it is AMinigameMainObjective
+		if (Cast<AMinigameMainObjective>(DamagedActor))
+		{
+			if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
+				Damage *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
+		}
+
+		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
+	}
+	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during DealDamageAndBuffBetweenActors()!");
 		return false;
 	}
+	return true;
+}
+
+
+bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
+{
+	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
+}
+
+bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage)
+{
+	if (!DamageCauser || !Controller)
+		return false;
+
+	EnumWeaponType WeaponType = EnumWeaponType::None;
+	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (WeaponType == EnumWeaponType::None)
+		return false;
+
+	TArray<AActor*> IgnoredActors;
+	auto AttackingPlayer = Controller->GetPawn();
+	if (AttackingPlayer)
+		IgnoredActors.Add(AttackingPlayer);
+
+	bool bDoFullDamage = true;
+	float DamageFalloff = bDoFullDamage ? 0.f : 1.f;
+
+	UGameplayStatics::ApplyRadialDamageWithFalloff(
+		Controller,   //const UObject* WorldContextObject
+		BaseDamage,
+		0.0f,			// float MinDamage
+		Origin,
+		DamageInnerRadius,			// float DamageInnerRadius
+		DamageOuterRadius,
+		DamageFalloff,
+		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
+		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
+		DamageCauser,		//AActor* DamageCauser
+		Controller				 //AController* InstigatedByController
+		//ECC_Visibility	  // DamagePreventionChannel
+	);
+
+	return true;
+}
+
+bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
+{	
+	if (!DamageCauser || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
+		return false;
+
+	EnumWeaponType WeaponType = EnumWeaponType::None;
+	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (WeaponType == EnumWeaponType::None)
+		return false;
+
+	TArray<EnumAttackBuff> AttackBuffs;
+	if (WeaponType == EnumWeaponType::Fork)
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	else if (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	else if (WeaponType == EnumWeaponType::Blower)
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	else if (WeaponType == EnumWeaponType::Lighter)
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+	else if (WeaponType == EnumWeaponType::Flamethrower)
+	{
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	}
+	else if (WeaponType == EnumWeaponType::Flamefork)
+		AttackBuffs.Add(EnumAttackBuff::Burning);
+	else if (WeaponType == EnumWeaponType::Taser)
+		AttackBuffs.Add(EnumAttackBuff::Paralysis);
+
+	for (int32 i = 0; i < AttackBuffs.Num(); i++)
+	{
+		EnumAttackBuff AttackBuff = AttackBuffs[i];
+
+		check(DamagedCharacter->CheckBuffMap(AttackBuff));
+		float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
+		float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
+		float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
+
+		float buffPointsToAdd = 0.0f;
+		float buffTimeToAdd = 0.0f;
+		if (AttackBuff == EnumAttackBuff::Knockback && Controller->GetPawn())
+		{
+			FVector3d AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			DamagedCharacter->KnockbackDirection_DuringLastFrame += AttackingDirection;
+		}		
 		
-
-	if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
-	{
-		// check holding player
-		auto AttackingWeaponHoldingPlayer = AttackingWeapon->GetHoldingPlayer();
-		if (!AttackingWeaponHoldingPlayer)
-			return false;
-		// check both player controllers
-		auto AttackingWeaponHoldingCharacterController = AttackingWeaponHoldingPlayer->GetController();
-		auto DamagedCharacterController = pCharacter->GetController();
-		if (!AttackingWeaponHoldingCharacterController || !DamagedCharacterController)
-			return false;
-		// check both player states
-		AM_PlayerState* pCharacterPS = AttackingWeaponHoldingCharacterController->GetPlayerState<AM_PlayerState>();
-		AM_PlayerState* AttakingWeaponPS = DamagedCharacterController->GetPlayerState<AM_PlayerState>();
-		if (!pCharacterPS || !AttakingWeaponPS)
-			return false;
-		if(pCharacterPS->TeamIndex == AttakingWeaponPS->TeamIndex)
-			return false;
-
-		EnumWeaponType WeaponType = AttackingWeapon->WeaponType;
-		float Damage = AttackingWeapon->Damage;
-		FString weaponDamageParName = AttackingWeapon->GetWeaponName() + TEXT("Damage");
-		if(!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
-			Damage = 0.0f;
-		AController* EventInstigator = AttackingWeapon->GetInstigator()->Controller;
-
-		//FString testStr = UJsonFactory::LoadFileToString("DataFiles/test.txt");
-		//GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Blue, testStr);	
-
-		/*auto jsonObject = UJsonFactory::ReadJson("DataFiles/test.json");
-		if (jsonObject)
+		FString ParName = "";
+		// points to add
+		ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" + 
+				AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
+			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		BuffPoints += buffPointsToAdd;
+		if(AttackBuff == EnumAttackBuff::Burning)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("BuffPoints: %f"), BuffPoints));
+		if (1.0f <= BuffPoints)
 		{
-			FString targetString = "";
-			double targetDouble = 0;
-			bool targetBoolen = true;
-			jsonObject->TryGetStringField("a1", targetString);
-			jsonObject->TryGetNumberField("a2", targetDouble);
-			jsonObject->TryGetBoolField("a3", targetBoolen);
-			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Blue, FString::Printf(TEXT("Json string: %s"), *targetString));
-			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Blue, FString::Printf(TEXT("Json float: %lf"), targetDouble));
-			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Blue, FString::Printf(TEXT("Json bool: %s"), targetBoolen ? TEXT("true") : TEXT("false")));
+			// time to add		
+			ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
+			// when it is time-based buff(burning), we add the time and substract 1 from BuffPoints; 
+			// otherwise(paralysis, knockback), we will neither add the time nor touch the BuffPoints
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			{
+				buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+				BuffPoints -= floorf(BuffPoints);
+			}				
 		}
-		else
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Blue, FString::Printf(TEXT("Json Failed")));
-		}*/
-
-		if (AttackingWeapon->WeaponType == EnumWeaponType::None)
-		{
-			return false;
-		}
-		// Fork
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Fork)
-		{
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Blower
-		else if(AttackingWeapon->WeaponType == EnumWeaponType::Blower)
-		{
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Lighter
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Lighter)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-		}
-		// Flamethrower
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamethrower)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-			ApplyBuff(EnumAttackBuff::Knockback, AttackingWeapon, pCharacter);
-		}
-		// Flamefork
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Flamefork)
-		{
-			ApplyBuff(EnumAttackBuff::Burning, AttackingWeapon, pCharacter);
-		}
-		// Taser
-		else if (AttackingWeapon->WeaponType == EnumWeaponType::Taser)
-		{
-			ApplyBuff(EnumAttackBuff::Paralysis, AttackingWeapon, pCharacter);
-		}
-
-		// TODO: judge if it is a teammate
-		pCharacter->TakeDamageRe(Damage, WeaponType, EventInstigator, AttackingWeapon);	
-
-	}
-	else if (dynamic_cast<AMinigameMainObjective*>(DamagedActor))
-	{
-		float Damage = AttackingWeapon->MiniGameDamage;
-		FString weaponDamageParName = AttackingWeapon->GetWeaponName() + TEXT("MiniGameDamage");
-		if (!jsonObject->TryGetNumberField(weaponDamageParName, Damage))
-			Damage = 0.0f;
-		//// Temporary; weird to assign MiniGameAccumulatedTimeToGenerateDamage here
-		//if (999.0f < AttackingWeapon->MiniGameAccumulatedTimeToGenerateDamage)
-		//	AttackingWeapon->MiniGameAccumulatedTimeToGenerateDamage = AttackingWeapon->AccumulatedTimeToGenerateDamage;
-		UGameplayStatics::ApplyDamage(DamagedActor, Damage, AttackingWeapon->GetInstigator()->Controller, AttackingWeapon, UDamageType::StaticClass());
-	}
-	else
-	{
-		return false;
-	}
+	}	
 	return true;
 }
 
-bool DamageManager::ApplyBuff(EnumAttackBuff AttackBuff, ABaseWeapon* AttackingWeapon, class AMCharacter* DamagedActor)
-{
-	auto jsonObject = UJsonFactory::GetJsonObject_1();
-	if (!jsonObject)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, "Read json failed during ApplyBuff()!");
-		return false;
-	}
 
-	if (AttackBuff == EnumAttackBuff::Burning)
-	{
-		float buffPoints = 0.0f;
-		FString weaponBuffPointsParName = AttackingWeapon->GetWeaponName() + TEXT("BurningBuffPoints");
-		if (!jsonObject->TryGetNumberField(weaponBuffPointsParName, buffPoints))
-			buffPoints = 0.0f;
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Burning, buffPoints, FVector3d::Zero(),
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else if (AttackBuff == EnumAttackBuff::Paralysis)
-	{
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, 1.0f, FVector3d::Zero(),
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else if (AttackBuff == EnumAttackBuff::Knockback)
-	{
-		check(AttackingWeapon->GetHoldingPlayer());
-		FRotator AttackerControlRotation = AttackingWeapon->GetHoldingPlayer()->GetControlRotation();
-		FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-		DamagedActor->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, 
-			AttackingWeapon->GetInstigator()->Controller, AttackingWeapon);
-	}
-	else
-	{
-		return false;
-	}
-	return true;
-}

@@ -2,6 +2,8 @@
 
 
 #include "Weapon/CombinedWeapon/WeaponAlarmgun.h"
+
+#include "Weapon/WeaponDataHelper.h"
 #include "Weapon/BaseProjectile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
@@ -15,17 +17,17 @@
 // Sets default values
 AWeaponAlarmgun::AWeaponAlarmgun()
 {
-	IsCombined = true;
-	WeaponType = EnumWeaponType::Bomb;
+	IsCombineWeapon = true;
+	WeaponType = EnumWeaponType::Alarmgun;
+	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));
-	//Set the Static Mesh and its position/scale if we successfully found a mesh asset to use.
 	if (DefaultMesh.Succeeded())
 	{
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	AttackDetectComponent = WeaponMesh;
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -39,33 +41,22 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
-
-	DamageType = UDamageType::StaticClass();
-	Damage = 50.0f;
-
-	// WeaponName
-	WeaponName = "Alarmgun";
-
 }
 
 
-// should only be called on server
-void AWeaponAlarmgun::AttackStart()
+void AWeaponAlarmgun::SpawnProjectile()
 {
-	Super::AttackStart();
+	auto pCharacter = GetOwner();
+	if (pCharacter && SpecificProjectileClass)
+	{
+		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
+		FRotator spawnRotation = SpawnProjectilePointMesh->GetComponentRotation();
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("Test shooting a bullet"));
-	FVector spawnLocation = GetActorLocation() + (GetActorUpVector() * 0.0f);
-	FRotator spawnRotation = GetActorRotation();
-	auto spawnRotationEuler = spawnRotation.Euler();
-	spawnRotationEuler.X = -spawnRotationEuler.X;
-	spawnRotation = spawnRotationEuler.Rotation();
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = GetInstigator();
+		spawnParameters.Owner = this;
 
-	FActorSpawnParameters spawnParameters;
-	// Instigator: The APawn that is responsible for damage done by the spawned Actor. (Can be left as NULL).
-	spawnParameters.Instigator = GetInstigator();
-	spawnParameters.Owner = this;
-
-	auto spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(spawnLocation, spawnRotation, spawnParameters);
-
+		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
+		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+	}
 }

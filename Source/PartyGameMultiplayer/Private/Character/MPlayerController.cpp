@@ -11,18 +11,21 @@
 #include "GameBase/MGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
+#include "Matchmaking/EOSGameInstance.h"
+#include "UI/MInGameHUD.h"
 
 // Constructor
 // ===================================================
 #pragma region Constructor
 AMPlayerController::AMPlayerController()
 {
-	
 }
 
 void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMPlayerController, CanMove);
 
 	//Replicate Action
 }
@@ -51,22 +54,37 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex, const FString
 void AMPlayerController::GetReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
-	if (MyServerPlayerState->TeamIndex != 0)
-	{
-		if (MyServerPlayerState->IsReady == true)
-		{
-			MyServerPlayerState->IsReady = false;
-		}
-		else
-		{
-			MyServerPlayerState->IsReady = true;
-		}
-	}
+
+	MyServerPlayerState->UpdatePlayerReadyState();
+	// if (MyServerPlayerState->TeamIndex != 0)
+	// {
+	// 	if (MyServerPlayerState->IsReady == true)
+	// 	{
+	// 		MyServerPlayerState->IsReady = false;
+	// 	}
+	// 	else
+	// 	{
+	// 		MyServerPlayerState->IsReady = true;
+	// 	}
+	// }
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
 	{
 		MyGameMode->CheckGameStart();
+	}
+}
+
+void AMPlayerController::SetCanMove_Implementation(bool i_CanMove)
+{
+	CanMove = i_CanMove;
+}
+
+void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_UpdatePlayerHealth(percentage);
 	}
 }
 
@@ -77,6 +95,8 @@ void AMPlayerController::BeginPlay()
 	if (IsLocalPlayerController())
 	{
 		UI_ShowLobbyMenu();
+		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
+		check(MyInGameHUD);
 	}
 	
 	// if (IsLocalPlayerController())
@@ -109,6 +129,16 @@ void AMPlayerController::BeginPlay()
 	// 	bShowMouseCursor = true;
 	// 	DefaultMouseCursor = EMouseCursor::Default;
 	// }
+}
+
+void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
+{
+	UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
+	if(GameInstanceRef)
+	{
+		GameInstanceRef->DestroySession();
+	}
+	Super::OnNetCleanup(Connection);
 }
 
 // Input
@@ -220,20 +250,24 @@ void AMPlayerController::StartTheGame()
 
 void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
 {
-	// AMCharacter* MyPawn = Cast<AMCharacter>(GetPawn());
-	// if (MyPawn)
-	// {
-	// 	MyPawn->SetGameUIVisibility(isVisible);
-	// }
-	
 	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
 	{
 		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
 
-		if (pawn)
+		if (pawn && !pawn->IsLocallyControlled())
 		{
 			pawn->SetGameUIVisibility(isVisible);
 		}
+		else if (pawn && pawn->IsLocallyControlled())
+		{
+			pawn->SetLocallyControlledGameUI(isVisible);
+		}
+	}
+
+	// Open Current Player Status Widget
+	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
+	{
+		MyInGameHUD->StartGameUI();
 	}
 }
 
@@ -276,7 +310,7 @@ void AMPlayerController::Server_RequestRespawn_Implementation()
 void AMPlayerController::MoveForward(float Value)
 {
 	AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
-	if (MyPawn)
+	if (MyPawn && CanMove)
 	{
 		if (MyPawn->GetIsDead())
 			return;
@@ -300,7 +334,7 @@ void AMPlayerController::MoveForward(float Value)
 void AMPlayerController::MoveRight(float Value)
 {
 	AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
-	if (MyPawn)
+	if (MyPawn && CanMove)
 	{
 		if (MyPawn->GetIsDead())
 			return;
@@ -381,7 +415,7 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 	// Direct the Pawn towards that location
 	APawn* const MyPawn = GetPawn();
 	AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if(MyPawn && MyGameState)
+	if(MyPawn && MyGameState && CanMove)
 	{
 		if (MyGameState->IsGameStart)
 		{

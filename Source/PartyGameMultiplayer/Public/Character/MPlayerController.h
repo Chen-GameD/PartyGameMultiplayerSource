@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/MInGameHUD.h"
 #include "MPlayerController.generated.h"
 
 /**
@@ -64,11 +65,21 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();
+
+	UFUNCTION(Server, Reliable)
+	void SetCanMove(bool i_CanMove);
+
+	// UI Update
+	// InGame UI
+	UFUNCTION()
+	void UI_InGame_UpdateHealth(float percentage);
 	
 protected:
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	virtual void OnNetCleanup(UNetConnection* Connection) override;
 	
 	// Movement
 	// ==========================
@@ -125,9 +136,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UUserWidget* WB_GameTimerUI;
 
+	UPROPERTY(BlueprintReadOnly, Replicated)
+	bool CanMove = true;
+
 // Members
 // ==============================================================
-	
+private:
+	//InGame HUD
+	AMInGameHUD* MyInGameHUD;
 
 	
 };

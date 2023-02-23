@@ -17,7 +17,7 @@ public:
 	AWeaponAlarmgun();
 
 	// should only be called on server
-	virtual void AttackStart() override;
+	virtual void SpawnProjectile() override;
 
 protected:
 private:
@@ -25,6 +25,5 @@ private:
 // MEMBER VARIABLES
 public:
 protected:
-	TArray<class ABaseProjectile*> Projectiles;
 private:
 };

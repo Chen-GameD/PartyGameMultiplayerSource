@@ -11,7 +11,7 @@
 #include "NiagaraFunctionLibrary.h"
 //#include "GeometryCacheComponent.h"
 
-#include "UI/HealthBar.h"
+#include "UI/MCharacterFollowWidget.h"
 #include "Components/WidgetComponent.h"
 #include "Character/MCharacter.h"
 #include "GameBase/MGameMode.h"
@@ -38,7 +38,7 @@ AMinigameMainObjective::AMinigameMainObjective()
 	//	Mesh->SetupAttachment(RootMesh);
 	//}
 
-	MaxHealth = 100.0f;
+	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
 
 	//Create HealthBar UI Widget
@@ -66,8 +66,11 @@ void AMinigameMainObjective::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 // server-only
 float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!EventInstigator || !DamageCauser)
+		return 0.0f;
 	if (CurrentHealth <= 0)
 		return 0.0f;
+
 	CurrentHealth -= DamageTaken;
 	if (CurrentHealth <= 0)
 	{
@@ -77,11 +80,9 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
 			SkeletalMesh->DestroyComponent();
 		}
-		if (auto killer = Cast<AMCharacter>((Cast<ABaseWeapon>(DamageCauser))->GetHoldingPlayer())) {
-			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) 
-			{
-				killerPS->addScore(30);
-			}
+		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
+		{
+			killerPS->addScore(30);
 		}
 
 		// Set timer and respawn this actor
@@ -113,7 +114,7 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 void AMinigameMainObjective::BeginPlay()
 {
 	Super::BeginPlay();
-	if (UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject()))
+	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
 	{
 		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
 		healthBar->HideTip();
@@ -126,7 +127,7 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
 
-	if (UHealthBar* healthBar = Cast<UHealthBar>(HealthWidget->GetUserWidgetObject()))
+	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
 	{
 		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
 	}

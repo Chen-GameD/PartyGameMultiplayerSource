@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "BaseWeapon.h"
+#include "Weapon/WeaponDataHelper.h"
 
 class WeaponConfig
 {
@@ -39,9 +40,13 @@ private:
 		{"Blower", "Blower_Socket"},
 		{"Fork", "Fork_Socket"},
 		{"Lighter", "Lighter_Socket"},
+		{"Alarm", "Alarm_Socket"},
 		{"Flamefork", "Flamefork_Socket"},
 		{"Flamethrower", "Flamethrower_Socket"},
-		{"Taser", "Taser_Socket"}
+		{"Taser", "Taser_Socket"},
+		{"Alarmgun", "Alarmgun_Socket"},
+		{"Bomb", "Bomb_Socket"},
+		{"Cannon", "Cannon_Socket"}
 	};
 
 	std::map<FString, EnumWeaponType> CombineWeaponIndex{
@@ -50,7 +55,13 @@ private:
 		{"Blower+Fork", EnumWeaponType::Taser},
 		{"Fork+Lighter", EnumWeaponType::Flamefork},
 		{"Lighter+Blower", EnumWeaponType::Flamethrower},
-		{"Fork+Blower", EnumWeaponType::Taser}
+		{"Fork+Blower", EnumWeaponType::Taser},
+		{"Alarm+Blower", EnumWeaponType::Alarmgun},
+		{"Blower+Alarm", EnumWeaponType::Alarmgun},
+		{"Alarm+Fork", EnumWeaponType::Bomb},
+		{"Fork+Alarm", EnumWeaponType::Bomb},
+		{"Alarm+Lighter", EnumWeaponType::Cannon},
+		{"Lighter+Alarm", EnumWeaponType::Cannon},
 	};
 
 	// Weapon Attack Style state Map - Weapon Type: Attack Type State Index in Anim State Vector
@@ -60,9 +71,13 @@ private:
 		{EnumWeaponType::Fork, 0},
 		{EnumWeaponType::Blower, 1},
 		{EnumWeaponType::Lighter, 0},
+		{EnumWeaponType::Alarm, 0},
 		{EnumWeaponType::Flamethrower, 4},
 		{EnumWeaponType::Flamefork, 0},
-		{EnumWeaponType::Taser, 1}
+		{EnumWeaponType::Taser, 1},
+		{EnumWeaponType::Alarmgun, 4},
+		{EnumWeaponType::Bomb, 0},
+		{EnumWeaponType::Cannon, 4}
 	};
 
 private:

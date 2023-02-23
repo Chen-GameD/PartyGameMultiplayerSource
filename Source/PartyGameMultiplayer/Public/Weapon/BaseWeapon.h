@@ -4,56 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Weapon/WeaponDataHelper.h"
+
 #include "BaseWeapon.generated.h"
 
 
-enum EnumWeaponType
-{
-	None,
-	Fork,
-	Blower,
-	Lighter,
-	Flamethrower,
-	Flamefork,
-	Taser,
-	Alarm,
-	Alarmgun,
-	Bomb,
-	Cannon
-};
-
-enum EnumAttackType
-{
-	OneHit,
-	Constant
-};
-
-enum EnumAttackBuff
-{
-	Burning,
-	Paralysis,
-	Blowing,
-	Knockback
-};
-
-/*
-	UClasses cannot really be abstract in the C++ sense, because the UObject sub-system requires that each class can be instantiated
-	(it creates at least one instance of each class as a so called Class Default Object [CDO] that holds the default properties of that class).
-	Therefore, every class method must have an implementation, even if it does nothing.
-	That being said, you can get similar behavior by decorating your member methods with the PURE_VIRTUAL macro. This will tell
-	the UObject sub-system that your intent is to declare a pure virtual method. So even though the method is not pure virtual
-	in the C++ sense - it has a (possibly empty) function body - the compiler can still ensure that all child classes do supply an actual implementation.
-
-	Summary:
-	If you don't want a class to be instantiated, use the "Abstract" class specifier, although it isn't exactly abstract in the C++ sense
-	We can't make a UClass abstract by putting a pure virtual function into it, because Unreal doesn't allow pure virtual functions in a UClass.
-*/
 UCLASS(Abstract)
 class PARTYGAMEMULTIPLAYER_API ABaseWeapon : public AActor
 {
 	GENERATED_BODY()
 
-// MEMBER METHODS
+/* MEMBER METHODS */
 public:
 	ABaseWeapon();
 
@@ -70,46 +32,40 @@ public:
 	virtual void AttackStart();
 	// should only be called on server
 	virtual void AttackStop();
-
-	/*
-		Confusion: the macro doesn't keep the child class from instantiating when it doesn't implement the interface...
-		If return type is not void, you have write something like "ABaseWeapon::AttackStart, return false;" inside the macro
-	
-		For example, the flamethrower starts to throw the flame
-		virtual void AttackStart() PURE_VIRTUAL(ABaseWeapon::AttackStart, );
-		For example, the flamethrower stops throwing the flame
-		virtual void AttackStop() PURE_VIRTUAL(ABaseWeapon::AttackStop, );
-	*/
-
 	//Get weapon name
-	virtual FString GetWeaponName() const;
-
+	virtual FString GetWeaponName();
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
-	ACharacter* GetHoldingPlayer() const;
+	AController* GetHoldingController() const;
+
+	//// only on server, generate stuff like damage, buff and so on
+	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
 
 protected:
 	virtual void CheckInitilization();
 	virtual void BeginPlay() override;
-	//virtual void Destroyed() override; 
+	virtual void Destroyed() override; 
 	virtual void PlayAnimationWhenNotBeingPickedUp(float DeltaTime);
-	//virtual void GenerateAttackHitEffect() PURE_VIRTUAL(ABaseWeapon::GenerateAttackHitEffect, );
+	// should be only on client
+	virtual void DisplayCaseCollisionSetActive(bool IsActive);
+	// should be only on client
 	virtual void GenerateAttackHitEffect();
-	//virtual void GenerateDamage(class AActor* DamagedActor) PURE_VIRTUAL(ABaseWeapon::GenerateDamage, );
-	virtual void GenerateDamage(class AActor* DamagedActor);
-	//virtual void GenerateBuff(class AActor* DamagedActor);
+	// should only be called on server
+	virtual void SpawnProjectile();
 
+	/* RepNotify Functions */
 	UFUNCTION()
-		virtual void OnRep_Transform();
+		virtual void OnRep_DisplayCaseTransform();
 	UFUNCTION()
 		virtual void OnRep_bAttackOn();
 	UFUNCTION()
 		virtual void OnRep_bAttackOverlap();
 	UFUNCTION()
 		virtual void OnRep_IsPickedUp();	
-	UFUNCTION()
-		virtual void OnRep_DamageGenerationCounter();
-	// only is called on server
+	//UFUNCTION()
+	//	virtual void OnRep_DamageGenerationCounter();
+
+	// only is called on server, deal with damage applied by the AttackDetectComponent
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -117,7 +73,7 @@ protected:
 	UFUNCTION(Category = "Weapon")
 		virtual void OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	// only is called on server(For test use, will not be used in the actual project)
+	// only is called on server(For test, will not be used in the actual play)
 	UFUNCTION(Category = "Weapon")
 		virtual void OnDisplayCaseOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -125,43 +81,55 @@ protected:
 private:
 
 
-// MEMBER VARIABLES
+/* MEMBER VARIABLES */
 public:
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
-	bool IsCombined;
+	bool IsCombineWeapon;  // if it is a combine type weapon or not
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
+	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* textureUI;
-	// Ele is short for Element
+	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
 
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float Damage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float MiniGameDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float AccumulatedTimeToGenerateDamage;
-	UPROPERTY(EditAnywhere, Category = "Damage")
-		float MiniGameAccumulatedTimeToGenerateDamage;
+	// Damage related
+	//float Damage;
+	//float MiniGameDamage;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> DamageType;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Damage")
+		TSubclassOf<class UDamageType> MiniGameDamageType;
+	// CoolDown related(CD_LeftEnergy needs to replicate so the client can show the correct cd UI)
+	float CD_MaxEnergy;
+	float CD_MinEnergyToAttak;
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "CoolDown")
+	float CD_LeftEnergy;	
+	float CD_DropSpeed;
+	float CD_RecoverSpeed;
+	bool CD_CanRecover;
+	float TimePassed_SinceAttackStop;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
+		bool IsPickedUp;
 
 protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;
 
-	// if we don't need the weapon to know which character is using it [on the client end], then this variable doesn't have to be replicated
-	//UPROPERTY(Replicated)
-	ACharacter* HoldingPlayer;
+	// don't replicate pointers
+	AController* HoldingController;
 
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootLocation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FRotator RootRotation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootScale;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FVector DisplayCaseLocation;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FRotator DisplayCaseRotation;
+	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
+		FVector DisplayCaseScale;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
-		bool IsPickedUp;
+	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
+	int ApplyDamageCounter;
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOn)
 		bool bAttackOn;
@@ -169,10 +137,10 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOverlap)
 		bool bAttackOverlap;
 
-	UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
-		unsigned int DamageGenerationCounter;
+	//UPROPERTY(ReplicatedUsing = OnRep_DamageGenerationCounter)
+	//	unsigned int DamageGenerationCounter;
 
-	// record what is being attacked and how long they have been attacked
+	// Which actor is being attacked - how long they have been attacked
 	TMap<AActor*, float> AttackObjectMap;
 
 	/**
@@ -184,13 +152,16 @@ protected:
 		which ensures that their classes will be recognized within the header file.
 	*/
 
-	// Static Mesh used to provide a visual representation of the object.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		class UStaticMeshComponent* WeaponMesh;
-
 	// Sphere component used to make sure the weapon could be on the ground after threw away.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* DisplayCase;
+
+	// Static Mesh used to provide a visual representation of the object.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* WeaponMesh;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* SpawnProjectilePointMesh;
 
 	/*	PrimitiveComponent(has OnWeaponOverlapBegin&OnWeaponOverlapEnd) used to test collision
 			UPrimitiveComponent->UMeshComponent->UStaticMeshComponent
@@ -212,12 +183,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UParticleSystem* AttackHitEffect;
 
-	//The damage type and damage that will be done by this weapon
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> DamageType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage")
-		TSubclassOf<class UDamageType> MiniGameDamageType;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class ABaseProjectile> SpecificProjectileClass;
 
 	//WeaponName
 	FString WeaponName;

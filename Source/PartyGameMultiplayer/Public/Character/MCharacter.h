@@ -11,6 +11,10 @@
 #include "../M_PlayerState.h"
 #include "MCharacter.generated.h"
 
+//#define IS_LISTEN_SERVER
+
+UENUM()
+enum SkillType { SKILL_DASH };
 
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
@@ -27,7 +31,7 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 	
 	/**	Health Bar UI widget */
 	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* HealthWidget;
+	class UWidgetComponent* PlayerFollowWidget;
 
 	/**	Inventory Menu UI widget Reference */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -38,6 +42,8 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AMCharacter();
+
+	virtual void Restart() override;
 
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -66,10 +72,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	// customized TakeDamge Function
 	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
 
-	float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
-		AController* EventInstigator, ABaseWeapon* DamageCauser);
+	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
+		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
 	/**	Update HealthBar UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -99,11 +106,23 @@ public:
 	UFUNCTION()
 	void SetGameUIVisibility(bool isVisible);
 
+	UFUNCTION()
+	void SetLocallyControlledGameUI(bool isVisible);
+
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);
 
 	UFUNCTION()
 	void SetThisCharacterMesh(int TeamIndex);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetCanMove(bool i_CanMove);
+
+	// Check if the buffmap is valid with the input buff or if it can be valid with it after the operation
+	bool CheckBuffMap(EnumAttackBuff AttackBuff);
+
+	UFUNCTION()
+	float GetCurrentEnergyWeaponUIUpdatePercent();
 	
 protected:
 
@@ -262,6 +281,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
 
+	// Buff Map
+	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
+	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
+	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+	FVector3d KnockbackDirection_DuringLastFrame;
+
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
@@ -271,10 +296,6 @@ protected:
 	/** The player's current health. When reduced to 0, they are considered dead.*/
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
-
-	// Buff Map
-	// BuffName: BuffPoints, BuffRemainedTime
-	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 
 	UPROPERTY(Replicated)
 	bool IsDead;
@@ -291,9 +312,9 @@ protected:
 	float OriginalMaxWalkSpeed;
 	float DashSpeed;
 	FTimerHandle DashingTimer;
-	// Buff
-	UPROPERTY(EditAnywhere, Category = "Buff")
-	float BurningBuffDamagePerSecond;
+
+	// buff
+	bool CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
 	// to do

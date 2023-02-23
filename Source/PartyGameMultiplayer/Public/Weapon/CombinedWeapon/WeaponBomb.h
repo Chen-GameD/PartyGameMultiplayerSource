@@ -18,12 +18,27 @@ class PARTYGAMEMULTIPLAYER_API AWeaponBomb : public ABaseWeapon
 public:
 	AWeaponBomb();
 
+	virtual void Tick(float DeltaTime) override;
+
+	// should only be called on server
+	virtual void AttackStart() override;
+	// should only be called on server
+	virtual void AttackStop() override;
+	// should only be called on server
+	virtual void SpawnProjectile() override;
+
 protected:
+	virtual void OnRep_bAttackOn() override;
 private:
 
-	// MEMBER VARIABLES
+// MEMBER VARIABLES
 public:
+	// Static Mesh used to provide a visual representation of the object.
+	UPROPERTY(EditAnywhere, Category = "Components")
+		class UStaticMeshComponent* WeaponMesh_WithoutBomb;
 protected:
+	bool ShouldHideWeapon;
+	float TimePassed_SinceLastAttackOn;
 private:
 	
 };
