@@ -13,6 +13,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
+#include "Weapon/DamageManager.h"
+
 
 AProjectileBomb::AProjectileBomb()
 {
@@ -35,5 +37,51 @@ AProjectileBomb::AProjectileBomb()
 	//	UNiagaraSystem* AttackHitEffect_NiagaraSystem = DefaultAttackHitEffect.Object;
 	//	AttackHitEffect_NSComponent->SetAsset(AttackHitEffect_NiagaraSystem);
 	//}
+
+	HasAppliedNeedleRainDamage = false;
 }
 
+
+void AProjectileBomb::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (2.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
+		{
+			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+			HasAppliedNeedleRainDamage = true;
+		}
+	}
+}
+
+
+
+void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (HasExploded)
+		return;
+
+	if (Cast<ABaseWeapon>(OtherActor) || Cast<ABaseProjectile>(OtherActor))
+		return;
+	if (Cast<APawn>(OtherActor) && Controller && OtherActor == Controller->GetPawn())
+		return;
+
+	Origin = this->GetActorLocation();
+	HasExploded = true;
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_HasExploded();
+	}
+	HasAppliedNeedleRainDamage = false;
+
+	// Direct Hit Damage
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+
+	// Bomb's Range Damage is different
+	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+}

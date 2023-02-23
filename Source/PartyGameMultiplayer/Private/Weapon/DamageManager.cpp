@@ -67,6 +67,11 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 
 bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
 {
+	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
+}
+
+bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage)
+{
 	if (!DamageCauser || !Controller)
 		return false;
 
@@ -80,7 +85,7 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 
 	TArray<AActor*> IgnoredActors;
 	auto AttackingPlayer = Controller->GetPawn();
-	if(AttackingPlayer)
+	if (AttackingPlayer)
 		IgnoredActors.Add(AttackingPlayer);
 
 	bool bDoFullDamage = true;
@@ -91,8 +96,8 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 		BaseDamage,
 		0.0f,			// float MinDamage
 		Origin,
-		0.f,			// float DamageInnerRadius
-		DamageRadius,
+		DamageInnerRadius,			// float DamageInnerRadius
+		DamageOuterRadius,
 		DamageFalloff,
 		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
 		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
@@ -103,7 +108,6 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 
 	return true;
 }
-
 
 bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
 {	

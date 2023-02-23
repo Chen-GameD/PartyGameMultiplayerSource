@@ -15,4 +15,11 @@ class PARTYGAMEMULTIPLAYER_API AProjectileBomb : public ABaseProjectile
 	GENERATED_BODY()
 public:
 	AProjectileBomb();
+	virtual void Tick(float DeltaTime) override;
+protected:
+	virtual void OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+protected:
+	bool HasAppliedNeedleRainDamage;
 };

@@ -49,7 +49,7 @@ ABaseProjectile::ABaseProjectile()
 	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
 
 	LiveTime = 0.0f;
-	MaxLiveTime = 10.0f;
+	MaxLiveTime = 5.0f;
 
 	TotalTime_ApplyDamage = 0.0f;
 	TotalDamage_ForTotalTime = 0.0f;
@@ -78,25 +78,29 @@ void ABaseProjectile::Tick(float DeltaTime)
 			return;
 		}
 
-		// Explosion has started && is constant
-		if (HasExploded && bApplyConstantDamage)
+		// Explosion has started
+		if (HasExploded)
 		{
-			// Explosion is finished
-			if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
+			//  Is constant damage type
+			if (bApplyConstantDamage)
 			{
-				Destroy();
-				return;
-			}
+				// Explosion is finished
+				if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
+				{
+					Destroy();
+					return;
+				}
 
-			// Explosion is not finished
-			// TryApplyRadialDamage when reaches the timeinterval
-			if (ADamageManager::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
-			{
-				ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
-				TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
-			}
+				// Explosion is not finished
+				// TryApplyRadialDamage when reaches the timeinterval
+				if (ADamageManager::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
+				{
+					ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+					TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
+				}				
+				TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
+			}	
 			TimePassed_SinceExplosion += DeltaTime;
-			TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
 		}
 	}
 }
@@ -169,7 +173,6 @@ void ABaseProjectile::OnRep_HasExploded()
 
 void ABaseProjectile::Destroyed()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("Destroyed")));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Enter Destroyed")));
 
 	if (AttackHitEffect_NSComponent)
@@ -186,7 +189,7 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	if (HasExploded)
 		return;
 
-	if (Cast<ABaseWeapon>(OtherActor))
+	if (Cast<ABaseWeapon>(OtherActor) || Cast<ABaseProjectile>(OtherActor))
 		return;
 	if (Cast<APawn>(OtherActor) && Controller && OtherActor == Controller->GetPawn())
 		return;
