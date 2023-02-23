@@ -4,6 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Weapon/BaseWeapon.h"
+
 #include "BaseProjectile.generated.h"
 
 UCLASS()
@@ -15,25 +18,27 @@ class PARTYGAMEMULTIPLAYER_API ABaseProjectile : public AActor
 public:
 	ABaseProjectile();
 
-	/** Property replication */
+	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
 
+	UFUNCTION()
+		virtual void OnRep_HasExploded();
+
 	// Server specific
 	UFUNCTION(Category = "Projectile")
 		virtual void OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	/* RepNotify Functions */
-	UFUNCTION()
-		virtual void OnRep_bAttackHit();
 private:
 
 // MEMBER VARIABLES
 public:
+	EnumWeaponType WeaponType;
+	class AController* Controller;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
@@ -43,11 +48,20 @@ protected:
 		class UNiagaraComponent* AttackHitEffect_NSComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraSystem* AttackHitEffect_NSSystem;
-	
-	UPROPERTY(ReplicatedUsing = OnRep_bAttackHit)
-		bool bAttackHit;
+
+	float LiveTime;
+	float MaxLiveTime;
+
 	float TotalTime_ApplyDamage;
-	//FTimerHandle TimerHandle_Loop;
+	float TotalDamage_ForTotalTime;
+	FVector Origin;
+	float DamageRadius;
+	bool bApplyConstantDamage;
+	float BaseDamage;  // the number passed to ADamageManager::TryApplyRadialDamage()
+	UPROPERTY(ReplicatedUsing = OnRep_HasExploded)
+	bool HasExploded;
+	float TimePassed_SinceLastTryApplyRadialDamage;
+	float TimePassed_SinceExplosion;
 
 private:
 

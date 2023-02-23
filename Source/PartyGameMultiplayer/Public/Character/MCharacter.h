@@ -118,6 +118,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_SetCanMove(bool i_CanMove);
 
+	// Check if the buffmap is valid with the input buff or if it can be valid with it after the operation
+	bool CheckBuffMap(EnumAttackBuff AttackBuff);
+
 	UFUNCTION()
 	float GetCurrentEnergyWeaponUIUpdatePercent();
 
@@ -282,8 +285,10 @@ public:
 		TArray<USkeletalMesh*> CharacterBPArray;
 
 	// Buff Map
-	// BuffName: BuffPoints, BuffRemainedTime
+	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
+	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+	FVector3d KnockbackDirection_DuringLastFrame;
 
 protected:
 

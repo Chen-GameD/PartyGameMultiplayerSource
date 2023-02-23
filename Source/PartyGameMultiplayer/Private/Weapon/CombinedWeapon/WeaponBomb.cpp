@@ -21,7 +21,6 @@ AWeaponBomb::AWeaponBomb()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Bomb;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_1(TEXT("/Game/ArtAssets/Models/Bomb/Bomb.Bomb"));
@@ -55,6 +54,23 @@ AWeaponBomb::AWeaponBomb()
 	if (DefaultAttackHitEffect.Succeeded())
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
+	}
+}
+
+
+void AWeaponBomb::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (ShouldHideWeapon)
+	{
+		if (CD_MaxEnergy / CD_RecoverSpeed <= TimePassed_SinceLastAttackOn)
+		{
+			WeaponMesh->SetVisibility(true);
+			TimePassed_SinceLastAttackOn = 0.0f;
+			ShouldHideWeapon = false;
+		}
+		TimePassed_SinceLastAttackOn += DeltaTime;
 	}
 }
 
@@ -116,7 +132,6 @@ void AWeaponBomb::SpawnProjectile()
 		spawnParameters.Instigator = GetInstigator();
 		spawnParameters.Owner = this;
 
-		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
 		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }
@@ -126,16 +141,9 @@ void AWeaponBomb::OnRep_bAttackOn()
 	Super::OnRep_bAttackOn();
 
 	if (bAttackOn && WeaponMesh->IsVisible())
-	{
 		WeaponMesh->SetVisibility(false);
-		//WeaponMesh_WithoutBomb->SetVisibility(true);
-		FTimerHandle TimerHandle;
-		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-			{
-				WeaponMesh->SetVisibility(true);
-				//WeaponMesh_WithoutBomb->SetVisibility(false);
-			}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
-	}	
+	TimePassed_SinceLastAttackOn = 0.0f;
+	ShouldHideWeapon = true;
 }
 
 

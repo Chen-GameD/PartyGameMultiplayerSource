@@ -1,5 +1,5 @@
 ﻿#include "WeaponConfig.h"
-
+#include "Weapon/WeaponDataHelper.h"
 #include "CombinedWeapon/WeaponFlamefork.h"
 #include "CombinedWeapon/WeaponFlamethrower.h"
 #include "CombinedWeapon/WeaponTaser.h"

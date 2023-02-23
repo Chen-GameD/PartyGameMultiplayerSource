@@ -17,27 +17,13 @@
 #include "GameFramework/Character.h"
 
 #include "Weapon/DamageTypeToCharacter.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
-
-TMap<EnumWeaponType, FString> ABaseWeapon::WeaponEnumToString_Map = 
-{
-	{EnumWeaponType::None, "None"},
-	{EnumWeaponType::Fork, "Fork"},
-	{EnumWeaponType::Blower, "Blower"},
-	{EnumWeaponType::Lighter, "Lighter"},
-	{EnumWeaponType::Alarm, "Alarm"},
-	{EnumWeaponType::Flamethrower, "Flamethrower"},
-	{EnumWeaponType::Flamefork, "Flamefork"},
-	{EnumWeaponType::Taser, "Taser"},
-	{EnumWeaponType::Alarmgun, "Alarmgun"},
-	{EnumWeaponType::Bomb, "Bomb"},
-	{EnumWeaponType::Cannon, "Cannon"},
-};
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -47,12 +33,12 @@ ABaseWeapon::ABaseWeapon()
 	IsPickedUp = false;
 	HasBeenCombined = false;
 	WeaponType = EnumWeaponType::None;
+	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
-	// DisplayCase->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
@@ -72,6 +58,8 @@ ABaseWeapon::ABaseWeapon()
 	//Damage = 0.0f;
 	//DamageGenerationCounter = 0;
 	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
+	CD_CanRecover = true;
+	TimePassed_SinceAttackStop = 0.0f;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
@@ -112,7 +100,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					else
 					{
-						if (CD_LeftEnergy < CD_MaxEnergy)
+						if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
 						{
 							CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
 							CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
@@ -122,13 +110,23 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// if the attack type is not constant 
 				else
 				{
-					if (CD_LeftEnergy < CD_MaxEnergy)
+					if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
 					{
 						CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
 						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
 					}
-				}							
-				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("CD_LeftEnergy: %f"), CD_LeftEnergy));
+				}
+				if (!CD_CanRecover)
+				{
+					float CD_RecoverDelay = 1.0f;
+					if(TimePassed_SinceAttackStop <= CD_RecoverDelay)
+						TimePassed_SinceAttackStop += DeltaTime;
+					if (CD_RecoverDelay < TimePassed_SinceAttackStop)
+					{
+						CD_CanRecover = true;
+						TimePassed_SinceAttackStop = 0.0f;
+					}
+				}				
 			}
 			// Apply constant damage
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
@@ -138,8 +136,11 @@ void ABaseWeapon::Tick(float DeltaTime)
 					Elem.Value += DeltaTime;
 					if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 					{
-						//GenerateDamageLike(Elem.Key, DeltaTime);
-						ADamageManager::TryApplyDamageToAnActor(this, Elem.Key, DeltaTime);
+						if (ADamageManager::interval_ApplyDamage < Elem.Value && HoldingController)
+						{
+							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
+							Elem.Value -= ADamageManager::interval_ApplyDamage;
+						}						
 					}
 				}
 			}
@@ -179,10 +180,11 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
 	IsPickedUp = true;
 
-	HoldingPlayer = pCharacter;
-	check(HoldingPlayer != nullptr);
-	SetInstigator(HoldingPlayer);
-	SetOwner(HoldingPlayer);
+	check(pCharacter);
+	HoldingController = pCharacter->GetController();
+	check(HoldingController);
+	SetInstigator(pCharacter);
+	SetOwner(pCharacter);
 
 	SetActorEnableCollision(false);
 	//  Set DisplayCaseCollision to inactive
@@ -200,10 +202,9 @@ void ABaseWeapon::GetThrewAway()
 {
 	IsPickedUp = false;
 
-	auto OldHoldingPlayer = HoldingPlayer;
-	HoldingPlayer = nullptr;
-	SetInstigator(HoldingPlayer);
-	SetOwner(HoldingPlayer);
+	HoldingController = nullptr;
+	SetInstigator(nullptr);
+	SetOwner(nullptr);
 
 	SetActorEnableCollision(true);
 	//  Set DisplayCaseCollision to active
@@ -273,6 +274,10 @@ void ABaseWeapon::AttackStop()
 	ApplyDamageCounter = 0;
 	AttackObjectMap.Empty();
 
+	if (AttackType == EnumAttackType::Constant)
+		CD_CanRecover = false;
+	TimePassed_SinceAttackStop = 0.0f;
+
 	if (AttackType != EnumAttackType::SpawnProjectile)
 	{
 		SetActorEnableCollision(bAttackOn);
@@ -294,11 +299,12 @@ void ABaseWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	CheckInitilization();
+	GetWeaponName(); // to update weapon name
 
 	// Assign some member variables(we want both the server and client have these values)
 	if (AWeaponDataHelper::DamageManagerDataAsset)
 	{
-		// CoolDown
+		// CoolDown		
 		FString ParName = WeaponName + "_" + "CD_MaxEnergy";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
@@ -394,45 +400,6 @@ void ABaseWeapon::GenerateAttackHitEffect()
 }
 
 
-//void ABaseWeapon::GenerateDamageLike(class AActor* DamagedActor, float DeltaTime)
-//{
-//	check(DamagedActor);
-//
-//	//if (auto pCharacter = Cast<AMCharacter>(DamagedActor))
-//	//{		
-//	//	//UGameplayStatics::ApplyDamage(DamagedActor, Damage, GetInstigator()->Controller, this, DamageType);
-//	//	pCharacter->TakeDamageRe(Damage, WeaponType, GetInstigator()->Controller, this);
-//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//	//	// To transfer
-//	//	// knockback
-//	//	/*check(HoldingPlayer);
-//	//	FRotator AttackerControlRotation = HoldingPlayer->GetControlRotation();
-//	//	FVector3d AttackerControlDir = AttackerControlRotation.RotateVector(FVector3d::ForwardVector);
-//	//	pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Knockback, 1.0f, AttackerControlDir, GetInstigator()->Controller, this);*/
-//	//	// paralysis
-//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Paralysis, 1.0f, FVector3d::Zero(), GetInstigator()->Controller, this);
-//	//	// burning
-//	//	//pCharacter->AccumulateAttackedBuff(EnumAttackBuff::Burning, 0.5f, FVector3d::Zero(), GetInstigator()->Controller, this);
-//	//}
-//	//else if(dynamic_cast<AMinigameMainObjective*>(DamagedActor))
-//	//{
-//	//	UGameplayStatics::ApplyDamage(DamagedActor, MiniGameDamage, GetInstigator()->Controller, this, MiniGameDamageType);
-//	//	//DamagedActor->TakeDamageRe(Damage, GetInstigator()->Controller, this);
-//	//	DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//	//}
-//
-//	bool success = ADamageManager::DealDamageAndBuffBetweenActors(this, DamagedActor, DeltaTime);
-//	if (success)
-//	{
-//		DamageGenerationCounter = (DamageGenerationCounter + 1) % 1000;
-//		// Listen Server
-//		if (GetNetMode() == NM_ListenServer)
-//		{
-//			OnRep_DamageGenerationCounter();
-//		}
-//	}		
-//}
-
 void ABaseWeapon::OnRep_DisplayCaseTransform()
 {
 	if (!IsPickedUp)
@@ -485,7 +452,6 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 {
 	if (IsPickedUp && GetOwner())
 	{
-		// What will happen if the weapon hit another player
 		if( (Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor) )
 		{
@@ -493,19 +459,18 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				AttackObjectMap.Add(OtherActor);
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
-
-			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
-				&& ApplyDamageCounter == 0 )
-			{
-				//GenerateDamageLike(OtherActor, -1.0f);  
-				ADamageManager::TryApplyDamageToAnActor(this, OtherActor, -1.0f);  // DeltaTime as -1.0f suggests it is one-hit type damge
-				ApplyDamageCounter++;
-			}
 			// Listen server
 			if (GetNetMode() == NM_ListenServer)
 			{
 				OnRep_bAttackOverlap();
-			}		
+			}
+
+			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
+				&& ApplyDamageCounter == 0 && HoldingController)
+			{
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
+				ApplyDamageCounter++;
+			}	
 		}
 	}
 }
@@ -546,14 +511,16 @@ void ABaseWeapon::OnDisplayCaseOverlapBegin(class UPrimitiveComponent* Overlappe
 	}
 }
 
-FString ABaseWeapon::GetWeaponName() const
+FString ABaseWeapon::GetWeaponName()
 {
+	if (WeaponName == "")
+		WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 	return WeaponName;
 }
 
-ACharacter* ABaseWeapon::GetHoldingPlayer() const
+AController* ABaseWeapon::GetHoldingController() const
 {
-	return HoldingPlayer;
+	return HoldingController;
 }
 
 

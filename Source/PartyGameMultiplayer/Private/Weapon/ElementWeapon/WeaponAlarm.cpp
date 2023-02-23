@@ -17,7 +17,6 @@ AWeaponAlarm::AWeaponAlarm()
 {
 	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Alarm;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Alarm/Alarm01.Alarm01"));
@@ -40,20 +39,38 @@ AWeaponAlarm::AWeaponAlarm()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
+
+	ShouldHideWeapon = false;
+	TimePassed_SinceLastAttackOn = 0.0f;
 }
+
+void AWeaponAlarm::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (ShouldHideWeapon)
+	{
+		if (CD_MaxEnergy / CD_RecoverSpeed <= TimePassed_SinceLastAttackOn)
+		{
+			if (!HasBeenCombined)
+				SetActorHiddenInGame(false);
+			TimePassed_SinceLastAttackOn = 0.0f;
+			ShouldHideWeapon = false;
+		}
+		TimePassed_SinceLastAttackOn += DeltaTime;
+	}	
+}
+
 
 
 void AWeaponAlarm::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	SetActorHiddenInGame(true);
-	FTimerHandle TimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]() 
-		{ 
-			if(!HasBeenCombined)
-				SetActorHiddenInGame(false); 
-		}, 0.99 * CD_MaxEnergy / CD_RecoverSpeed, false);
+	if(bAttackOn)
+		SetActorHiddenInGame(true);
+	TimePassed_SinceLastAttackOn = 0.0f;
+	ShouldHideWeapon = true;
 }
 
 

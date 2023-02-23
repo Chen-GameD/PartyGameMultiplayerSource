@@ -18,6 +18,7 @@ class PARTYGAMEMULTIPLAYER_API AWeaponAlarm : public ABaseWeapon
 public:
 	AWeaponAlarm();
 
+	virtual void Tick(float DeltaTime) override;
 	// should only be called on server
 	virtual void SpawnProjectile() override;
 
@@ -28,5 +29,7 @@ private:
 // MEMBER VARIABLES
 public:
 protected:
+	bool ShouldHideWeapon;
+	float TimePassed_SinceLastAttackOn;
 private:
 };

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "BaseWeapon.h"
+#include "Weapon/WeaponDataHelper.h"
 
 class WeaponConfig
 {

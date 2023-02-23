@@ -38,7 +38,7 @@ AMinigameMainObjective::AMinigameMainObjective()
 	//	Mesh->SetupAttachment(RootMesh);
 	//}
 
-	MaxHealth = 100.0f;
+	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
 
 	//Create HealthBar UI Widget
@@ -66,8 +66,11 @@ void AMinigameMainObjective::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 // server-only
 float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (!EventInstigator || !DamageCauser)
+		return 0.0f;
 	if (CurrentHealth <= 0)
 		return 0.0f;
+
 	CurrentHealth -= DamageTaken;
 	if (CurrentHealth <= 0)
 	{
@@ -77,11 +80,9 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
 			SkeletalMesh->DestroyComponent();
 		}
-		if (auto killer = Cast<AMCharacter>((Cast<ABaseWeapon>(DamageCauser))->GetHoldingPlayer())) {
-			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) 
-			{
-				killerPS->addScore(30);
-			}
+		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
+		{
+			killerPS->addScore(30);
 		}
 
 		// Set timer and respawn this actor

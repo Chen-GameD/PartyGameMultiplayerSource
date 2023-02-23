@@ -2,6 +2,8 @@
 
 
 #include "Weapon/CombinedWeapon/WeaponAlarmgun.h"
+
+#include "Weapon/WeaponDataHelper.h"
 #include "Weapon/BaseProjectile.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
@@ -17,7 +19,6 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 {
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Alarmgun;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::SpawnProjectile;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/AlarmGun/AlarmGun.AlarmGun"));

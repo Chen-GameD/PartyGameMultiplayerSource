@@ -21,7 +21,6 @@ AWeaponFlamefork::AWeaponFlamefork()
 
 	IsCombineWeapon = true;
 	WeaponType = EnumWeaponType::Flamefork;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Flamefork/FlameFork.FlameFork"));
 	if (DefaultMesh.Succeeded())

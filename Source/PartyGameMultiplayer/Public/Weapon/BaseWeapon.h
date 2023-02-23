@@ -4,38 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "Weapon/WeaponDataHelper.h"
+
 #include "BaseWeapon.generated.h"
-
-
-enum EnumWeaponType
-{
-	None,
-	Fork,
-	Blower,
-	Lighter,
-	Alarm,
-	Flamethrower,
-	Flamefork,
-	Taser,
-	Alarmgun,
-	Bomb,
-	Cannon
-};
-
-enum EnumAttackType
-{
-	OneHit,
-	Constant,
-	SpawnProjectile
-};
-
-enum EnumAttackBuff
-{
-	Burning,
-	Paralysis,
-	Blowing,
-	Knockback
-};
 
 
 UCLASS(Abstract)
@@ -61,10 +33,10 @@ public:
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
-	virtual FString GetWeaponName() const;
+	virtual FString GetWeaponName();
 	// Get Weapon Holder
 	UFUNCTION(BlueprintCallable)
-	ACharacter* GetHoldingPlayer() const;
+	AController* GetHoldingController() const;
 
 	//// only on server, generate stuff like damage, buff and so on
 	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
@@ -111,8 +83,6 @@ private:
 
 /* MEMBER VARIABLES */
 public:
-	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
-
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
 	bool IsCombineWeapon;  // if it is a combine type weapon or not
@@ -138,7 +108,9 @@ public:
 	float CD_LeftEnergy;	
 	float CD_DropSpeed;
 	float CD_RecoverSpeed;
-	
+	bool CD_CanRecover;
+	float TimePassed_SinceAttackStop;
+
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
 
@@ -147,7 +119,7 @@ protected:
 	size_t ID;
 
 	// don't replicate pointers
-	ACharacter* HoldingPlayer;
+	AController* HoldingController;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseLocation;

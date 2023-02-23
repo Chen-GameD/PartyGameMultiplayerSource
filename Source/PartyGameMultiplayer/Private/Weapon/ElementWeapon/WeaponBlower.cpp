@@ -16,7 +16,6 @@ AWeaponBlower::AWeaponBlower()
 {
 	IsCombineWeapon = false;
 	WeaponType = EnumWeaponType::Blower;
-	WeaponName = WeaponEnumToString_Map[WeaponType];
 	AttackType = EnumAttackType::Constant;
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/ArtAssets/Models/Blower/Blower.Blower"));

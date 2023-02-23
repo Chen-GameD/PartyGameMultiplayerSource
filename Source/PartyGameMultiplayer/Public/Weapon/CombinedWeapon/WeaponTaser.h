@@ -16,17 +16,16 @@ public:
 	AWeaponTaser();
 
 	virtual void Tick(float DeltaTime) override;
-
-	// should only be called on server
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void AttackStart() override;
-	// should only be called on server
 	virtual void AttackStop() override;
 
 protected:
-	virtual void CheckInitilization() override;
-	/*virtual void GenerateAttackHitEffect() override;*/
-	//virtual void GenerateDamage(class AActor* DamagedActor) override;
 	//virtual void OnRep_bAttackOn() override;
+	UFUNCTION()
+		virtual void OnRep_ForkWorldTransform();
+	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
 private:
 
@@ -35,7 +34,7 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* TaserForkMesh;
-	bool bStretching;
+	bool bShouldStretchOut;
 	UPROPERTY(EditAnywhere, Category = "TaserTmp")
 	float originalX;
 	UPROPERTY(EditAnywhere, Category = "TaserTmp")
@@ -44,6 +43,16 @@ protected:
 	float strechOutSpeed;
 	UPROPERTY(EditAnywhere, Category = "TaserTmp")
 	float strechInSpeed;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ForkWorldTransform)
+		FVector ForkWorldLocation;
+	UPROPERTY(ReplicatedUsing = OnRep_ForkWorldTransform)
+		FRotator ForkWorldRotation;
+	FVector ForkWorldLocation_WhenFirstHitTarget;
+	FRotator ForkWorldRotation_WhenFirstHitTarget;
+
+	bool bHitTarget;
+
 private:
 
 };
