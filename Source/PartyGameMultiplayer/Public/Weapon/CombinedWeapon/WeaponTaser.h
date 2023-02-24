@@ -22,6 +22,8 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void OnRep_bAttackOn() override;
 	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 
@@ -43,7 +45,9 @@ protected:
 	// TaserFork original transform
 	FVector TaserFork_OriginalRelativeLocation;
 	FRotator TaserFork_OriginalRelativeRotation;
-	FVector TaserFork_OriginalRelativeScale;
+	FVector TaserFork_RelativeLocation_WhenAttackStop;
+	FRotator TaserFork_RelativeRotation_WhenAttackStop;
+	//FVector TaserFork_OriginalRelativeScale;
 
 	// For stretch behaviors
 		//bool bShouldStretchOut;
@@ -53,6 +57,8 @@ protected:
 	float StrechOutSpeed;
 	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
 	float StrechInSpeed;
+	bool IsForkOut;
+	float StrechInTime;
 
 	// hit and attached
 	UPROPERTY(ReplicatedUsing = OnRep_bHitTarget)
@@ -64,10 +70,9 @@ protected:
 		FVector ServerForkWorldLocation;
 	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
 		FRotator ServerForkWorldRotation;
-	FVector TaserForkWorldLocation_WhenFirstHitTarget;
-	FRotator TaserForkWorldRotation_WhenFirstHitTarget;
+	FVector ServerTaserForkWorldLocation_WhenFirstHitTarget;
+	FRotator ServerTaserForkWorldRotation_WhenFirstHitTarget;
 
-	
 
 private:
 

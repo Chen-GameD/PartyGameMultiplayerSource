@@ -54,6 +54,9 @@ AWeaponTaser::AWeaponTaser()
 	//StrechOutSpeed = 360.0f;
 	//StrechInSpeed = 160.0f;
 
+	IsForkOut = false;
+	StrechInTime = 0.0f;
+
 	bHitTarget = false;
 	bForkAttachedToWeapon = true;
 }
@@ -66,10 +69,10 @@ void AWeaponTaser::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
 		// if attack on and not hit a target, the server fork would stretch out and the client fork would copy the location 
 		if (bAttackOn && !bHitTarget)
 		{
+			FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
 			// stretch out to the limit
 			if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
 			{
@@ -77,18 +80,36 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			else
 				AttackStop();
-		}
-		
+		}		
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
 		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
 	}
 	// if attack stops, both the clients and server should stretch in. Now we don't need to keep them identical.
 	if (!bAttackOn)
 	{
-		FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
-		if (TaserFork_CurRelativeLocation.X < TaserFork_OriginalRelativeLocation.X)
+		if (TaserForkMesh->GetRelativeLocation() != TaserFork_OriginalRelativeLocation ||
+			TaserForkMesh->GetRelativeRotation() != TaserFork_OriginalRelativeRotation)
 		{
-			TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(StrechInSpeed, 0, 0));
+			IsForkOut = true;
+			if (TimePassed_SinceAttackStop <= StrechInTime)
+			{
+				double percent = FMath::Clamp(TimePassed_SinceAttackStop / StrechInTime, 0.0f, 1.0f);
+				FVector InterpolatedRelativeLocation = FMath::Lerp(TaserFork_RelativeLocation_WhenAttackStop, TaserFork_OriginalRelativeLocation, percent);
+				FRotator InterpolatedRelativeRotation = FMath::Lerp(TaserFork_RelativeRotation_WhenAttackStop, TaserFork_OriginalRelativeRotation, percent);
+				TaserForkMesh->SetRelativeLocation(InterpolatedRelativeLocation);
+				TaserForkMesh->SetRelativeRotation(InterpolatedRelativeRotation);
+			}
+			// edge case, unexpected situation, the back is still not done after passing StrechInTime
+			else
+			{
+				TaserForkMesh->SetRelativeLocation(TaserFork_OriginalRelativeLocation);
+				TaserForkMesh->SetRelativeRotation(TaserFork_OriginalRelativeRotation);
+				IsForkOut = false;
+			}
+		}
+		else
+		{
+			IsForkOut = false;
 		}
 	}
 	// Server
@@ -113,6 +134,9 @@ void AWeaponTaser::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLif
 
 void AWeaponTaser::AttackStart()
 {
+	if (IsForkOut)
+		return;
+
 	Super::AttackStart();
 	//bShouldStretchOut = true;
 }
@@ -120,6 +144,12 @@ void AWeaponTaser::AttackStart()
 void AWeaponTaser::AttackStop()
 {
 	Super::AttackStop();
+
+	float DistanceForkTravelled = FVector::Distance(SpawnProjectilePointMesh->GetComponentLocation(), TaserForkMesh->GetComponentLocation());
+	check(0 < StrechInSpeed);
+	StrechInTime = DistanceForkTravelled / StrechInSpeed;
+	TaserFork_RelativeLocation_WhenAttackStop;
+	TaserFork_RelativeRotation_WhenAttackStop;
 
 	//bShouldStretchOut = false;
 	bHitTarget = false;
@@ -132,7 +162,15 @@ void AWeaponTaser::BeginPlay()
 
 	TaserFork_OriginalRelativeLocation = TaserForkMesh->GetRelativeLocation();
 	TaserFork_OriginalRelativeRotation = TaserForkMesh->GetRelativeRotation();
-	TaserFork_OriginalRelativeScale = TaserForkMesh->GetRelativeScale3D();
+	//TaserFork_OriginalRelativeScale = TaserForkMesh->GetRelativeScale3D();
+}
+
+void AWeaponTaser::OnRep_bAttackOn()
+{
+	Super::OnRep_bAttackOn();
+
+	TaserFork_RelativeLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
+	TaserFork_RelativeRotation_WhenAttackStop = TaserForkMesh->GetRelativeRotation();
 }
 
 void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
@@ -162,8 +200,8 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			bHitTarget = true;
 			OnRep_bHitTarget();
 
-			TaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
-			TaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();
+			ServerTaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
+			ServerTaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();
 
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);
@@ -202,6 +240,23 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 
 void AWeaponTaser::OnRep_bHitTarget()
 {
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_OnRep_bHitTarget"));
+		if(bHitTarget)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_bHitTarget is TRUE"));
+		else
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_bHitTarget is FALSE"));
+	}	
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_OnRep_bHitTarget"));
+		if (bHitTarget)
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_bHitTarget is TRUE"));
+		else
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_bHitTarget is FALSE"));
+	}
+
 	if (bHitTarget)
 	{
 		if (bForkAttachedToWeapon)
@@ -215,15 +270,12 @@ void AWeaponTaser::OnRep_bHitTarget()
 }
 
 
-
-
 void AWeaponTaser::SetTaserForkAttached(bool bShouldAttachToWeapon)
 {
 	// Attach Back to Weapon
 	if(bShouldAttachToWeapon)
 	{
 		TaserForkMesh->AttachToComponent(WeaponMesh, FAttachmentTransformRules::KeepWorldTransform);
-		TaserForkMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 		bForkAttachedToWeapon = true;
 	}
 	// Detach from Weapon

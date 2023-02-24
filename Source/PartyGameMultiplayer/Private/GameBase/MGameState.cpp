@@ -76,7 +76,7 @@ void AMGameState::UpdateGameTime()
 	GameTime--;
 
 	FString TipInformation = FString::Printf(TEXT("Game time : %d"), GameTime);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TipInformation);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TipInformation);
 
 	if (GameTime <= 0)
 	{
@@ -94,7 +94,7 @@ void AMGameState::UpdateGameTime()
 void AMGameState::StartGame_Implementation()
 {
 	FString TipInformation = FString::Printf(TEXT("Start game timer!"));
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
 	SetClientStartGame();

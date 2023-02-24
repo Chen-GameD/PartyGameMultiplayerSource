@@ -73,31 +73,44 @@ void ABaseWeapon::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		// Deal with the collision of the display box
+		// Not being picked up
 		if (!IsPickedUp)
 		{
 			DisplayCaseLocation = DisplayCase->GetComponentLocation();
 			DisplayCaseRotation = DisplayCase->GetComponentRotation();
 			DisplayCaseScale = DisplayCase->GetComponentScale();
 		}
+		// being picked up
 		else
-		{			
-			// If the weapon has cd
-			if (0 < CD_MaxEnergy)
+		{		
+			if (!HasBeenCombined)
 			{
-				// if the attack type is constant 
-				if (AttackType == EnumAttackType::Constant)
+				// If the weapon has CD
+				if (0 < CD_MaxEnergy)
 				{
-					if (bAttackOn)
+					// if the attack type is constant 
+					if (AttackType == EnumAttackType::Constant)
 					{
-						if (0 < CD_LeftEnergy)
+						if (bAttackOn)
 						{
-							CD_LeftEnergy -= CD_DropSpeed * DeltaTime;
-							CD_LeftEnergy = FMath::Max(CD_LeftEnergy, 0.0f);
-							if (CD_LeftEnergy < CD_MinEnergyToAttak)
-								AttackStop();
+							if (0 < CD_LeftEnergy)
+							{
+								CD_LeftEnergy -= CD_DropSpeed * DeltaTime;
+								CD_LeftEnergy = FMath::Max(CD_LeftEnergy, 0.0f);
+								if (CD_LeftEnergy < CD_MinEnergyToAttak)
+									AttackStop();
+							}
+						}
+						else
+						{
+							if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
+							{
+								CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
+								CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
+							}
 						}
 					}
+					// if the attack type is not constant 
 					else
 					{
 						if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
@@ -106,44 +119,30 @@ void ABaseWeapon::Tick(float DeltaTime)
 							CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
 						}
 					}
-				}
-				// if the attack type is not constant 
-				else
-				{
-					if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
+					if (!CD_CanRecover)
 					{
-						CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
-						CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
+						float CD_RecoverDelay = 1.0f;
+						if (CD_RecoverDelay < TimePassed_SinceAttackStop)
+							CD_CanRecover = true;
 					}
 				}
-				if (!CD_CanRecover)
+				// Apply constant damage
+				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
-					float CD_RecoverDelay = 1.0f;
-					if(TimePassed_SinceAttackStop <= CD_RecoverDelay)
-						TimePassed_SinceAttackStop += DeltaTime;
-					if (CD_RecoverDelay < TimePassed_SinceAttackStop)
+					for (auto& Elem : AttackObjectMap)
 					{
-						CD_CanRecover = true;
-						TimePassed_SinceAttackStop = 0.0f;
+						Elem.Value += DeltaTime;
+						if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
+						{
+							if (ADamageManager::interval_ApplyDamage < Elem.Value && HoldingController)
+							{
+								ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
+								Elem.Value -= ADamageManager::interval_ApplyDamage;
+							}
+						}
 					}
 				}				
-			}
-			// Apply constant damage
-			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
-			{
-				for (auto& Elem : AttackObjectMap)
-				{
-					Elem.Value += DeltaTime;
-					if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
-					{
-						if (ADamageManager::interval_ApplyDamage < Elem.Value && HoldingController)
-						{
-							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
-							Elem.Value -= ADamageManager::interval_ApplyDamage;
-						}						
-					}
-				}
-			}
+			}			
 		}		
 	}
 
@@ -154,6 +153,16 @@ void ABaseWeapon::Tick(float DeltaTime)
 		{
 			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
 		}
+	}
+
+	// Assign TimePassed_SinceAttackStop(We will use this value on both clients and server)
+	if (!bAttackOn)
+	{
+		double tmpVal = TimePassed_SinceAttackStop + DeltaTime;
+		if (TNumericLimits<float>::Max() < tmpVal)
+			TimePassed_SinceAttackStop = TNumericLimits<float>::Max();
+		else
+			TimePassed_SinceAttackStop = tmpVal;
 	}
 }
 
