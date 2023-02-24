@@ -14,9 +14,6 @@
 #include "Character/MCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
-//FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
-float ADamageManager::interval_ApplyDamage = 0.1f; // preset value for all constant damage
-
 
 bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor)
 {
@@ -38,7 +35,7 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
 		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
-			Damage *= interval_ApplyDamage;
+			Damage *= AWeaponDataHelper::interval_ApplyDamage;
 		// Special situation: Bomb's fork, Taser's fork
 		if( (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass()) || 
 			WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass() )
@@ -147,13 +144,16 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		{
 			FVector AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
 			AttackingDirection.Normalize();
-			DamagedCharacter->KnockbackDirection_DuringLastFrame += AttackingDirection;
+			DamagedCharacter->KnockbackDirection_SinceLastApplyBuff += AttackingDirection;
 		}	
 		if (AttackBuff == EnumAttackBuff::Paralysis && Controller->GetPawn())
 		{
 			FVector Direction_SelfToAttacker = Controller->GetPawn()->GetActorLocation() - DamagedCharacter->GetActorLocation();
-			Direction_SelfToAttacker.Normalize();
-			DamagedCharacter->TaserDragDirection_DuringLastFrame += Direction_SelfToAttacker;
+			if (100.0f < Direction_SelfToAttacker.Length())
+			{
+				Direction_SelfToAttacker.Normalize();
+				DamagedCharacter->TaserDragDirection_SinceLastApplyBuff += Direction_SelfToAttacker;
+			}			
 		}
 		
 		FString ParName = "";
@@ -168,7 +168,7 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
 			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			buffPointsToAdd = AWeaponDataHelper::interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		BuffPoints += buffPointsToAdd;
 		if (1.0f <= BuffPoints)
 		{
@@ -187,13 +187,14 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 			// not touch the BuffPoints	
 			if (AttackBuff == EnumAttackBuff::Paralysis)
 			{
-				buffTimeToAdd = interval_ApplyDamage;
+				buffTimeToAdd = AWeaponDataHelper::interval_ApplyDamage;
 				BuffRemainedTime += buffTimeToAdd;
 				BuffAccumulatedTime += buffTimeToAdd;
 			}
 			// When it is knockback, we will neither add the time nor touch the BuffPoints
 		}
 	}	
+	DamagedCharacter->ActByBuff_PerDamage();
 	return true;
 }
 

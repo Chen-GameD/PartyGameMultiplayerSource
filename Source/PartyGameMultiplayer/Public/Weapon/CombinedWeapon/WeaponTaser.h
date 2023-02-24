@@ -43,6 +43,8 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* TaserForkMesh;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* AttackOnEffect_TaserFork;
 
 	// TaserFork original transform
 	FVector TaserFork_OriginalRelativeLocation;
@@ -52,7 +54,6 @@ protected:
 	//FVector TaserFork_OriginalRelativeScale;
 
 	// For stretch behaviors
-		//bool bShouldStretchOut;
 	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
 	float MaxLen;
 	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")

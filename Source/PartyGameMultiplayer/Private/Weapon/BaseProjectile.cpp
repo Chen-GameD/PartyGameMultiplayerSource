@@ -93,7 +93,7 @@ void ABaseProjectile::Tick(float DeltaTime)
 
 				// Explosion is not finished
 				// TryApplyRadialDamage when reaches the timeinterval
-				if (ADamageManager::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
+				if (AWeaponDataHelper::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
 				{
 					ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
 					TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
@@ -148,7 +148,7 @@ void ABaseProjectile::BeginPlay()
 	if (0.0f < TotalTime_ApplyDamage)
 		bApplyConstantDamage = true;
 	// BaseDamage
-	float numIntervals = TotalTime_ApplyDamage / ADamageManager::interval_ApplyDamage;
+	float numIntervals = TotalTime_ApplyDamage / AWeaponDataHelper::interval_ApplyDamage;
 	BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 
 	// Server duty

@@ -121,7 +121,10 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					if (!CD_CanRecover)
 					{
-						float CD_RecoverDelay = 1.0f;
+						float CD_RecoverDelay = 0.0f;
+						FString ParName =  WeaponName + "_CD_RecoverDelay";
+						if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+							CD_RecoverDelay = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 						if (CD_RecoverDelay < TimePassed_SinceAttackStop)
 							CD_CanRecover = true;
 					}
@@ -134,10 +137,10 @@ void ABaseWeapon::Tick(float DeltaTime)
 						Elem.Value += DeltaTime;
 						if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 						{
-							if (ADamageManager::interval_ApplyDamage < Elem.Value && HoldingController)
+							if (AWeaponDataHelper::interval_ApplyDamage < Elem.Value && HoldingController)
 							{
 								ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
-								Elem.Value -= ADamageManager::interval_ApplyDamage;
+								Elem.Value -= AWeaponDataHelper::interval_ApplyDamage;
 							}
 						}
 					}

@@ -5,6 +5,7 @@
 
 #include "Kismet/GameplayStatics.h"
 
+float AWeaponDataHelper::interval_ApplyDamage = 0.01f; // preset value for all constant damage
 
 UDamageManagerDataAsset* AWeaponDataHelper::DamageManagerDataAsset = nullptr;
 
@@ -51,7 +52,6 @@ AWeaponDataHelper::AWeaponDataHelper()
 {
 	if (!DamageManagerDataAsset)
 	{
-		//static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> DefaultDamageManagerDataAsset(*RandomFileName);
 		static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> DefaultDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
 		if (DefaultDamageManagerDataAsset.Succeeded())
 		{

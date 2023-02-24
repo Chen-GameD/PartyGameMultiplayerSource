@@ -126,6 +126,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
+
+	virtual void ActByBuff_PerDamage();
+	virtual void ActByBuff_PerTick(float DeltaTime);
 	
 protected:
 
@@ -225,7 +228,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
-	virtual void ActByBuff(float DeltaTime);
 
 // Members
 // ==============================================================
@@ -288,8 +290,8 @@ public:
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
 	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
-	FVector KnockbackDirection_DuringLastFrame;
-	FVector TaserDragDirection_DuringLastFrame;
+	FVector KnockbackDirection_SinceLastApplyBuff;
+	FVector TaserDragDirection_SinceLastApplyBuff;
 
 protected:
 

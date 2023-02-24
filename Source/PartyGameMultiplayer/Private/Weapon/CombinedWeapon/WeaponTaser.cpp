@@ -4,6 +4,8 @@
 
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Components/PrimitiveComponent.h"
@@ -49,8 +51,10 @@ AWeaponTaser::AWeaponTaser()
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
 
+	AttackOnEffect_TaserFork = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect_TaserFork"));
+	AttackOnEffect_TaserFork->SetupAttachment(TaserForkMesh);
+
 	// Currently, they are decided by derived BP
-	//originalX = TaserForkMesh->GetRelativeLocation().X;
 	//MaxLen = 0.0f;
 	//StrechOutSpeed = 360.0f;
 	//StrechInSpeed = 160.0f;
@@ -88,8 +92,18 @@ void AWeaponTaser::Tick(float DeltaTime)
 			// move with the hit character
 			else
 			{
-				if (Server_ActorBeingHit)
+				if(Server_ActorBeingHit)
 					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_LocationOffset_ActorBeingHit_TaserFork);
+				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+				{
+					if (pCharacter->GetIsDead())
+						AttackStop();
+				}
+				else if (AMinigameMainObjective* pMinigameMainObjective = Cast<AMinigameMainObjective>(Server_ActorBeingHit))
+				{
+					if (pMinigameMainObjective->GetCurrentHealth() <= 0)
+						AttackStop();
+				}
 			}
 		}		
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
@@ -179,6 +193,15 @@ void AWeaponTaser::BeginPlay()
 void AWeaponTaser::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
+
+	if (bAttackOn)
+	{
+		AttackOnEffect_TaserFork->Activate();
+	}
+	else
+	{
+		AttackOnEffect_TaserFork->Deactivate();
+	}
 
 	TaserFork_RelativeLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
 	TaserFork_RelativeRotation_WhenAttackStop = TaserForkMesh->GetRelativeRotation();

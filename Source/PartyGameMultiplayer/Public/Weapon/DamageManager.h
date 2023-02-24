@@ -29,9 +29,5 @@ public:
 	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage);
 	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
 	static bool ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter);
-private:
-	
-public:
-	static float interval_ApplyDamage; // preset value for all constant damage
-private:
+
 };
