@@ -64,14 +64,16 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_bHitTarget)
 		bool bHitTarget;
 	bool bForkAttachedToWeapon; // used by both clients and server
+	AActor* Server_ActorBeingHit;
+	FVector Server_LocationOffset_ActorBeingHit_TaserFork;
 
 	// transfrom related to hit target
 	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
 		FVector ServerForkWorldLocation;
 	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
 		FRotator ServerForkWorldRotation;
-	FVector ServerTaserForkWorldLocation_WhenFirstHitTarget;
-	FRotator ServerTaserForkWorldRotation_WhenFirstHitTarget;
+	//FVector ServerTaserForkWorldLocation_WhenFirstHitTarget;
+	//FRotator ServerTaserForkWorldRotation_WhenFirstHitTarget;
 
 
 private:

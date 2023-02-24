@@ -58,6 +58,7 @@ AWeaponTaser::AWeaponTaser()
 	IsForkOut = false;
 	StrechInTime = 0.0f;
 
+	Server_ActorBeingHit = nullptr;
 	bHitTarget = false;
 	bForkAttachedToWeapon = true;
 }
@@ -71,16 +72,25 @@ void AWeaponTaser::Tick(float DeltaTime)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// if attack on and not hit a target, the server fork would stretch out and the client fork would copy the location 
-		if (bAttackOn && !bHitTarget)
+		if (bAttackOn)
 		{
-			FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
-			// stretch out to the limit
-			if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
-			{
-				TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(-StrechOutSpeed, 0, 0));
+			if (!bHitTarget)
+			{				
+				// stretch out to the limit
+				FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
+				if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
+				{
+					TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(-StrechOutSpeed, 0, 0));
+				}
+				else
+					AttackStop();
 			}
+			// move with the hit character
 			else
-				AttackStop();
+			{
+				if (Server_ActorBeingHit)
+					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_LocationOffset_ActorBeingHit_TaserFork);
+			}
 		}		
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
 		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
@@ -200,9 +210,11 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 
 			bHitTarget = true;
 			OnRep_bHitTarget();
+			Server_ActorBeingHit = OtherActor;
+			Server_LocationOffset_ActorBeingHit_TaserFork = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
 
-			ServerTaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
-			ServerTaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();
+			//ServerTaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
+			//ServerTaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();
 
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);
@@ -241,23 +253,6 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 
 void AWeaponTaser::OnRep_bHitTarget()
 {
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_OnRep_bHitTarget"));
-		if(bHitTarget)
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_bHitTarget is TRUE"));
-		else
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sever_bHitTarget is FALSE"));
-	}	
-	else
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_OnRep_bHitTarget"));
-		if (bHitTarget)
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_bHitTarget is TRUE"));
-		else
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_bHitTarget is FALSE"));
-	}
-
 	if (bHitTarget)
 	{
 		if (bForkAttachedToWeapon)
