@@ -31,7 +31,7 @@ TMap<EnumWeaponType, EnumAttackType> AWeaponDataHelper::WeaponEnumToAttackTypeEn
 	{EnumWeaponType::Alarm, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Flamethrower, EnumAttackType::Constant},
 	{EnumWeaponType::Flamefork, EnumAttackType::OneHit},
-	{EnumWeaponType::Taser, EnumAttackType::OneHit},
+	{EnumWeaponType::Taser, EnumAttackType::Constant},
 	{EnumWeaponType::Alarmgun, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Bomb, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Cannon, EnumAttackType::SpawnProjectile},
