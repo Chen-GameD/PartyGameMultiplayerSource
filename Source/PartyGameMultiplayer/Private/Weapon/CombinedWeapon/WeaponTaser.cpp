@@ -241,6 +241,28 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 	}
 }
 
+/*
+For taser, we deal it specially.Even if Overlap Ends(Fork may get off the damaged actor),
+we still keep the damaged actor in the AttackObjectMap in order to keep applying damage
+*/
+void AWeaponTaser::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	//if (IsPickedUp && GetOwner())
+	//{
+	//	if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+	//		Cast<AMinigameMainObjective>(OtherActor))
+	//	{
+	//		if (AttackObjectMap.Contains(OtherActor))
+	//		{
+	//			AttackObjectMap.Remove(OtherActor);
+	//		}
+	//		bAttackOverlap = false;
+	//	}
+	//}
+}
+
+
 void AWeaponTaser::OnRep_ServerForkWorldTransform()
 {
 	// We only want to make the transform consistent when the attack is on
@@ -250,6 +272,7 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 		TaserForkMesh->SetWorldRotation(ServerForkWorldRotation);
 	}	
 }
+
 
 void AWeaponTaser::OnRep_bHitTarget()
 {

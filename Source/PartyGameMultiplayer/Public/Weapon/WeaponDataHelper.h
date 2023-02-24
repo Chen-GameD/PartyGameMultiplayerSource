@@ -34,9 +34,9 @@ enum EnumAttackType
 enum EnumAttackBuff
 {
 	Burning,
-	Paralysis,
-	Blowing,
-	Knockback
+	Knockback,
+	//Blowing,
+	Paralysis
 };
 
 

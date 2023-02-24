@@ -40,9 +40,9 @@ TMap<EnumWeaponType, EnumAttackType> AWeaponDataHelper::WeaponEnumToAttackTypeEn
 TMap<EnumAttackBuff, FString> AWeaponDataHelper::AttackBuffEnumToString_Map =
 {
 	{EnumAttackBuff::Burning, "Burning"},
-	{EnumAttackBuff::Paralysis, "Paralysis"},
-	{EnumAttackBuff::Blowing, "Blowing"},
 	{EnumAttackBuff::Knockback, "Knockback"},
+	//{EnumAttackBuff::Blowing, "Blowing"},
+	{EnumAttackBuff::Paralysis, "Paralysis"},
 };
 
 

@@ -145,12 +145,19 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		float buffTimeToAdd = 0.0f;
 		if (AttackBuff == EnumAttackBuff::Knockback && Controller->GetPawn())
 		{
-			FVector3d AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			FVector AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			AttackingDirection.Normalize();
 			DamagedCharacter->KnockbackDirection_DuringLastFrame += AttackingDirection;
-		}		
+		}	
+		if (AttackBuff == EnumAttackBuff::Paralysis && Controller->GetPawn())
+		{
+			FVector Direction_SelfToAttacker = Controller->GetPawn()->GetActorLocation() - DamagedCharacter->GetActorLocation();
+			Direction_SelfToAttacker.Normalize();
+			DamagedCharacter->TaserDragDirection_DuringLastFrame += Direction_SelfToAttacker;
+		}
 		
 		FString ParName = "";
-		// points to add
+		// Assign buffPointsToAdd (up to 3 times, the value may be overwrote by the next Search And Assign)
 		ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
@@ -163,21 +170,28 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		BuffPoints += buffPointsToAdd;
-		if(AttackBuff == EnumAttackBuff::Burning)
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("BuffPoints: %f"), BuffPoints));
 		if (1.0f <= BuffPoints)
 		{
 			// time to add		
 			ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
-			// when it is time-based buff(burning), we add the time and substract 1 from BuffPoints; 
-			// otherwise(paralysis, knockback), we will neither add the time nor touch the BuffPoints
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			// When it is burning, we add the designated time and substract 1 from BuffPoints; 	
+			// We know only Burning has "Burning_TimeToAdd"
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName)) 
 			{
 				buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				BuffRemainedTime += buffTimeToAdd;
 				BuffAccumulatedTime += buffTimeToAdd;
 				BuffPoints -= floorf(BuffPoints);
-			}				
+			}		
+			// When it is paralysis, we will add interval_ApplyDamage(because that's the damage frequency of Taser), 
+			// not touch the BuffPoints	
+			if (AttackBuff == EnumAttackBuff::Paralysis)
+			{
+				buffTimeToAdd = interval_ApplyDamage;
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+			}
+			// When it is knockback, we will neither add the time nor touch the BuffPoints
 		}
 	}	
 	return true;

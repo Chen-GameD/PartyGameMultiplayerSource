@@ -75,7 +75,7 @@ public:
 	// customized TakeDamge Function
 	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
 
-	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
+	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
 	/**	Update HealthBar UI for character */
@@ -288,7 +288,8 @@ public:
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
 	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
-	FVector3d KnockbackDirection_DuringLastFrame;
+	FVector KnockbackDirection_DuringLastFrame;
+	FVector TaserDragDirection_DuringLastFrame;
 
 protected:
 

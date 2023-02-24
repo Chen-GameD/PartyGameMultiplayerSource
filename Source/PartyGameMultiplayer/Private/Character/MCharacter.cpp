@@ -905,10 +905,11 @@ void AMCharacter::OnRep_CurrentHealth()
 
 void AMCharacter::OnRep_IsOnGround()
 {
-	// Update client care only, like UI
-
 	if (!EffectJump || !EffectLand)
 		return;
+	if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
+		return;
+
 	if (IsOnGround)
 	{
 		EffectLand->Activate();
@@ -1152,6 +1153,9 @@ void AMCharacter::Tick(float DeltaTime)
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
+		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
+			return;
+
 		// EffectRun
 		if (EffectRun->IsActive() == false)
 		{
@@ -1168,7 +1172,9 @@ void AMCharacter::Tick(float DeltaTime)
 			}				
 		}
 	}
+
 	KnockbackDirection_DuringLastFrame = FVector::ZeroVector;
+	TaserDragDirection_DuringLastFrame = FVector::ZeroVector;
 }
 #pragma endregion Engine life cycle function
 
@@ -1244,58 +1250,72 @@ void AMCharacter::ActByBuff(float DeltaTime)
 	if (!AWeaponDataHelper::DamageManagerDataAsset)
 		return;
 
-	EnumAttackBuff buffType;
-	/*  Burning */	
-	buffType = EnumAttackBuff::Burning;
-	if (CheckBuffMap(buffType))
-	{		
-		float& BuffRemainedTime = BuffMap[buffType][1];
-		if (0.0f < BuffRemainedTime)
-		{
-			float BurningBuffDamagePerSecond = 0.0f;
-			FString ParName = "BurningBuffDamagePerSecond";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
-			BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
-			/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Burning remain time: %f"), BuffRemainedTime));*/
-		}
-	}
-	/* Paralysis */
-	//buffType = EnumAttackBuff::Paralysis;	
-	//if (CheckBuffMap(buffType))
-	//{
-	//	float& BuffPoints = BuffMap[buffType][0];
-	//	if (1.0f <= BuffPoints)
-	//	{
-	//		if (CanMove)
-	//		{
-	//			Server_SetCanMove(false);
-	//			CanMove = false;
-	//		}
-	//	}			
-	//	else
-	//	{
-	//		if (!CanMove)
-	//		{
-	//			Server_SetCanMove(true);
-	//			CanMove = true;
-	//		}
-	//	}
-	//}
-	/* Knockback */
-	buffType = EnumAttackBuff::Knockback;
-	if (CheckBuffMap(buffType))
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		float& BuffPoints = BuffMap[buffType][0];
-		if (1.0f <= BuffPoints)
+		EnumAttackBuff buffType;
+		/*  Burning */
+		buffType = EnumAttackBuff::Burning;
+		if (CheckBuffMap(buffType))
 		{
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Knockback"));
-			KnockbackDirection_DuringLastFrame.Z = 0.0f;
-			KnockbackDirection_DuringLastFrame *= 300.0f;
-			LaunchCharacter(KnockbackDirection_DuringLastFrame, true, false);
-			BuffPoints = 0.0f;
+			float& BuffRemainedTime = BuffMap[buffType][1];
+			if (0.0f < BuffRemainedTime)
+			{
+				float BurningBuffDamagePerSecond = 0.0f;
+				FString ParName = "BurningBuffDamagePerSecond";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
+				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
+			}
 		}
-	}
-		
+		/* Paralysis */
+		buffType = EnumAttackBuff::Paralysis;
+		if (CheckBuffMap(buffType))
+		{
+			float& BuffRemainedTime = BuffMap[buffType][1];
+			if (0.0f < BuffRemainedTime)
+			{
+				if (CanMove)
+				{
+					Server_SetCanMove(false);
+					SetElectricShockAnimState(true);
+					CanMove = false;
+				}
+				TaserDragDirection_DuringLastFrame.Z = 0.0f;
+				float dragSpeed = 15.0f;
+				FVector CurActorLocation = GetActorLocation();
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, FString::Printf(TEXT("TaserDragDirection_DuringLastFrame: %f, %f, %f"), 
+				//	TaserDragDirection_DuringLastFrame.X, TaserDragDirection_DuringLastFrame.Y, TaserDragDirection_DuringLastFrame.Z));
+				SetActorLocation(CurActorLocation + TaserDragDirection_DuringLastFrame * dragSpeed * DeltaTime);
+				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
+			}
+			else
+			{
+				if (!CanMove)
+				{
+					Server_SetCanMove(true);
+					SetElectricShockAnimState(false);
+					CanMove = true;
+				}
+			}
+		}
+		/* Knockback */
+		buffType = EnumAttackBuff::Knockback;
+		if (CheckBuffMap(buffType))
+		{
+			// don't apply knockback if the character is being paralyzed
+			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]))
+			{
+				float& BuffPoints = BuffMap[buffType][0];
+				if (1.0f <= BuffPoints)
+				{
+					KnockbackDirection_DuringLastFrame.Z = 0.0f;
+					KnockbackDirection_DuringLastFrame *= 300.0f;
+					LaunchCharacter(KnockbackDirection_DuringLastFrame, true, false);
+					BuffPoints = 0.0f;
+				}
+			}
+		}
+	}		
 }
