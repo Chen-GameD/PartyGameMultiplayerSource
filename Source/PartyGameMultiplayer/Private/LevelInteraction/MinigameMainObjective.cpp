@@ -2,10 +2,10 @@
 
 
 #include "LevelInteraction/MinigameMainObjective.h"
+
 #include "UObject/ConstructorHelpers.h"
 #include "Net/UnrealNetwork.h"
 #include "../PartyGameMultiplayerCharacter.h"
-#include "Weapon/DamageTypeToCharacter.h"
 //#include "Engine/TriggerBoxDamageTaker.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -15,6 +15,10 @@
 #include "Components/WidgetComponent.h"
 #include "Character/MCharacter.h"
 #include "GameBase/MGameMode.h"
+#include "Weapon/BaseWeapon.h"
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/DamageTypeToCharacter.h"
+#include "Weapon/WeaponDataHelper.h"
 
 
 AMinigameMainObjective::AMinigameMainObjective()
@@ -69,6 +73,20 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 	if (!EventInstigator || !DamageCauser)
 		return 0.0f;
 	if (CurrentHealth <= 0)
+		return 0.0f;
+
+	// Adjust the damage according to the minigame damage ratio
+	EnumWeaponType WeaponType = EnumWeaponType::None;
+	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (WeaponType == EnumWeaponType::None)
+		return 0.0f;
+	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
+		DamageTaken *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
+	else
 		return 0.0f;
 
 	CurrentHealth -= DamageTaken;

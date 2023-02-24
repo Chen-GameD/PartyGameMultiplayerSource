@@ -21,11 +21,16 @@ public:
 	virtual void AttackStop() override;
 
 protected:
-	//virtual void OnRep_bAttackOn() override;
-	UFUNCTION()
-		virtual void OnRep_ForkWorldTransform();
+	virtual void BeginPlay() override;
 	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
+
+	UFUNCTION()
+		virtual void OnRep_ServerForkWorldTransform();
+	UFUNCTION()
+		virtual void OnRep_bHitTarget();
+
+	void SetTaserForkAttached(bool bShouldAttachToWeapon);
 
 private:
 
@@ -34,24 +39,35 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* TaserForkMesh;
-	bool bShouldStretchOut;
-	UPROPERTY(EditAnywhere, Category = "TaserTmp")
-	float originalX;
-	UPROPERTY(EditAnywhere, Category = "TaserTmp")
-	float maxLen;
-	UPROPERTY(EditAnywhere, Category = "TaserTmp")
-	float strechOutSpeed;
-	UPROPERTY(EditAnywhere, Category = "TaserTmp")
-	float strechInSpeed;
 
-	UPROPERTY(ReplicatedUsing = OnRep_ForkWorldTransform)
-		FVector ForkWorldLocation;
-	UPROPERTY(ReplicatedUsing = OnRep_ForkWorldTransform)
-		FRotator ForkWorldRotation;
-	FVector ForkWorldLocation_WhenFirstHitTarget;
-	FRotator ForkWorldRotation_WhenFirstHitTarget;
+	// TaserFork original transform
+	FVector TaserFork_OriginalRelativeLocation;
+	FRotator TaserFork_OriginalRelativeRotation;
+	FVector TaserFork_OriginalRelativeScale;
 
-	bool bHitTarget;
+	// For stretch behaviors
+		//bool bShouldStretchOut;
+	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
+	float MaxLen;
+	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
+	float StrechOutSpeed;
+	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
+	float StrechInSpeed;
+
+	// hit and attached
+	UPROPERTY(ReplicatedUsing = OnRep_bHitTarget)
+		bool bHitTarget;
+	bool bForkAttachedToWeapon; // used by both clients and server
+
+	// transfrom related to hit target
+	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
+		FVector ServerForkWorldLocation;
+	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
+		FRotator ServerForkWorldRotation;
+	FVector TaserForkWorldLocation_WhenFirstHitTarget;
+	FRotator TaserForkWorldRotation_WhenFirstHitTarget;
+
+	
 
 private:
 

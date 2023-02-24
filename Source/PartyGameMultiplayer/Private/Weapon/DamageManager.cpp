@@ -45,14 +45,6 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
 		}
-
-		// if it is AMinigameMainObjective
-		if (Cast<AMinigameMainObjective>(DamagedActor))
-		{
-			if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
-				Damage *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
-		}
-
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
 	}
 	else
