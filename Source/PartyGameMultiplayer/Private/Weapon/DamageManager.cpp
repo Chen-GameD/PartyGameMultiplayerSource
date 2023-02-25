@@ -116,7 +116,10 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
 	}
 	else if (WeaponType == EnumWeaponType::Flamefork)
+	{
 		AttackBuffs.Add(EnumAttackBuff::Burning);
+		AttackBuffs.Add(EnumAttackBuff::Knockback);
+	}		
 	else if (WeaponType == EnumWeaponType::Taser)
 		AttackBuffs.Add(EnumAttackBuff::Paralysis);
 

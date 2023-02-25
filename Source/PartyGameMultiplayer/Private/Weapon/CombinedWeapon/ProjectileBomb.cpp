@@ -81,7 +81,7 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 
-	// Bomb's Range Damage is different
+	// Bomb's Range Damage will be delayed
 	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 }
