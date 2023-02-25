@@ -444,6 +444,8 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 		// Set the weapon pointer to nullptr
 		LeftWeapon = nullptr;
 
+		// Set isAttack to False
+		this->AnimState[7] = false;
 		// Set isLeftHeld Anim State
 		this->AnimState[5] = false;
 		// Need to update weapon type for anim
@@ -474,6 +476,8 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 		// Set the weapon pointer to nullptr
 		RightWeapon = nullptr;
 
+		// Set isAttack to False
+		this->AnimState[7] = false;
 		// Set isRightHeld Anim State
 		this->AnimState[6] = false;
 
@@ -966,6 +970,10 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);		
 		ADamageManager::ApplyBuff(DamageCauser, EventInstigator, DamageEvent.DamageTypeClass, this);
+
+		// If holding a taser, the attack should stop
+		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
+			CombineWeapon->AttackStop();
 
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority()) 

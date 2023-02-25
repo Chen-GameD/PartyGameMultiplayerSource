@@ -133,7 +133,9 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 	{
 		EnumAttackBuff AttackBuff = AttackBuffs[i];
 
-		check(DamagedCharacter->CheckBuffMap(AttackBuff));
+		if (!DamagedCharacter->CheckBuffMap(AttackBuff))
+			continue;
+
 		float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
 		float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
 		float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];

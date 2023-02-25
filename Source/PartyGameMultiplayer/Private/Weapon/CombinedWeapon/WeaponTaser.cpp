@@ -171,7 +171,8 @@ void AWeaponTaser::AttackStop()
 	Super::AttackStop();
 
 	float DistanceForkTravelled = FVector::Distance(SpawnProjectilePointMesh->GetComponentLocation(), TaserForkMesh->GetComponentLocation());
-	check(0 < StrechInSpeed);
+	if(StrechInSpeed <= 0)
+		StrechInSpeed = 2000.0f;
 	StrechInTime = DistanceForkTravelled / StrechInSpeed;
 	TaserFork_RelativeLocation_WhenAttackStop;
 	TaserFork_RelativeRotation_WhenAttackStop;

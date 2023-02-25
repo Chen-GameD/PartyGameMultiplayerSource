@@ -29,12 +29,3 @@ AWeaponFork::AWeaponFork()
 	}
 }
 
-
-
-void AWeaponFork::CheckInitilization()
-{
-	Super::CheckInitilization();
-	// do something specific to this weapon
-	check(AttackHitEffect);
-}
-

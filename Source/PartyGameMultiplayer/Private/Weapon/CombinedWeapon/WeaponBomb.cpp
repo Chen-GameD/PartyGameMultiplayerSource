@@ -93,8 +93,7 @@ void AWeaponBomb::AttackStart()
 	//AttackDetectComponent->OnActorEnableCollisionChanged();
 
 	// Whether spawn a projectile
-	check(0 < CD_MaxEnergy);
-	if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+	if (0.0f < CD_MaxEnergy && CD_MinEnergyToAttak <= CD_LeftEnergy)
 	{
 		CD_LeftEnergy -= CD_MinEnergyToAttak;
 		SpawnProjectile();

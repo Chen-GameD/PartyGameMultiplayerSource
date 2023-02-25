@@ -41,10 +41,3 @@ AWeaponFlamethrower::AWeaponFlamethrower()
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
 }
-
-void AWeaponFlamethrower::CheckInitilization()
-{
-	Super::CheckInitilization();
-	// do something specific to this weapon
-	check(AttackHitEffect);
-}

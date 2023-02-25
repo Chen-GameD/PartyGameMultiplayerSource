@@ -16,11 +16,6 @@ public:
 	AWeaponLighter();
 
 protected:
-	virtual void CheckInitilization() override;
-	/*virtual void BeginPlay() override;
-	virtual void Destroyed() override; */
-	/*virtual void GenerateAttackHitEffect() override;
-	virtual void GenerateDamage(class AActor* DamagedActor) override;*/
 
 private:
 

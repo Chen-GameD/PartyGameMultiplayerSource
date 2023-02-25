@@ -16,13 +16,10 @@ public:
 	AWeaponFork();
 
 protected:
-	virtual void CheckInitilization() override;
-	/*virtual void GenerateAttackHitEffect() override;
-	virtual void GenerateDamage(class AActor* DamagedActor) override;*/
 
 private:
 
-	// MEMBER VARIABLES
+// MEMBER VARIABLES
 public:
 protected:
 private:

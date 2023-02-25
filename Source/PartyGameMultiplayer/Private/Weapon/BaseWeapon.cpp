@@ -191,10 +191,17 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
 	IsPickedUp = true;
-
-	check(pCharacter);
+	if (!pCharacter)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::GetPickedUp"));
+		return;
+	}
 	HoldingController = pCharacter->GetController();
-	check(HoldingController);
+	if (!HoldingController)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::GetPickedUp"));
+		return;
+	}
 	SetInstigator(pCharacter);
 	SetOwner(pCharacter);
 
@@ -298,19 +305,10 @@ void ABaseWeapon::AttackStop()
 }
 
 
-void ABaseWeapon::CheckInitilization()
-{
-	check(WeaponMesh);
-	check(DisplayCase);
-	//check(AttackDetectComponent);
-}
-
-
 void ABaseWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CheckInitilization();
 	GetWeaponName(); // to update weapon name
 
 	// Assign some member variables(we want both the server and client have these values)
@@ -329,10 +327,14 @@ void ABaseWeapon::BeginPlay()
 		ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 		{
-			// When it is SpawnProjectile attack type, do not set CD_MinEnergyToAttak as 0 in the table! 
+			// Even when it is constant attack type, do not set CD_MinEnergyToAttak as 0 in the table! 
 			// Set it as a number slightly bigger, like 0.01f
 			CD_MinEnergyToAttak = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-			check(0.0f < CD_MinEnergyToAttak);
+			if (CD_MinEnergyToAttak <= 0.0f)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::BeginPlay"));
+				CD_MinEnergyToAttak = 0.01f;
+			}				
 		}
 	}
 

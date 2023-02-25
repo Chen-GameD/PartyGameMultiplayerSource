@@ -42,7 +42,6 @@ public:
 	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
 
 protected:
-	virtual void CheckInitilization();
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override; 
 	virtual void PlayAnimationWhenNotBeingPickedUp(float DeltaTime);
@@ -144,8 +143,6 @@ protected:
 	TMap<AActor*, float> AttackObjectMap;
 
 	/**
-		Note: the following UComonent memeber variables should be checked in CheckInitilization() before using.
-
 		We precede each of the types in these declarations with the class keyword.
 		This makes each of them a forward declaration of their own classes
 		in addition to being variable declarations, (chronological order: declare -> use -> define)

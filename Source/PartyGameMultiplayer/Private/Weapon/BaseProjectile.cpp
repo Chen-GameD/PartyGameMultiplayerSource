@@ -123,10 +123,20 @@ void ABaseProjectile::BeginPlay()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		auto pWeapon = Cast<ABaseWeapon>(GetOwner());
-		check(pWeapon && pWeapon->IsPickedUp);
+		if (!pWeapon || !pWeapon->IsPickedUp)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseProjectile::BeginPlay"));
+			Destroy();
+			return;
+		}
 		WeaponType = pWeapon->WeaponType;
 		Controller = pWeapon->GetHoldingController();
-		check(Controller);
+		if (!Controller)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseProjectile::BeginPlay"));
+			Destroy();
+			return;
+		}
 	}	
 
 	/* Assign member variables by map */

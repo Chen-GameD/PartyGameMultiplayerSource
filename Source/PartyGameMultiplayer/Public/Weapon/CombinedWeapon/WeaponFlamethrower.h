@@ -16,9 +16,6 @@ public:
 	AWeaponFlamethrower();
 
 protected:
-	virtual void CheckInitilization() override;
-	/*virtual void GenerateAttackHitEffect() override;
-	virtual void GenerateDamage(class AActor* DamagedActor) override;*/
 
 private:
 

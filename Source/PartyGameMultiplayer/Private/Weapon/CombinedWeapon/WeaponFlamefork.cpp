@@ -43,11 +43,3 @@ AWeaponFlamefork::AWeaponFlamefork()
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
 }
-
-
-void AWeaponFlamefork::CheckInitilization()
-{
-	Super::CheckInitilization();
-	// do something specific to this weapon
-	check(AttackHitEffect);
-}
