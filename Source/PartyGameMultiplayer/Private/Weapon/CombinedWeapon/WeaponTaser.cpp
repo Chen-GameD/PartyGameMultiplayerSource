@@ -75,9 +75,10 @@ void AWeaponTaser::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		// if attack on and not hit a target, the server fork would stretch out and the client fork would copy the location 
+		// if attack on
 		if (bAttackOn)
 		{
+			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
 			if (!bHitTarget)
 			{				
 				// stretch out to the limit
@@ -88,12 +89,23 @@ void AWeaponTaser::Tick(float DeltaTime)
 				}
 				else
 					AttackStop();
-			}
-			// move with the hit character
+			}			
+			// if hit a target 
 			else
 			{
-				if(Server_ActorBeingHit)
-					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_LocationOffset_ActorBeingHit_TaserFork);
+				// change the transform of the TaserFork
+				if (Server_ActorBeingHit)
+				{
+					// location: keep the same offset
+					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
+					// Rotation
+					FVector Server_ActorBeingHit_To_WeaponMesh_Now = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
+					float Angle = FMath::Acos(FVector::DotProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal())) * (180.0f / PI);
+					bool bNowVectorIsOnTheRight = 0 < FVector::DotProduct(FVector::UpVector, FVector::CrossProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal()));
+					FRotator CurRotation = TaserForkMesh->GetRelativeRotation();
+					CurRotation.Yaw = Server_TaserForkRotationYaw_WhenHit + (bNowVectorIsOnTheRight ? Angle : -Angle);
+					TaserForkMesh->SetWorldRotation(CurRotation);
+				}					
 				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
 					if (pCharacter->GetIsDead())
@@ -235,7 +247,9 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			bHitTarget = true;
 			OnRep_bHitTarget();
 			Server_ActorBeingHit = OtherActor;
-			Server_LocationOffset_ActorBeingHit_TaserFork = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
+			Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
+			Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
+			Server_TaserForkRotationYaw_WhenHit = TaserForkMesh->GetRelativeRotation().Yaw;
 
 			//ServerTaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
 			//ServerTaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();

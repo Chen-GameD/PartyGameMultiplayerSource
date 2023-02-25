@@ -68,16 +68,15 @@ protected:
 		bool bHitTarget;
 	bool bForkAttachedToWeapon; // used by both clients and server
 	AActor* Server_ActorBeingHit;
-	FVector Server_LocationOffset_ActorBeingHit_TaserFork;
+	FVector Server_ActorBeingHit_To_TaserFork_WhenHit;
+	FVector Server_ActorBeingHit_To_WeaponMesh_WhenHit;
+	float Server_TaserForkRotationYaw_WhenHit;
 
 	// transfrom related to hit target
 	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
 		FVector ServerForkWorldLocation;
 	UPROPERTY(ReplicatedUsing = OnRep_ServerForkWorldTransform)
 		FRotator ServerForkWorldRotation;
-	//FVector ServerTaserForkWorldLocation_WhenFirstHitTarget;
-	//FRotator ServerTaserForkWorldRotation_WhenFirstHitTarget;
-
 
 private:
 
