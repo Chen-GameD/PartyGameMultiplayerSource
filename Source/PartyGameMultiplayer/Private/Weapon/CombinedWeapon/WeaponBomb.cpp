@@ -32,7 +32,7 @@ AWeaponBomb::AWeaponBomb()
 
 	WeaponMesh_WithoutBomb = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh_WithoutBomb"));
 	WeaponMesh_WithoutBomb->SetupAttachment(DisplayCase);
-	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));
+	WeaponMesh_WithoutBomb->SetCollisionProfileName(TEXT("Trigger"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh_2(TEXT("/Game/ArtAssets/Models/Fork/Fork.Fork"));
 	if (DefaultMesh_2.Succeeded())
 	{
@@ -62,15 +62,10 @@ void AWeaponBomb::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (ShouldHideWeapon)
+	if (CD_MaxEnergy <= CD_LeftEnergy)
 	{
-		if (CD_MaxEnergy / CD_RecoverSpeed <= TimePassed_SinceLastAttackOn)
-		{
+		if(!WeaponMesh->IsVisible())
 			WeaponMesh->SetVisibility(true);
-			TimePassed_SinceLastAttackOn = 0.0f;
-			ShouldHideWeapon = false;
-		}
-		TimePassed_SinceLastAttackOn += DeltaTime;
 	}
 }
 
@@ -89,8 +84,6 @@ void AWeaponBomb::AttackStart()
 	ApplyDamageCounter = 0;
 
 	SetActorEnableCollision(bAttackOn);
-	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	//AttackDetectComponent->OnActorEnableCollisionChanged();
 
 	// Whether spawn a projectile
 	if (0.0f < CD_MaxEnergy && CD_MinEnergyToAttak <= CD_LeftEnergy)
@@ -139,10 +132,11 @@ void AWeaponBomb::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	if (bAttackOn && WeaponMesh->IsVisible())
-		WeaponMesh->SetVisibility(false);
-	TimePassed_SinceLastAttackOn = 0.0f;
-	ShouldHideWeapon = true;
+	if (bAttackOn)
+	{
+		if(WeaponMesh->IsVisible())
+			WeaponMesh->SetVisibility(false);
+	}		
 }
 
 

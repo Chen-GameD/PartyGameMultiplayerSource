@@ -48,6 +48,8 @@ protected:
 		class UNiagaraComponent* AttackHitEffect_NSComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraSystem* AttackHitEffect_NSSystem;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* AttackOnEffect_NSComponent;
 
 	float LiveTime;
 	float MaxLiveTime;

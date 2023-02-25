@@ -25,7 +25,7 @@ AWeaponAlarm::AWeaponAlarm()
 		WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
-	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for SpawnProjectile type weapon
+	//AttackDetectComponent = WeaponMesh;  // No AttackDetectComponent is needed for Alarm
 
 	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackOnEffect(TEXT("/Game/ArtAssets/Niagara/NS_FlameForkNew.NS_FlameForkNew"));
 	if (DefaultAttackOnEffect.Succeeded())
@@ -40,25 +40,21 @@ AWeaponAlarm::AWeaponAlarm()
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
 
-	ShouldHideWeapon = false;
-	TimePassed_SinceLastAttackOn = 0.0f;
+	IsHidden = false;
 }
 
 void AWeaponAlarm::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (ShouldHideWeapon)
+	if (CD_MaxEnergy <= CD_LeftEnergy && IsHidden)
 	{
-		if (CD_MaxEnergy / CD_RecoverSpeed <= TimePassed_SinceLastAttackOn)
+		if (!HasBeenCombined)
 		{
-			if (!HasBeenCombined)
-				SetActorHiddenInGame(false);
-			TimePassed_SinceLastAttackOn = 0.0f;
-			ShouldHideWeapon = false;
-		}
-		TimePassed_SinceLastAttackOn += DeltaTime;
-	}	
+			SetActorHiddenInGame(false);
+			IsHidden = false;
+		}			
+	}
 }
 
 
@@ -67,10 +63,11 @@ void AWeaponAlarm::OnRep_bAttackOn()
 {
 	Super::OnRep_bAttackOn();
 
-	if(bAttackOn)
+	if (bAttackOn)
+	{
 		SetActorHiddenInGame(true);
-	TimePassed_SinceLastAttackOn = 0.0f;
-	ShouldHideWeapon = true;
+		IsHidden = true;
+	}		
 }
 
 
@@ -80,7 +77,7 @@ void AWeaponAlarm::SpawnProjectile()
 	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
-		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + pCharacter->GetActorUpVector()).Rotation();  // character up 45 degree
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + 0.75 * pCharacter->GetActorUpVector()).Rotation();  // character up
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();

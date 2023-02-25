@@ -37,8 +37,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh_WithoutBomb;
 protected:
-	bool ShouldHideWeapon;
-	float TimePassed_SinceLastAttackOn;
 private:
 	
 };

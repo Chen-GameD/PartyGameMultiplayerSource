@@ -45,8 +45,8 @@ ABaseProjectile::ABaseProjectile()
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
 
-	//AttackHitEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackHitEffect_NSComponent"));
-	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
+	AttackOnEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_NSComponent"));
+	AttackOnEffect_NSComponent->SetupAttachment(StaticMesh);
 
 	LiveTime = 0.0f;
 	MaxLiveTime = 5.0f;
@@ -98,7 +98,9 @@ void ABaseProjectile::Tick(float DeltaTime)
 					ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
 					TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
 				}				
+
 				TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("DeltaTime: %f"), DeltaTime));
 			}	
 			TimePassed_SinceExplosion += DeltaTime;
 		}
@@ -161,10 +163,17 @@ void ABaseProjectile::BeginPlay()
 	float numIntervals = TotalTime_ApplyDamage / AWeaponDataHelper::interval_ApplyDamage;
 	BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 
-	// Server duty
+	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
+	}
+
+	// Client(Listen Server)
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
+	{
+		if (AttackOnEffect_NSComponent)
+			AttackOnEffect_NSComponent->Activate();
 	}
 }
 
@@ -173,6 +182,9 @@ void ABaseProjectile::OnRep_HasExploded()
 {
 	if (HasExploded)
 	{
+		if (AttackOnEffect_NSComponent)
+			AttackOnEffect_NSComponent->Deactivate();
+
 		StaticMesh->SetVisibility(false);
 		ProjectileMovementComponent->StopMovementImmediately();		
 		if (AttackHitEffect_NSSystem)

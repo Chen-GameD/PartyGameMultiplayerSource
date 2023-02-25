@@ -258,6 +258,7 @@ void ABaseWeapon::AttackStart()
 				return;
 		}		
 	}
+
 	bAttackOn = true;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -429,11 +430,13 @@ void ABaseWeapon::OnRep_bAttackOn()
 {
 	if (bAttackOn)
 	{		
-		AttackOnEffect->Activate();
+		if(AttackOnEffect)
+			AttackOnEffect->Activate();
 	}
 	else
 	{
-		AttackOnEffect->Deactivate();
+		if (AttackOnEffect)
+			AttackOnEffect->Deactivate();
 	}
 }
 

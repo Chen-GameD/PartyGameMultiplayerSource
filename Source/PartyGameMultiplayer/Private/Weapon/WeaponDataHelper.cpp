@@ -5,7 +5,8 @@
 
 #include "Kismet/GameplayStatics.h"
 
-float AWeaponDataHelper::interval_ApplyDamage = 0.01f; // preset value for all constant damage
+// A very important preset value, suggests that the game would run normally as long as it surpass 20fps
+float AWeaponDataHelper::interval_ApplyDamage = 0.03f;
 
 UDamageManagerDataAsset* AWeaponDataHelper::DamageManagerDataAsset = nullptr;
 
