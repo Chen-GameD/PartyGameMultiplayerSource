@@ -49,7 +49,7 @@ public:
 	AWeaponDataHelper();
 
 public:
-	static float interval_ApplyDamage; // preset value for all constant damage
+	//static float interval_ApplyDamage; // preset value for all constant damage
 
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
 

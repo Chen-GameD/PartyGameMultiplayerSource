@@ -5,8 +5,9 @@
 
 #include "Kismet/GameplayStatics.h"
 
+// deprecated
 // A very important preset value, suggests that the game would run normally as long as it surpass 20fps
-float AWeaponDataHelper::interval_ApplyDamage = 0.03f;
+//float AWeaponDataHelper::interval_ApplyDamage = 0.03f;
 
 UDamageManagerDataAsset* AWeaponDataHelper::DamageManagerDataAsset = nullptr;
 
