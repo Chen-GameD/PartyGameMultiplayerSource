@@ -969,7 +969,22 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);		
-		ADamageManager::ApplyBuff(DamageCauser, EventInstigator, DamageEvent.DamageTypeClass, this);
+
+		EnumWeaponType WeaponType = EnumWeaponType::None;
+		float DeltaTime_DamageCauser = 0;
+		if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		{
+			WeaponType = p->WeaponType;
+			DeltaTime_DamageCauser = p->CurDeltaTime;
+		}			
+		if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		{
+			WeaponType = p->WeaponType;
+			DeltaTime_DamageCauser = p->CurDeltaTime;
+		}
+		if (WeaponType == EnumWeaponType::None)
+			return false;
+		ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
 
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
@@ -1184,7 +1199,7 @@ void AMCharacter::Tick(float DeltaTime)
 #pragma endregion Engine life cycle function
 
 
-void AMCharacter::ActByBuff_PerDamage()
+void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 {
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -1204,7 +1219,7 @@ void AMCharacter::ActByBuff_PerDamage()
 				FString ParName = "Paralysis_DragSpeed";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					DragSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetActorLocation(GetActorLocation() + TaserDragDirection_SinceLastApplyBuff * DragSpeed * AWeaponDataHelper::interval_ApplyDamage);
+				SetActorLocation(GetActorLocation() + TaserDragDirection_SinceLastApplyBuff * DragSpeed * DeltaTime);
 			}
 		}
 		/* Knockback */

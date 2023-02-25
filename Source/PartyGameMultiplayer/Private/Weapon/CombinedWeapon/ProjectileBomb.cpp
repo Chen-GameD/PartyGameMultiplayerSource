@@ -51,7 +51,7 @@ void AProjectileBomb::Tick(float DeltaTime)
 	{
 		if (2.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
 		{
-			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
 		}
 	}
@@ -79,9 +79,9 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	HasAppliedNeedleRainDamage = false;
 
 	// Direct Hit Damage
-	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 
 	// Bomb's Range Damage is different
-	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 }

@@ -127,8 +127,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerDamage();
-	virtual void ActByBuff_PerTick(float DeltaTime);
+	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
+	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 	
 protected:
 

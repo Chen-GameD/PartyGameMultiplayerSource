@@ -69,6 +69,7 @@ ABaseWeapon::ABaseWeapon()
 void ABaseWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	CurDeltaTime = DeltaTime;
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -137,11 +138,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 						Elem.Value += DeltaTime;
 						if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 						{
-							if (AWeaponDataHelper::interval_ApplyDamage < Elem.Value && HoldingController)
-							{
-								ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key);
-								Elem.Value -= AWeaponDataHelper::interval_ApplyDamage;
-							}
+							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key, DeltaTime);
 						}
 					}
 				}				
@@ -485,7 +482,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
 				&& ApplyDamageCounter == 0 && HoldingController)
 			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 				ApplyDamageCounter++;
 			}	
 		}

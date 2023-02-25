@@ -113,6 +113,8 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
 
+	float CurDeltaTime;
+
 protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;

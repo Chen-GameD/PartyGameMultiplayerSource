@@ -39,6 +39,7 @@ private:
 public:
 	EnumWeaponType WeaponType;
 	class AController* Controller;
+	float CurDeltaTime;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
@@ -54,12 +55,12 @@ protected:
 	float LiveTime;
 	float MaxLiveTime;
 
-	float TotalTime_ApplyDamage;
-	float TotalDamage_ForTotalTime;
+	float TotalDamageTime;
+	float TotalDamage;
 	FVector Origin;
 	float DamageRadius;
 	bool bApplyConstantDamage;
-	float BaseDamage;  // the number passed to ADamageManager::TryApplyRadialDamage()
+	float BaseDamage;
 	UPROPERTY(ReplicatedUsing = OnRep_HasExploded)
 	bool HasExploded;
 	float TimePassed_SinceLastTryApplyRadialDamage;

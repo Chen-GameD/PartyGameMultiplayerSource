@@ -15,7 +15,7 @@
 #include "LevelInteraction/MinigameMainObjective.h"
 
 
-bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor)
+bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor, float DeltaTime)
 {
 	if (!DamageCauser || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
@@ -34,8 +34,8 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
-		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
-			Damage *= AWeaponDataHelper::interval_ApplyDamage;
+		if (0 < DeltaTime)
+			Damage *= DeltaTime;
 		// Special situation: Bomb's fork, Taser's fork
 		if( (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass()) || 
 			WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass() )
@@ -52,11 +52,10 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	return true;
 }
 
-
-bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
-{
-	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
-}
+//bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
+//{
+//	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
+//}
 
 bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage)
 {
@@ -97,17 +96,9 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 	return true;
 }
 
-bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
+bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter, float DeltaTime)
 {	
-	if (!DamageCauser || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
-		return false;
-
-	EnumWeaponType WeaponType = EnumWeaponType::None;
-	if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (WeaponType == EnumWeaponType::None)
+	if (WeaponType == EnumWeaponType::None || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	TArray<EnumAttackBuff> AttackBuffs;
@@ -170,7 +161,7 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
 			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = AWeaponDataHelper::interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		BuffPoints += buffPointsToAdd;
 		if (1.0f <= BuffPoints)
 		{
@@ -185,18 +176,18 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 				BuffAccumulatedTime += buffTimeToAdd;
 				BuffPoints -= floorf(BuffPoints);
 			}		
-			// When it is paralysis, we will add interval_ApplyDamage(because that's the damage frequency of Taser), 
+			// When it is paralysis, we will add DeltaTime(because that's the damage frequency of Taser), 
 			// not touch the BuffPoints	
 			if (AttackBuff == EnumAttackBuff::Paralysis)
 			{
-				buffTimeToAdd = AWeaponDataHelper::interval_ApplyDamage;
+				buffTimeToAdd = DeltaTime;
 				BuffRemainedTime += buffTimeToAdd;
 				BuffAccumulatedTime += buffTimeToAdd;
 			}
-			// When it is knockback, we will neither add the time nor touch the BuffPoints
+			// When it is knockback, we will neither add time nor touch the BuffPoints
 		}
 	}	
-	DamagedCharacter->ActByBuff_PerDamage();
+	DamagedCharacter->ActByBuff_PerDamage(DeltaTime);
 	return true;
 }
 

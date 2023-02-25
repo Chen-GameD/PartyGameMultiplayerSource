@@ -51,20 +51,20 @@ ABaseProjectile::ABaseProjectile()
 	LiveTime = 0.0f;
 	MaxLiveTime = 5.0f;
 
-	TotalTime_ApplyDamage = 0.0f;
-	TotalDamage_ForTotalTime = 0.0f;
+	TotalDamageTime = 0.0f;
+	TotalDamage = 0.0f;
 	Origin = FVector::ZeroVector;
 	DamageRadius = 0.0f;
 	bApplyConstantDamage = false;
-	BaseDamage = 0.0f;
 	HasExploded = false;
 	TimePassed_SinceExplosion = 0.0f;
-	TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
+	//TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
 }
 
 void ABaseProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);	
+	CurDeltaTime = DeltaTime;
 	
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -85,22 +85,14 @@ void ABaseProjectile::Tick(float DeltaTime)
 			if (bApplyConstantDamage)
 			{
 				// Explosion is finished
-				if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
+				if (TotalDamageTime < TimePassed_SinceExplosion)
 				{
 					Destroy();
 					return;
 				}
 
 				// Explosion is not finished
-				// TryApplyRadialDamage when reaches the timeinterval
-				if (AWeaponDataHelper::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
-				{
-					ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
-					TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
-				}				
-
-				TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("DeltaTime: %f"), DeltaTime));
+				ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, DeltaTime* TotalDamage / TotalDamageTime);
 			}	
 			TimePassed_SinceExplosion += DeltaTime;
 		}
@@ -147,21 +139,18 @@ void ABaseProjectile::BeginPlay()
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		TotalDamageTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// total damage
 	ParName = WeaponName + "_TotalDamage";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-		TotalDamage_ForTotalTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		TotalDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// damage radius
 	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// Is constant damage
-	if (0.0f < TotalTime_ApplyDamage)
+	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-	// BaseDamage
-	float numIntervals = TotalTime_ApplyDamage / AWeaponDataHelper::interval_ApplyDamage;
-	BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -224,9 +213,10 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	}
 
 	// Direct Hit Damage
-	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 
 	// Range Damage		
-	ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
 	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+	if(!bApplyConstantDamage)
+		ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 }

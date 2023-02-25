@@ -252,7 +252,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 
 			if (ApplyDamageCounter == 0 && HoldingController)
 			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor);
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 				ApplyDamageCounter++;
 			}
 		}
