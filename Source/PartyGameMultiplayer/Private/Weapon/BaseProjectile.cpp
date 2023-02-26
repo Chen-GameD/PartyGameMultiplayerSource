@@ -193,6 +193,7 @@ void ABaseProjectile::Destroyed()
 	if (AttackHitEffect_NSComponent)
 	{
 		AttackHitEffect_NSComponent->Deactivate();
+		AttackHitEffect_NSComponent->SetVisibility(false);
 		AttackHitEffect_NSComponent = nullptr;
 	}
 }

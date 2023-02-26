@@ -17,10 +17,10 @@
 
 AProjectileFlamefork::AProjectileFlamefork()
 {
-	ProjectileMovementComponent->InitialSpeed = 1500.0f;
-	ProjectileMovementComponent->MaxSpeed = 1500.0f;
+	ProjectileMovementComponent->InitialSpeed = 1150.0f;
+	ProjectileMovementComponent->MaxSpeed = 1150.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.25f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
@@ -35,7 +35,7 @@ void AProjectileFlamefork::BeginPlay()
 {
 	Super::BeginPlay();
 
-	MaxLiveTime = 1.5f;
+	MaxLiveTime = 0.3f;
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -52,12 +52,16 @@ void AProjectileFlamefork::Destroyed()
 	if (Wave_NSComponent)
 	{
 		Wave_NSComponent->Deactivate();
+		Wave_NSComponent->SetVisibility(false);
 		Wave_NSComponent = nullptr;
 	}
 }
 
 void AProjectileFlamefork::SpawnWaveNS_Implementation(FVector SpawnLocation, FRotator SpawnRotation)
 {
+	FRotator AdjustedSpawnRotation = SpawnRotation;
+	AdjustedSpawnRotation.Yaw += 45.0f;  // fix the z-axis bias
+	FVector SpawnScale = FVector(0.5, 0.5, 0.1);
 	if (Wave_NSSystem)
-		Wave_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Wave_NSSystem, SpawnLocation, SpawnRotation);
+		Wave_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Wave_NSSystem, SpawnLocation, AdjustedSpawnRotation, SpawnScale);
 }
