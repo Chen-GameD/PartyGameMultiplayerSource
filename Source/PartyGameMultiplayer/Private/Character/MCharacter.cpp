@@ -911,6 +911,10 @@ void AMCharacter::OnRep_IsOnGround()
 {
 	if (!EffectJump || !EffectLand)
 		return;
+	// Knockback won't trigger jump&land vfx
+	//if (CheckBuffMap(EnumAttackBuff::Knockback) && 0 < BuffMap[EnumAttackBuff::Knockback][0])
+	//	return;
+
 	if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
 		return;
 

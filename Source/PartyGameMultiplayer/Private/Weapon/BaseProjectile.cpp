@@ -172,7 +172,11 @@ void ABaseProjectile::OnRep_HasExploded()
 	if (HasExploded)
 	{
 		if (AttackOnEffect_NSComponent)
-			AttackOnEffect_NSComponent->Deactivate();
+		{
+			AttackOnEffect_NSComponent->Deactivate();  // Not working somehow
+			AttackOnEffect_NSComponent->SetVisibility(false);
+		}
+			
 
 		StaticMesh->SetVisibility(false);
 		ProjectileMovementComponent->StopMovementImmediately();		

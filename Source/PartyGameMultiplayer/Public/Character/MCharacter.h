@@ -8,6 +8,7 @@
 #include "GameFramework/Character.h"
 #include "UI/InventoryMenu.h"
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
 #include "MCharacter.generated.h"
 

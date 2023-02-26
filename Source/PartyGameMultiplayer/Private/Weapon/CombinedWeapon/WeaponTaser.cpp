@@ -65,6 +65,8 @@ AWeaponTaser::AWeaponTaser()
 	Server_ActorBeingHit = nullptr;
 	bHitTarget = false;
 	bForkAttachedToWeapon = true;
+
+	Ratio_ScaleUpOnRelativeScale = 3.0f;
 }
 
 
@@ -148,6 +150,11 @@ void AWeaponTaser::Tick(float DeltaTime)
 		{
 			IsForkOut = false;
 		}
+
+		if (!IsForkOut)
+		{
+			TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
+		}
 	}
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -175,6 +182,7 @@ void AWeaponTaser::AttackStart()
 		return;
 
 	Super::AttackStart();
+	TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
 	//bShouldStretchOut = true;
 }
 
@@ -200,7 +208,7 @@ void AWeaponTaser::BeginPlay()
 
 	TaserFork_OriginalRelativeLocation = TaserForkMesh->GetRelativeLocation();
 	TaserFork_OriginalRelativeRotation = TaserForkMesh->GetRelativeRotation();
-	//TaserFork_OriginalRelativeScale = TaserForkMesh->GetRelativeScale3D();
+	TaserFork_OriginalRelativeScale = TaserForkMesh->GetRelativeScale3D();
 }
 
 void AWeaponTaser::OnRep_bAttackOn()
@@ -218,6 +226,7 @@ void AWeaponTaser::OnRep_bAttackOn()
 
 	TaserFork_RelativeLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
 	TaserFork_RelativeRotation_WhenAttackStop = TaserForkMesh->GetRelativeRotation();
+	TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
 }
 
 void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,

@@ -49,6 +49,8 @@ protected:
 	// TaserFork original transform
 	FVector TaserFork_OriginalRelativeLocation;
 	FRotator TaserFork_OriginalRelativeRotation;
+	FVector TaserFork_OriginalRelativeScale;
+	float Ratio_ScaleUpOnRelativeScale;
 	FVector TaserFork_RelativeLocation_WhenAttackStop;
 	FRotator TaserFork_RelativeRotation_WhenAttackStop;
 	//FVector TaserFork_OriginalRelativeScale;
