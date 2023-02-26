@@ -206,6 +206,10 @@ void AMCharacter::Attack_Implementation()
 {
 	if ((LeftWeapon || RightWeapon || CombineWeapon) && !IsDead)
 	{
+		// Can't Attack(No WeaponAttackStart, No attack animation) during Paralysis
+		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0.0f < BuffMap[EnumAttackBuff::Paralysis][1])
+			return;
+
 		FString AttackMessage = FString::Printf(TEXT("You Start Attack."));
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AttackMessage);
 		

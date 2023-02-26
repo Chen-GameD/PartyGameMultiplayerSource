@@ -93,6 +93,10 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 	if (CurrentHealth <= 0)
 	{
 		CurrentHealth = 0.0f;	
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_CurrentHealth();
+		}
 		if (SkeletalMesh)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
@@ -145,10 +149,10 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
 
-	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
-	{
-		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
-	}
+	//if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
+	//{
+	//	healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
+	//}
 
 	if (CurrentHealth <= 0)
 	{
