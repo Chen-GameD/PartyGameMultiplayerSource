@@ -15,6 +15,10 @@ class PARTYGAMEMULTIPLAYER_API AWeaponFlamefork : public ABaseWeapon
 public:
 	AWeaponFlamefork();
 
+	virtual void AttackStart() override;
+	// should only be called on server
+	virtual void SpawnProjectile() override;
+
 protected:
 
 private:

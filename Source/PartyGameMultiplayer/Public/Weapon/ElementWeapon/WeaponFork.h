@@ -16,12 +16,16 @@ public:
 	AWeaponFork();
 
 protected:
-
+	//virtual void OnRep_bAttackOn() override;
 private:
 
 // MEMBER VARIABLES
 public:
 protected:
+	//UPROPERTY(EditAnywhere, Category = "Effects")
+	//	class UNiagaraComponent* Wave_NSComponent;
+	//UPROPERTY(EditAnywhere, Category = "Effects")
+	//	class UNiagaraSystem* Wave_NSSystem;
 private:
 
 };

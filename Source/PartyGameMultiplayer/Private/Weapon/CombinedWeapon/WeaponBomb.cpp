@@ -94,22 +94,22 @@ void AWeaponBomb::AttackStart()
 }
 
 
-void AWeaponBomb::AttackStop()
-{
-	if (!bAttackOn || !GetOwner())
-		return;
-
-	bAttackOn = false;
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_bAttackOn();
-	}
-	ApplyDamageCounter = 0;
-	AttackObjectMap.Empty();
-
-	SetActorEnableCollision(bAttackOn);
-}
+//void AWeaponBomb::AttackStop()
+//{
+//	if (!bAttackOn || !GetOwner())
+//		return;
+//
+//	bAttackOn = false;
+//	// Listen server
+//	if (GetNetMode() == NM_ListenServer)
+//	{
+//		OnRep_bAttackOn();
+//	}
+//	ApplyDamageCounter = 0;
+//	AttackObjectMap.Empty();
+//
+//	SetActorEnableCollision(bAttackOn);
+//}
 
 
 void AWeaponBomb::SpawnProjectile()

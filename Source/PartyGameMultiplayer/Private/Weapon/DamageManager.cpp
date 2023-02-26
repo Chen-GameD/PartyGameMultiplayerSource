@@ -29,13 +29,27 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		return false;
 
 	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
-	{		
+	{
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
 		if (0 < DeltaTime)
 			Damage *= DeltaTime;
+		// Special situation: Flamefork
+		if (WeaponType == EnumWeaponType::Flamefork)
+		{
+			if (DamageTypeClass == UMeleeDamageType::StaticClass())
+			{
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Flamefork_Melee"))
+					Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Flamefork_Melee"];
+			}
+			else
+			{
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Flamefork_Wave"))
+					Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Flamefork_Wave"];
+			}			
+		}
 		// Special situation: Bomb's fork, Taser's fork
 		if( (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass()) || 
 			WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass() )
@@ -118,7 +132,8 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 	else if (WeaponType == EnumWeaponType::Flamefork)
 	{
 		AttackBuffs.Add(EnumAttackBuff::Burning);
-		AttackBuffs.Add(EnumAttackBuff::Knockback);
+		if(DamageTypeClass == UMeleeDamageType::StaticClass())
+			AttackBuffs.Add(EnumAttackBuff::Knockback);
 	}		
 	else if (WeaponType == EnumWeaponType::Taser)
 		AttackBuffs.Add(EnumAttackBuff::Paralysis);

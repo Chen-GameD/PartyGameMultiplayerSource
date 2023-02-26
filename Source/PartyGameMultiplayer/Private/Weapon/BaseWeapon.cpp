@@ -295,11 +295,8 @@ void ABaseWeapon::AttackStop()
 		CD_CanRecover = false;
 	TimePassed_SinceAttackStop = 0.0f;
 
-	if (AttackType != EnumAttackType::SpawnProjectile)
-	{
-		SetActorEnableCollision(bAttackOn);
-		//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}
+	SetActorEnableCollision(bAttackOn);
+	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 
