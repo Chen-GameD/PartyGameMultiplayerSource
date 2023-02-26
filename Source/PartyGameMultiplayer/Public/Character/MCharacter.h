@@ -142,8 +142,8 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-	UFUNCTION()
-	void OnRep_IsOnGround();
+	UFUNCTION(NetMulticast, Reliable)
+	void CallJumpLandEffect();
 
 	UFUNCTION()
 	void OnRep_IsAllowDash();
@@ -293,6 +293,7 @@ public:
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
+	bool BeingKnockbackBeforeThisTick;
 
 protected:
 
@@ -308,7 +309,7 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(ReplicatedUsing = OnRep_IsOnGround)
+	UPROPERTY(Replicated)
 	bool IsOnGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;

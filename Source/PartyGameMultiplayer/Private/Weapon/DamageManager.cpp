@@ -140,7 +140,7 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 		{
 			FVector AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
 			AttackingDirection.Normalize();
-			DamagedCharacter->KnockbackDirection_SinceLastApplyBuff += AttackingDirection;
+			DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection;
 		}	
 		if (AttackBuff == EnumAttackBuff::Paralysis && Controller->GetPawn())
 		{
@@ -148,7 +148,7 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 			if (100.0f < Direction_SelfToAttacker.Length())
 			{
 				Direction_SelfToAttacker.Normalize();
-				DamagedCharacter->TaserDragDirection_SinceLastApplyBuff += Direction_SelfToAttacker;
+				DamagedCharacter->TaserDragDirection_SinceLastApplyBuff = Direction_SelfToAttacker;
 			}			
 		}
 		

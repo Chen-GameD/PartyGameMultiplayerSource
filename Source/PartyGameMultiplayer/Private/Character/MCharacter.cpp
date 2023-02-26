@@ -109,6 +109,7 @@ AMCharacter::AMCharacter()
 	EffectLand->bAutoActivate = false;
 
 	CanMove = true;
+	BeingKnockbackBeforeThisTick = false;
 }
 
 void AMCharacter::Restart()
@@ -157,7 +158,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	// Replicate AnimState
 	DOREPLIFETIME(AMCharacter, AnimState);
 	// Replicate SKD Array
-	DOREPLIFETIME(AMCharacter, SKDArray);
+	DOREPLIFETIME(AMCharacter, SKDArray); 
 }
 #pragma endregion Replicated Properties
 
@@ -907,15 +908,9 @@ void AMCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
-void AMCharacter::OnRep_IsOnGround()
+void AMCharacter::CallJumpLandEffect_Implementation()
 {
 	if (!EffectJump || !EffectLand)
-		return;
-	// Knockback won't trigger jump&land vfx
-	//if (CheckBuffMap(EnumAttackBuff::Knockback) && 0 < BuffMap[EnumAttackBuff::Knockback][0])
-	//	return;
-
-	if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
 		return;
 
 	if (IsOnGround)
@@ -1170,11 +1165,13 @@ void AMCharacter::Tick(float DeltaTime)
 
 		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-		if (GetNetMode() == NM_ListenServer)
+		if (oldIsOnGround != IsOnGround)
 		{
-			if (oldIsOnGround != IsOnGround)
-				OnRep_IsOnGround();
+			if( !(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]) && 
+				 !(BeingKnockbackBeforeThisTick) )
+			CallJumpLandEffect();
 		}
+		BeingKnockbackBeforeThisTick = false;
 	}
 
 	// Client(Listen Server)
@@ -1243,6 +1240,7 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 					KnockbackDirection_SinceLastApplyBuff.Z = 0.0f;
 					KnockbackDirection_SinceLastApplyBuff *= Knockback_MoveSpeed;
 					LaunchCharacter(KnockbackDirection_SinceLastApplyBuff, true, false);
+					BeingKnockbackBeforeThisTick = true;
 					BuffPoints = 0.0f;
 				}
 			}
