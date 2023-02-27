@@ -1036,18 +1036,58 @@ bool AMCharacter::GetIsDead()
 // ===========================================
 #pragma region UI
 
-void AMCharacter::SetTipUI_Implementation(bool isShowing)
+void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTouchWeapon)
 {
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		if (isShowing)
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		if (isShowing && CurrentTouchWeapon)
 		{
-			healthBar->ShowTip();
+			CharacterFollowWidget->ShowTip();
+			// Update Weapon UI
+			// Left
+			if (RightWeapon)
+			{
+				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+				{
+					TSubclassOf<ABaseWeapon> combineWeaponRef;
+					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
+					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->textureUI);
+				}
+				else
+				{
+					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+				}
+			}
+			else
+			{
+				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+			}
+
+			// Right
+			if (LeftWeapon)
+			{
+				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+				{
+					TSubclassOf<ABaseWeapon> combineWeaponRef;
+					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
+					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->textureUI);
+				}
+				else
+				{
+					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+				}
+			}
+			else
+			{
+				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+			}
 		}
 		else
 		{
-			healthBar->HideTip();
+			CharacterFollowWidget->HideTip();
 		}
 	}
 }
@@ -1066,14 +1106,31 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 	ABaseWeapon* tempWeaponTouched = Cast<ABaseWeapon>(OtherActor);
 	if (tempWeaponTouched && !IsDead)
 	{
-		SetTipUI(true);
-		
 		if (!CurrentTouchedWeapon.Contains(tempWeaponTouched))
 		{
 			CurrentTouchedWeapon.Add(tempWeaponTouched);
 			// Output: WeaponOverlap
-			FString CollisionMessage = FString::Printf(TEXT("Append Weapon to array : %s"), *tempWeaponTouched->GetWeaponName());
+			FString NetName = "None";
+			if (GetNetMode() == NM_ListenServer)
+			{
+				NetName = "ListenServer";
+			}
+			else if (GetNetMode() == NM_Client)
+			{
+				NetName = "Client";
+			}
+			else if (GetNetMode() == NM_DedicatedServer)
+			{
+				NetName = "DedicatedServer";
+			}
+			FString CollisionMessage = FString::Printf(TEXT("Append Weapon to array(%s) : %s"), ToCStr(NetName), *tempWeaponTouched->GetWeaponName());
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, CollisionMessage);
+		}
+
+		// Set Tip Weapon Image
+		if (CurrentTouchedWeapon.Num() > 0)
+		{
+			SetTipUI(true, CurrentTouchedWeapon[0]);
 		}
 	}
 }
@@ -1086,8 +1143,6 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 	ABaseWeapon* tempWeaponTouched = Cast<ABaseWeapon>(OtherActor);
 	if (tempWeaponTouched && !IsDead)
 	{
-		SetTipUI(false);
-		
 		if (CurrentTouchedWeapon.Contains(tempWeaponTouched))
 		{
 			CurrentTouchedWeapon.Remove(tempWeaponTouched);
@@ -1096,6 +1151,7 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 			FString CollisionMessage = FString::Printf(TEXT("Remove Weapon in array : %s"), *tempWeaponTouched->GetWeaponName());
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, CollisionMessage);
 		}
+		SetTipUI(false);
 	}
 }
 #pragma endregion Collision

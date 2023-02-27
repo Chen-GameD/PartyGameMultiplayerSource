@@ -209,7 +209,7 @@ protected:
 	// UI
 	// ======================
 	UFUNCTION(Client, Reliable)
-	void SetTipUI(bool isShowing);
+	void SetTipUI(bool isShowing, ABaseWeapon* CurrentTouchWeapon = nullptr);
 
 	// Collision
 	UFUNCTION(Category = "Weapon")

@@ -32,6 +32,11 @@ public:
 	UFUNCTION()
 	void SetWeaponEnergyUIVisibility(bool IsVisible);
 
+	UFUNCTION()
+	void SetLeftWeaponTipUI(UTexture2D* texture);
+	UFUNCTION()
+	void SetRightWeaponTipUI(UTexture2D* texture);
+
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	
@@ -46,10 +51,15 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UImage* Tip_Right;
 
+	// UPROPERTY(meta = (BindWidget))
+	// UTextBlock* Tip_Left_Text;
+	// UPROPERTY(meta = (BindWidget))
+	// UTextBlock* Tip_Right_Text;
+
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Tip_Left_Text;
+	UImage* Tip_Left_Weapon;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Tip_Right_Text;
+	UImage* Tip_Right_Weapon;
 
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* InGame_WeaponEnergyCanvasHolder;
