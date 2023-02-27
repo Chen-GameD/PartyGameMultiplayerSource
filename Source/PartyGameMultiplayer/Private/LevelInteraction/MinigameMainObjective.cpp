@@ -82,7 +82,7 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 		}
 		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
 		{
-			killerPS->addScore(30);
+			killerPS->addScore(ScoreCanGet);
 		}
 
 		// Set timer and respawn this actor
@@ -160,4 +160,9 @@ void AMinigameMainObjective::StartToRespawnActor()
 		MyGameMode->Server_RespawnMinigameObject();
 	}
 	AMinigameMainObjective::Destroy(true, true);
+}
+
+void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)
+{
+	ScoreCanGet = n_Score;
 }

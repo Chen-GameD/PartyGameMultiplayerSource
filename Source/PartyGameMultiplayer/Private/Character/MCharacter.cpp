@@ -794,15 +794,15 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 {
 	if (isVisible)
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		healthBar->HideTip();
-		healthBar->SetVisibility(ESlateVisibility::Visible);
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		healthBar->HideTip();
-		healthBar->SetVisibility(ESlateVisibility::Hidden);
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
@@ -810,16 +810,16 @@ void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
 {
 	if (isVisible)
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		healthBar->HideTip();
-		healthBar->SetVisibility(ESlateVisibility::Visible);
-		healthBar->SetLocalControlledUI();
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+		CharacterFollowWidget->SetLocalControlledUI();
 	}
 	else
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		healthBar->HideTip();
-		healthBar->SetVisibility(ESlateVisibility::Hidden);
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 

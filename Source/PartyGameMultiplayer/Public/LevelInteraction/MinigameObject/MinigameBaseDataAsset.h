@@ -20,6 +20,12 @@ public:
 	int GameTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	int ScoreCanGet;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	FString MinigameHint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
 	TSubclassOf<AMinigameMainObjective> MinigameObject;
 };
 

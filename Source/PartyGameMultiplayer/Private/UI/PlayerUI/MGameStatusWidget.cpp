@@ -48,4 +48,6 @@ void UMGameStatusWidget::UpdateGameTimer(int i_GameTime)
 void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info)
 {
 	MinigameInfo->SetText(FText::FromString(i_Info));
+
+	ShowMinigameInfoAnimation();
 }

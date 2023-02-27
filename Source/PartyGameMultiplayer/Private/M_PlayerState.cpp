@@ -5,6 +5,7 @@
 
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameMode.h"
+#include "GameBase/MGameState.h"
 
 void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 {
@@ -129,6 +130,18 @@ void AM_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 void AM_PlayerState::addScore(float i_scoreToAdd) {
 	SetScore(GetScore() + i_scoreToAdd);
+
+	// This function only call on server
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState)
+	{
+		TeamIndex == 1 ? MyGameState->Team_1_Score += i_scoreToAdd : MyGameState->Team_2_Score += i_scoreToAdd;
+		
+		if (GetNetMode() == NM_ListenServer)
+		{
+			TeamIndex == 1 ? MyGameState->OnRep_Team_1_ScoreUpdate() : MyGameState->OnRep_Team_2_ScoreUpdate();
+		}
+	}
 }
 
 void AM_PlayerState::addKill(int i_killToAdd) {
