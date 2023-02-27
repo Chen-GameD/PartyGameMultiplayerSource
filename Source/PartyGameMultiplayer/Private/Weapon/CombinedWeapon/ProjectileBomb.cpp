@@ -26,10 +26,10 @@ AProjectileBomb::AProjectileBomb()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 1000.0f;
-	ProjectileMovementComponent->MaxSpeed = 1000.0f;
+	ProjectileMovementComponent->InitialSpeed = 800.0f;
+	ProjectileMovementComponent->MaxSpeed = 800.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 1.0f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.65f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
@@ -51,7 +51,7 @@ void AProjectileBomb::Tick(float DeltaTime)
 	{
 		if (2.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
 		{
-			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
 		}
 	}
@@ -79,9 +79,9 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	HasAppliedNeedleRainDamage = false;
 
 	// Direct Hit Damage
-	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 
-	// Bomb's Range Damage is different
-	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
+	// Bomb's Range Damage will be delayed
+	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 }

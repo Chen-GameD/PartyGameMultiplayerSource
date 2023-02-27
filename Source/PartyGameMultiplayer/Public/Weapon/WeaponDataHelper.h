@@ -34,9 +34,9 @@ enum EnumAttackType
 enum EnumAttackBuff
 {
 	Burning,
-	Paralysis,
-	Blowing,
-	Knockback
+	Knockback,
+	//Blowing,
+	Paralysis
 };
 
 
@@ -49,6 +49,8 @@ public:
 	AWeaponDataHelper();
 
 public:
+	//static float interval_ApplyDamage; // preset value for all constant damage
+
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
 
 	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;

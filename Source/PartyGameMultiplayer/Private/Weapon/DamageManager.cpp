@@ -14,11 +14,8 @@
 #include "Character/MCharacter.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
-//FTimerHandle* ADamageManager::TimerHandle_Loop = nullptr;
-float ADamageManager::interval_ApplyDamage = 0.1f; // preset value for all constant damage
 
-
-bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor)
+bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor, float DeltaTime)
 {
 	if (!DamageCauser || !DamagedActor || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
@@ -32,27 +29,34 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		return false;
 
 	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
-	{		
+	{
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
-		if (AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map[WeaponType] == EnumAttackType::Constant)
-			Damage *= interval_ApplyDamage;
-		// Special situation: Bomb's fork
-		if (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
+		if (0 < DeltaTime)
+			Damage *= DeltaTime;
+		// Special situation: Flamefork
+		if (WeaponType == EnumWeaponType::Flamefork)
+		{
+			if (DamageTypeClass == UMeleeDamageType::StaticClass())
+			{
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Flamefork_Melee"))
+					Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Flamefork_Melee"];
+			}
+			else
+			{
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Flamefork_Wave"))
+					Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Flamefork_Wave"];
+			}			
+		}
+		// Special situation: Bomb's fork, Taser's fork
+		if( (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass()) || 
+			WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass() )
 		{
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
 				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
 		}
-
-		// if it is AMinigameMainObjective
-		if (Cast<AMinigameMainObjective>(DamagedActor))
-		{
-			if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
-				Damage *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
-		}
-
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
 	}
 	else
@@ -62,11 +66,10 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	return true;
 }
 
-
-bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
-{
-	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
-}
+//bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage)
+//{
+//	return TryApplyRadialDamage(DamageCauser, Controller, Origin, 0.0f, DamageRadius, BaseDamage);
+//}
 
 bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage)
 {
@@ -107,17 +110,9 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 	return true;
 }
 
-bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter)
+bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter, float DeltaTime)
 {	
-	if (!DamageCauser || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
-		return false;
-
-	EnumWeaponType WeaponType = EnumWeaponType::None;
-	if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (WeaponType == EnumWeaponType::None)
+	if (WeaponType == EnumWeaponType::None || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	TArray<EnumAttackBuff> AttackBuffs;
@@ -135,7 +130,12 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		AttackBuffs.Add(EnumAttackBuff::Knockback);
 	}
 	else if (WeaponType == EnumWeaponType::Flamefork)
-		AttackBuffs.Add(EnumAttackBuff::Burning);
+	{
+		if (DamageTypeClass == UMeleeDamageType::StaticClass())
+			AttackBuffs.Add(EnumAttackBuff::Knockback);
+		else
+			AttackBuffs.Add(EnumAttackBuff::Burning);
+	}		
 	else if (WeaponType == EnumWeaponType::Taser)
 		AttackBuffs.Add(EnumAttackBuff::Paralysis);
 
@@ -143,7 +143,9 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 	{
 		EnumAttackBuff AttackBuff = AttackBuffs[i];
 
-		check(DamagedCharacter->CheckBuffMap(AttackBuff));
+		if (!DamagedCharacter->CheckBuffMap(AttackBuff))
+			continue;
+
 		float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
 		float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
 		float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
@@ -152,12 +154,22 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		float buffTimeToAdd = 0.0f;
 		if (AttackBuff == EnumAttackBuff::Knockback && Controller->GetPawn())
 		{
-			FVector3d AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
-			DamagedCharacter->KnockbackDirection_DuringLastFrame += AttackingDirection;
-		}		
+			FVector AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			AttackingDirection.Normalize();
+			DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection;
+		}	
+		if (AttackBuff == EnumAttackBuff::Paralysis && Controller->GetPawn())
+		{
+			FVector Direction_SelfToAttacker = Controller->GetPawn()->GetActorLocation() - DamagedCharacter->GetActorLocation();
+			if (100.0f < Direction_SelfToAttacker.Length())
+			{
+				Direction_SelfToAttacker.Normalize();
+				DamagedCharacter->TaserDragDirection_SinceLastApplyBuff = Direction_SelfToAttacker;
+			}			
+		}
 		
 		FString ParName = "";
-		// points to add
+		// Assign buffPointsToAdd (up to 3 times, the value may be overwrote by the next Search And Assign)
 		ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
@@ -168,25 +180,33 @@ bool ADamageManager::ApplyBuff(AActor* DamageCauser, AController* Controller, TS
 		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
 			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = interval_ApplyDamage * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		BuffPoints += buffPointsToAdd;
-		if(AttackBuff == EnumAttackBuff::Burning)
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("BuffPoints: %f"), BuffPoints));
 		if (1.0f <= BuffPoints)
 		{
 			// time to add		
 			ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
-			// when it is time-based buff(burning), we add the time and substract 1 from BuffPoints; 
-			// otherwise(paralysis, knockback), we will neither add the time nor touch the BuffPoints
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			// When it is burning, we add the designated time and substract 1 from BuffPoints; 	
+			// We know only Burning has "Burning_TimeToAdd"
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName)) 
 			{
 				buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				BuffRemainedTime += buffTimeToAdd;
 				BuffAccumulatedTime += buffTimeToAdd;
 				BuffPoints -= floorf(BuffPoints);
-			}				
+			}		
+			// When it is paralysis, we will add DeltaTime(because that's the damage frequency of Taser), 
+			// not touch the BuffPoints	
+			if (AttackBuff == EnumAttackBuff::Paralysis)
+			{
+				buffTimeToAdd = DeltaTime;
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+			}
+			// When it is knockback, we will neither add time nor touch the BuffPoints
 		}
 	}	
+	DamagedCharacter->ActByBuff_PerDamage(DeltaTime);
 	return true;
 }
 

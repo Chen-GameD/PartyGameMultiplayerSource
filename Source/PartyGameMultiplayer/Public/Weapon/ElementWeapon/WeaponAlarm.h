@@ -29,7 +29,6 @@ private:
 // MEMBER VARIABLES
 public:
 protected:
-	bool ShouldHideWeapon;
-	float TimePassed_SinceLastAttackOn;
+	bool IsHidden;
 private:
 };

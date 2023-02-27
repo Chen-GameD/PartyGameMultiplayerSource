@@ -34,10 +34,10 @@ AProjectileCannon::AProjectileCannon()
 		CannonMesh->SetRelativeScale3D(FVector(8.0f, 8.0f, 8.0f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 1000.0f;
-	ProjectileMovementComponent->MaxSpeed = 1000.0f;
+	ProjectileMovementComponent->InitialSpeed = 700.0f;
+	ProjectileMovementComponent->MaxSpeed = 700.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 1.0f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.9f;
 
 }
 

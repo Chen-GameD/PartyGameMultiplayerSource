@@ -23,7 +23,7 @@ public:
 	// should only be called on server
 	virtual void AttackStart() override;
 	// should only be called on server
-	virtual void AttackStop() override;
+	//virtual void AttackStop() override;
 	// should only be called on server
 	virtual void SpawnProjectile() override;
 
@@ -37,8 +37,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh_WithoutBomb;
 protected:
-	bool ShouldHideWeapon;
-	float TimePassed_SinceLastAttackOn;
 private:
 	
 };
