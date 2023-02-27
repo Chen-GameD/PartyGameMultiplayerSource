@@ -806,6 +806,8 @@ void AMCharacter::SetGameUIVisibility(bool isVisible)
 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		CharacterFollowWidget->HideTip();
 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+		CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 	}
 	else
 	{
