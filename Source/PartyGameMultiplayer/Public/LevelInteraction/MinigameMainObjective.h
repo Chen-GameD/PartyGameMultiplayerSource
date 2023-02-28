@@ -54,9 +54,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Health", ReplicatedUsing = OnRep_CurrentHealth)
 		float CurrentHealth;
 
-	/**	Health Bar UI widget */
-	UPROPERTY(VisibleAnywhere)
-		class UWidgetComponent* HealthWidget;
+	// /**	Health Bar UI widget */
+	// UPROPERTY(VisibleAnywhere)
+	// 	class UWidgetComponent* HealthWidget;
 
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class UStaticMeshComponent* RootMesh;

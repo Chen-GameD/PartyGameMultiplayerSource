@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/MCharacterFollowWidget.h"
 #include "UI/MInGameHUD.h"
 #include "MPlayerController.generated.h"
 
@@ -57,8 +58,8 @@ public:
 	UFUNCTION()
 	void StartTheGame();
 
-	UFUNCTION(Client, Reliable, BlueprintCallable)
-	void Client_SetGameUIVisibility(bool isVisible);
+	UFUNCTION(NetMulticast, Reliable, BlueprintCallable)
+	void NetMulticast_InitPlayerFollowWidget(bool isVisible, bool needReset = false);
 
 	UFUNCTION(Client, Reliable)
 	void Client_SynMeshWhenJoinSession();
@@ -77,6 +78,27 @@ public:
 	// HUD getter
 	UFUNCTION(BlueprintCallable)
 	AMInGameHUD* GetInGameHUD();
+	
+	// FollowWidget Relate
+	//=========================================================
+	// // This function should only call when this controller is locally controlled controller.
+	// // Set the health bar hidden, set the pick up hint and weapon energy bar visible.
+	// UFUNCTION()
+	// void LocallyControlled_SetFollowWidgetUIVisibility(ESlateVisibility newVisibility);
+	// // This function should only call when this controller is not locally controlled controller.
+	// // Set the health bar visible, set the pick up hint and weapon energy bar hidden.
+	// UFUNCTION()
+	// void NotLocallyControlled_SetFollowWidgetUIVisibility(ESlateVisibility newVisibility);
+	UFUNCTION()
+	void SetFollowWidgetUIVisibility(ESlateVisibility newVisibility);
+	UFUNCTION()
+	void UpdateFollowWidgetHealthBar(float percent);
+	UFUNCTION()
+	void SetFollowWidgetPlayerName();
+	UFUNCTION()
+	void SetFollowWidgetWeaponHintVisibility(ESlateVisibility newVisibility);
+	UFUNCTION()
+	void UpdateFollowWidgetWeaponHint(UTexture2D* LeftTextureUI, UTexture2D* RightTextureUI);
 	
 protected:
 
@@ -143,11 +165,23 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	bool CanMove = true;
 
+	/**	Health Bar UI widget */
+	// UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	// TSubclassOf<UUserWidget> WB_PlayerFollowWidgetClass;
+	// UPROPERTY()
+	// UMCharacterFollowWidget* PlayerFollowWidget;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	TSubclassOf<UMCharacterFollowWidget> PlayerFollowWidgetClass;
+	// Follow Widget
+	UMCharacterFollowWidget* CharacterFollowWidget;
+
 // Members
 // ==============================================================
 private:
 	//InGame HUD
 	AMInGameHUD* MyInGameHUD;
 
+	// // Follow Widget
+	// UMCharacterFollowWidget* CharacterFollowWidget;
 	
 };

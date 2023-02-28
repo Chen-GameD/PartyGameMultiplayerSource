@@ -71,8 +71,8 @@ AMCharacter::AMCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	//Create HealthBar UI Widget
-	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
-	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	// PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
+	// PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -688,7 +688,7 @@ void AMCharacter::OnHealthUpdate()
 	{
 		if (!IsLocallyControlled())
 		{
-			SetHealthBarUI();
+			NL_SetHealthBarUI();
 		}
 		else
 		{
@@ -799,40 +799,42 @@ void AMCharacter::Multicast_SetMesh_Implementation(USkeletalMesh* i_changeMesh)
 	GetMesh()->SetSkeletalMesh(i_changeMesh);
 }
 
-void AMCharacter::SetGameUIVisibility(bool isVisible)
-{
-	if (isVisible)
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
-		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-		CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
-	}
-	else
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
+// void AMCharacter::SetGameUIVisibility(bool isVisible)
+// {
+// 	ENetMode currentNetMode = GetNetMode();
+// 	if (isVisible)
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+// 		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+// 		if (MyPlayerState)
+// 			CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
+// 	}
+// 	else
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
+// 	}
+// }
 
-void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
-{
-	if (isVisible)
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
-		CharacterFollowWidget->SetLocalControlledUI();
-	}
-	else
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
+// void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
+// {
+// 	if (isVisible)
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+// 		CharacterFollowWidget->SetIsLocalControlledUI();
+// 	}
+// 	else
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
+// 	}
+// }
 
 void AMCharacter::SetOutlineEffect(bool isVisible)
 {
@@ -1037,10 +1039,15 @@ float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AC
 }
 
 
-void AMCharacter::SetHealthBarUI()
+void AMCharacter::NL_SetHealthBarUI()
 {
-	UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-	healthBar->SetHealthToProgressBar(CurrentHealth/MaxHealth);
+	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
+	if (MyPlayerController)
+	{
+		MyPlayerController->UpdateFollowWidgetHealthBar(CurrentHealth/MaxHealth);
+	}
+	// UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+	// healthBar->UpdateHealthToProgressBar(CurrentHealth/MaxHealth);
 }
 #pragma endregion Health
 
@@ -1069,54 +1076,86 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 {
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		//UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 		if (isShowing && CurrentTouchWeapon)
 		{
-			CharacterFollowWidget->ShowTip();
+			//CharacterFollowWidget->ShowTip();
+			if (MyPlayerController)
+			{
+				MyPlayerController->SetFollowWidgetWeaponHintVisibility(ESlateVisibility::Visible);
+			}
+
+			UTexture2D* LeftWeaponTexture = nullptr;
+			UTexture2D* RightWeaponTexture = nullptr;
+			
 			// Update Weapon UI
 			// Left
-			if (RightWeapon)
+			if (RightWeapon && WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
 			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
-				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->textureUI);
-				}
-				else
-				{
-					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
-				}
+				TSubclassOf<ABaseWeapon> combineWeaponRef;
+				combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
+				ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+				LeftWeaponTexture = combineWeapon->textureUI;
+				
+				// if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+				// {
+				// 	TSubclassOf<ABaseWeapon> combineWeaponRef;
+				// 	combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
+				// 	ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+				// 	
+				// 	//CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->textureUI);
+				// 	LeftWeaponTexture = combineWeapon->textureUI;
+				// }
+				// else
+				// {
+				// 	//CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+				// 	LeftWeaponTexture = CurrentTouchWeapon->textureUI;
+				// }
 			}
 			else
 			{
-				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+				//CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+				LeftWeaponTexture = CurrentTouchWeapon->textureUI;
 			}
 
 			// Right
-			if (LeftWeapon)
+			if (LeftWeapon && WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
 			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
-				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->textureUI);
-				}
-				else
-				{
-					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
-				}
+				TSubclassOf<ABaseWeapon> combineWeaponRef;
+				combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
+				ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+				RightWeaponTexture = combineWeapon->textureUI;
+				
+				// if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+				// {
+				// 	TSubclassOf<ABaseWeapon> combineWeaponRef;
+				// 	combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
+				// 	ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+				// 	CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->textureUI);
+				// }
+				// else
+				// {
+				// 	CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+				// }
 			}
 			else
 			{
-				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+				//CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+				RightWeaponTexture = CurrentTouchWeapon->textureUI;
+			}
+
+			if (LeftWeaponTexture && RightWeaponTexture)
+			{
+				MyPlayerController->UpdateFollowWidgetWeaponHint(LeftWeaponTexture, RightWeaponTexture);
 			}
 		}
 		else
 		{
-			CharacterFollowWidget->HideTip();
+			if (MyPlayerController)
+			{
+				MyPlayerController->SetFollowWidgetWeaponHintVisibility(ESlateVisibility::Hidden);
+			}
 		}
 	}
 }
@@ -1193,13 +1232,14 @@ void AMCharacter::BeginPlay()
 	
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		healthBar->HideTip();
-		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		if (MyGameState)
-		{
-			SetGameUIVisibility(MyGameState->IsGameStart);
-		}
+		// UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		// healthBar->HideTip();
+		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		// if (MyGameState)
+		// {
+		// 	ENetMode currentNetMode = GetNetMode();
+		// 	SetGameUIVisibility(MyGameState->IsGameStart);
+		// }
 		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
 		if (MyPlayerState)
 		{

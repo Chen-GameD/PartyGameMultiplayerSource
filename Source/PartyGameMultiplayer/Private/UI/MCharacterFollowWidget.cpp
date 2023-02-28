@@ -7,14 +7,23 @@
 #include "Components/NamedSlot.h"
 #include "GameBase/MGameState.h"
 
-void UMCharacterFollowWidget::SetLocalControlledUI()
+void UMCharacterFollowWidget::SetIsLocalControlledUI(bool IsLocalControlled)
 {
-	HealthBar->SetVisibility(ESlateVisibility::Hidden);
-	InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
-	PlayerName->SetVisibility(ESlateVisibility::Hidden);
+	if (IsLocalControlled)
+	{
+		HealthBar->SetVisibility(ESlateVisibility::Hidden);
+		PlayerName->SetVisibility(ESlateVisibility::Hidden);
+		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		HealthBar->SetVisibility(ESlateVisibility::Visible);
+		PlayerName->SetVisibility(ESlateVisibility::Visible);
+		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
-void UMCharacterFollowWidget::SetHealthToProgressBar(float percentage)
+void UMCharacterFollowWidget::UpdateHealthToProgressBar(float percentage)
 {
 	if(IsValid(HealthBar))
 	{
@@ -27,30 +36,40 @@ void UMCharacterFollowWidget::SetPlayerName(FString i_PlayerName)
 	PlayerName->SetText(FText::FromString(i_PlayerName));
 }
 
+// void UMCharacterFollowWidget::ShowTip()
+// {
+// 	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
+// 	{
+// 		Tip_Left->SetVisibility(ESlateVisibility::Visible);
+// 		Tip_Right->SetVisibility(ESlateVisibility::Visible);
+// 		//Tip_Left_Text->SetVisibility(ESlateVisibility::Visible);
+// 		//Tip_Right_Text->SetVisibility(ESlateVisibility::Visible);
+// 		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Visible);
+// 		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Visible);
+// 	}
+// }
+//
+// void UMCharacterFollowWidget::HideTip()
+// {
+// 	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
+// 	{
+// 		Tip_Left->SetVisibility(ESlateVisibility::Hidden);
+// 		Tip_Right->SetVisibility(ESlateVisibility::Hidden);
+// 		//Tip_Left_Text->SetVisibility(ESlateVisibility::Hidden);
+// 		//Tip_Right_Text->SetVisibility(ESlateVisibility::Hidden);
+// 		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Hidden);
+// 		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Hidden);
+// 	}
+// }
 
-void UMCharacterFollowWidget::ShowTip()
+void UMCharacterFollowWidget::SetHintUIVisibility(ESlateVisibility newVisibility)
 {
-	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
+	if (Tip_Left && Tip_Right && Tip_Left_Weapon && Tip_Right_Weapon)
 	{
-		Tip_Left->SetVisibility(ESlateVisibility::Visible);
-		Tip_Right->SetVisibility(ESlateVisibility::Visible);
-		//Tip_Left_Text->SetVisibility(ESlateVisibility::Visible);
-		//Tip_Right_Text->SetVisibility(ESlateVisibility::Visible);
-		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Visible);
-		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Visible);
-	}
-}
-
-void UMCharacterFollowWidget::HideTip()
-{
-	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
-	{
-		Tip_Left->SetVisibility(ESlateVisibility::Hidden);
-		Tip_Right->SetVisibility(ESlateVisibility::Hidden);
-		//Tip_Left_Text->SetVisibility(ESlateVisibility::Hidden);
-		//Tip_Right_Text->SetVisibility(ESlateVisibility::Hidden);
-		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Hidden);
-		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Hidden);
+		Tip_Left->SetVisibility(newVisibility);
+		Tip_Right->SetVisibility(newVisibility);
+		Tip_Left_Weapon->SetVisibility(newVisibility);
+		Tip_Right_Weapon->SetVisibility(newVisibility);
 	}
 }
 

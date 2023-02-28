@@ -45,9 +45,9 @@ AMinigameMainObjective::AMinigameMainObjective()
 	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
 
-	//Create HealthBar UI Widget
-	HealthWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
-	HealthWidget->SetupAttachment(RootMesh);	
+	// //Create HealthBar UI Widget
+	// HealthWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
+	// HealthWidget->SetupAttachment(RootMesh);	
 
 	BlowUpEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BlowUpEffect"));
 	BlowUpEffect->SetupAttachment(RootMesh);
@@ -136,11 +136,11 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 void AMinigameMainObjective::BeginPlay()
 {
 	Super::BeginPlay();
-	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
-	{
-		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
-		healthBar->HideTip();
-	}
+	// if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
+	// {
+	// 	healthBar->UpdateHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
+	// 	healthBar->HideTip();
+	// }
 	BlowUpEffect->Deactivate();
 }
 
@@ -151,7 +151,7 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 
 	//if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
 	//{
-	//	healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
+	//	healthBar->UpdateHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
 	//}
 
 	if (CurrentHealth <= 0)
@@ -161,11 +161,11 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Client"));
 			SkeletalMesh->DestroyComponent();
 		}
-		if (HealthWidget)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's HealthWidget on Client"));
-			HealthWidget->DestroyComponent();
-		}
+		// if (HealthWidget)
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's HealthWidget on Client"));
+		// 	HealthWidget->DestroyComponent();
+		// }
 		if (BlowUpEffect)
 		{
 			BlowUpEffect->Activate();

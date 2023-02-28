@@ -31,8 +31,8 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 	class UCameraComponent* FollowCamera;
 	
 	/**	Health Bar UI widget */
-	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* PlayerFollowWidget;
+	// UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+	// class UWidgetComponent* PlayerFollowWidget;
 
 	/**	Inventory Menu UI widget Reference */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -81,7 +81,7 @@ public:
 
 	/**	Update HealthBar UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
-	void SetHealthBarUI();
+	void NL_SetHealthBarUI();
 
 	/**	Add Score/Kill/Death to current character, pass negative value to decrement positive to increment */
 	UFUNCTION(BlueprintCallable, Category = "Score")
@@ -104,11 +104,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetMesh(USkeletalMesh* i_changeMesh);
 
-	UFUNCTION()
-	void SetGameUIVisibility(bool isVisible);
+	// UFUNCTION()
+	// void SetGameUIVisibility(bool isVisible);
 
-	UFUNCTION()
-	void SetLocallyControlledGameUI(bool isVisible);
+	// UFUNCTION()
+	// void SetLocallyControlledGameUI(bool isVisible);
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);

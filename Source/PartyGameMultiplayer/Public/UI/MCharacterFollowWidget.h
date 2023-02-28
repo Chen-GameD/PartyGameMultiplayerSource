@@ -20,10 +20,16 @@ class PARTYGAMEMULTIPLAYER_API UMCharacterFollowWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetLocalControlledUI();
-	void SetHealthToProgressBar(float percentage);
-	void ShowTip();
-	void HideTip();
+	UFUNCTION()
+	void SetIsLocalControlledUI(bool IsLocalControlled);
+	UFUNCTION()
+	void UpdateHealthToProgressBar(float percentage);
+	// UFUNCTION()
+	// void ShowTip();
+	// UFUNCTION()
+	// void HideTip();
+	UFUNCTION()
+	void SetHintUIVisibility(ESlateVisibility newVisibility);
 	UFUNCTION()
 	void SetPlayerName(FString i_PlayerName);
 

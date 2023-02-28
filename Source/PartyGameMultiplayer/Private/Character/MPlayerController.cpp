@@ -6,12 +6,14 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
+#include "Components/WidgetComponent.h"
 #include "GameBase/MGameInstance.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
 #include "Matchmaking/EOSGameInstance.h"
+#include "UI/MCharacterFollowWidget.h"
 #include "UI/MInGameHUD.h"
 
 // Constructor
@@ -19,6 +21,13 @@
 #pragma region Constructor
 AMPlayerController::AMPlayerController()
 {
+	//Create HealthBar UI Widget
+	//PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
+	//PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
+	//check(PlayerFollowWidget);
+	
+	//CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 }
 
 void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -29,14 +38,6 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	//Replicate Action
 }
-
-// void AMPlayerController::UpdateLobbyMenu_Implementation()
-// {
-// 	if (IsLocalPlayerController())
-// 	{
-// 		UI_UpdateLobbyMenu();
-// 	}
-// }
 
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex, const FString& i_PlayerName)
 {
@@ -56,17 +57,6 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
 	MyServerPlayerState->UpdatePlayerReadyState();
-	// if (MyServerPlayerState->TeamIndex != 0)
-	// {
-	// 	if (MyServerPlayerState->IsReady == true)
-	// 	{
-	// 		MyServerPlayerState->IsReady = false;
-	// 	}
-	// 	else
-	// 	{
-	// 		MyServerPlayerState->IsReady = true;
-	// 	}
-	// }
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
@@ -103,36 +93,29 @@ void AMPlayerController::BeginPlay()
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
 		check(MyInGameHUD);
 	}
-	
-	// if (IsLocalPlayerController())
-	// {
-	// 	UI_ShowLobbyMenu();
- //        
-	// 	// Get Name and update to playerstate
-	// 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
-	// 	UMGameInstance* MyGameInstance = Cast<UMGameInstance>(GetGameInstance());
-	// 	if (MyPlayerState && MyGameInstance)
-	// 	{
-	// 		MyPlayerState->UpdatePlayerName(MyGameInstance->PlayerName);
-	// 		MyPlayerState->UpdateTeamIndex();
-	// 	}
-	// 	//GetPlayerState<AM_PlayerState>()->UpdatePlayerName(Cast<UMGameInstance>(GetGameInstance())->PlayerName);
- //        
-	// 	//GetPlayerState<AM_PlayerState>()->UpdateTeamIndex();
-	// }
-	
 
-	// if (IsLocalPlayerController())
+	// if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	// {
-	// 	//FInputModeGameAndU
-	// 	FInputModeGameOnly inputMode;
-	// 	inputMode.SetConsumeCaptureMouseDown(false);
-	// 	SetInputMode(inputMode);
-	// 	// set our turn rate for input
-	// 	TurnRateGamePad = 50.f;
+	// 	CharacterFollowWidget = CreateWidget<UMCharacterFollowWidget>(this, PlayerFollowWidgetClass);
+	// 	CharacterFollowWidget->AddToViewport();
 	//
-	// 	bShowMouseCursor = true;
-	// 	DefaultMouseCursor = EMouseCursor::Default;
+	// 	if (IsLocalPlayerController())
+	// 	{
+	// 		// Only show Hint UI and Weapon Energy UI
+	// 		if (CharacterFollowWidget)
+	// 		{
+	// 			CharacterFollowWidget->SetIsLocalControlledUI(true);
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		if (CharacterFollowWidget)
+	// 		{
+	// 			CharacterFollowWidget->SetIsLocalControlledUI(false);
+	// 		}
+	// 	}
+	// 	
+	// 	SetFollowWidgetUIVisibility(ESlateVisibility::Hidden);
 	// }
 }
 
@@ -155,14 +138,6 @@ void AMPlayerController::SetupInputComponent()
 	
 	InputComponent->BindAxis("Move Forward / Backward", this, &AMPlayerController::MoveForward);
 	InputComponent->BindAxis("Move Right / Left", this, &AMPlayerController::MoveRight);
-
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	//InputComponent->BindAxis("Turn Right / Left Mouse", this, &AMPlayerController::AddControllerYawInput);
-	//InputComponent->BindAxis("Turn Right / Left Gamepad", this, &AMPlayerController::TurnAtRate);
-	//InputComponent->BindAxis("Look Up / Down Mouse", this, &AMPlayerController::AddControllerPitchInput);
-	//InputComponent->BindAxis("Look Up / Down Gamepad", this, &AMPlayerController::LookUpAtRate);
 
 	// handle touch devices
 	InputComponent->BindTouch(IE_Pressed, this, &AMPlayerController::TouchStarted);
@@ -195,6 +170,67 @@ void AMPlayerController::UI_ShowLobbyMenu()
 	}
 }
 
+void AMPlayerController::SetFollowWidgetUIVisibility(ESlateVisibility newVisibility)
+{
+	// if (IsLocalPlayerController())
+	// {
+	// 	// Only show Hint UI and Weapon Energy UI
+	// 	if (CharacterFollowWidget)
+	// 	{
+	// 		CharacterFollowWidget->SetIsLocalControlledUI(true);
+	// 	}
+	// }
+	// else
+	// {
+	// 	if (CharacterFollowWidget)
+	// 	{
+	// 		CharacterFollowWidget->SetIsLocalControlledUI(false);
+	// 	}
+	// }
+
+	if (CharacterFollowWidget)
+	{
+		CharacterFollowWidget->SetVisibility(newVisibility);
+	}
+}
+
+void AMPlayerController::UpdateFollowWidgetHealthBar(float percent)
+{
+	if (CharacterFollowWidget)
+	{
+		CharacterFollowWidget->UpdateHealthToProgressBar(percent);
+	}
+}
+
+void AMPlayerController::SetFollowWidgetPlayerName()
+{
+	if (CharacterFollowWidget)
+	{
+		AM_PlayerState* MyPlayerstate = GetPlayerState<AM_PlayerState>();
+		if (MyPlayerstate)
+		{
+			CharacterFollowWidget->SetPlayerName(MyPlayerstate->PlayerNameString);
+		}
+	}
+}
+
+void AMPlayerController::SetFollowWidgetWeaponHintVisibility(ESlateVisibility newVisibility)
+{
+	if (CharacterFollowWidget)
+	{
+		CharacterFollowWidget->SetHintUIVisibility(newVisibility);
+	}
+}
+
+void AMPlayerController::UpdateFollowWidgetWeaponHint(UTexture2D* LeftTextureUI, UTexture2D* RightTextureUI)
+{
+	if (LeftTextureUI && RightTextureUI && CharacterFollowWidget)
+	{
+		CharacterFollowWidget->SetLeftWeaponTipUI(LeftTextureUI);
+		CharacterFollowWidget->SetRightWeaponTipUI(RightTextureUI);
+	}
+}
+
 void AMPlayerController::GetNotifyPlayerControllerUpdateReadyState_Implementation(bool IsAllReady)
 {
 	if (IsLocalPlayerController())
@@ -222,35 +258,6 @@ void AMPlayerController::StartTheGame()
 			WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
-
-	// Remove All Widget
-	// TO DO: need to move UI from pawn to controller
-	//UWidgetLayoutLibrary::RemoveAllWidgets(GetWorld());
-
-	// Add timer UI
-	// if (WB_GameTimerUIClass)
-	// {
-	// 	if (!WB_GameTimerUI)
-	// 	{
-	// 		// Create menu on client
-	// 		if (IsLocalPlayerController())
-	// 		{
-	// 			WB_GameTimerUI = CreateWidget<UUserWidget>(this, WB_GameTimerUIClass);
-	// 			//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
-	// 			
-	// 			WB_GameTimerUI->AddToViewport();
-	// 			//FInputModeGameAndU
-	// 			FInputModeGameOnly inputMode;
-	// 			inputMode.SetConsumeCaptureMouseDown(false);
-	// 			SetInputMode(inputMode);
-	// 			// set our turn rate for input
-	// 			//TurnRateGamePad = 50.f;
-	// 			//
-	// 			bShowMouseCursor = true;
-	// 			DefaultMouseCursor = EMouseCursor::Default;
-	// 		}
-	// 	}
-	// }
 	
 	if (MyInGameHUD)
 	{
@@ -269,29 +276,68 @@ void AMPlayerController::StartTheGame()
 		// No HUD
 		// TODO
 	}
+
+	// Do Init about all the controller's follow widget
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+		
+		currentController->CharacterFollowWidget = CreateWidget<UMCharacterFollowWidget>(currentController, currentController->PlayerFollowWidgetClass);
+		currentController->CharacterFollowWidget->AddToViewport();
+
+		if (currentController->IsLocalPlayerController())
+		{
+			// Only show Hint UI and Weapon Energy UI
+			if (currentController->CharacterFollowWidget)
+			{
+				currentController->CharacterFollowWidget->SetIsLocalControlledUI(true);
+			}
+		}
+		else
+		{
+			if (currentController->CharacterFollowWidget)
+			{
+				currentController->CharacterFollowWidget->SetIsLocalControlledUI(false);
+			}
+		}
+		
+		currentController->SetFollowWidgetUIVisibility(ESlateVisibility::Visible);
+	}
 }
 
-void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
+void AMPlayerController::NetMulticast_InitPlayerFollowWidget_Implementation(bool isVisible, bool needReset)
 {
-	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
-	{
-		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
+	// for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
+	// {
+	// 	AMCharacter* pawn = Cast<AMCharacter>(*iterator);
+	//
+	// 	if (pawn && !pawn->IsLocallyControlled())
+	// 	{
+	// 		pawn->SetGameUIVisibility(isVisible);
+	// 	}
+	// 	else if (pawn && pawn->IsLocallyControlled())
+	// 	{
+	// 		pawn->SetLocallyControlledGameUI(isVisible);
+	// 	}
+	// }
 
-		if (pawn && !pawn->IsLocallyControlled())
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
+	{
+		SetFollowWidgetUIVisibility(isVisible ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+        
+		if (needReset)
 		{
-			pawn->SetGameUIVisibility(isVisible);
+			// Reset the health bar
+			UpdateFollowWidgetHealthBar(1);
 		}
-		else if (pawn && pawn->IsLocallyControlled())
+		
+		// Open Current Player Status Widget
+		if (MyInGameHUD && IsLocalPlayerController() && isVisible)
 		{
-			pawn->SetLocallyControlledGameUI(isVisible);
+			MyInGameHUD->StartGameUI();
 		}
 	}
-
-	// Open Current Player Status Widget
-	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
-	{
-		MyInGameHUD->StartGameUI();
-	}
+	
 }
 
 void AMPlayerController::Client_SynMeshWhenJoinSession_Implementation()
@@ -324,7 +370,7 @@ void AMPlayerController::Server_RequestRespawn_Implementation()
 		AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 		if (myGameState)
 		{
-			Client_SetGameUIVisibility(myGameState->IsGameStart);
+			NetMulticast_InitPlayerFollowWidget(myGameState->IsGameStart, true);
 		}
 	}
 }
@@ -395,23 +441,6 @@ void AMPlayerController::TouchStopped(ETouchIndex::Type FingerIndex, FVector Loc
 
 void AMPlayerController::Test_Implementation()
 {
-	// if (IsLocalPlayerController())
-	// {
-	// 	UI_ShowLobbyMenu();
- //        
-	// 	// Get Name and update to playerstate
-	// 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
-	// 	UMGameInstance* MyGameInstance = Cast<UMGameInstance>(GetGameInstance());
-	// 	if (MyPlayerState && MyGameInstance)
-	// 	{
-	// 		MyPlayerState->UpdatePlayerName(MyGameInstance->PlayerName);
-	// 		MyPlayerState->UpdateTeamIndex();
-	// 	}
-	// 	//GetPlayerState<AM_PlayerState>()->UpdatePlayerName(Cast<UMGameInstance>(GetGameInstance())->PlayerName);
- //        
-	// 	//GetPlayerState<AM_PlayerState>()->UpdateTeamIndex();
-	// }
-
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
@@ -446,6 +475,17 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 			FRotator WorldRotator = WorldDirection.Rotation();
 			//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
 			SetControlRotation(WorldRotator);
+		}
+	}
+
+	if (MyPawn && CharacterFollowWidget)
+	{
+		FVector2D ScreenLocation;
+		FVector WorldLocation = MyPawn->GetActorLocation();
+		APlayerController* PC = Cast<APlayerController>(this);
+		if (PC != nullptr && PC->ProjectWorldLocationToScreen(WorldLocation, ScreenLocation))
+		{
+			CharacterFollowWidget->SetPositionInViewport(ScreenLocation);
 		}
 	}
 }
