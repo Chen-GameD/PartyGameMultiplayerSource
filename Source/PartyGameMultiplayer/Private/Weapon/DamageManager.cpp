@@ -103,8 +103,8 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
 		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
 		DamageCauser,		//AActor* DamageCauser
-		Controller				 //AController* InstigatedByController
-		//ECC_Visibility	  // DamagePreventionChannel
+		Controller,				 //AController* InstigatedByController
+		ECollisionChannel::ECC_MAX	  // DamagePreventionChannel
 	);
 
 	return true;

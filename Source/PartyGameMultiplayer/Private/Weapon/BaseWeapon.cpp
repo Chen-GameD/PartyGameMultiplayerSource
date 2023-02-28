@@ -217,7 +217,7 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 void ABaseWeapon::GetThrewAway()
 {
 	IsPickedUp = false;
-
+	HasBeenCombined = false;
 	HoldingController = nullptr;
 	SetInstigator(nullptr);
 	SetOwner(nullptr);
