@@ -84,10 +84,16 @@ void AWeaponTaser::Tick(float DeltaTime)
 			if (!bHitTarget)
 			{				
 				// stretch out to the limit
-				FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
-				if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
+				//FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
+				//if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
+				//{
+				//	TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(-StrechOutSpeed, 0, 0));
+				//}
+				FVector TaserFork_CurWorldLocation = TaserForkMesh->GetComponentLocation();
+				if (FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart) < MaxLen)
 				{
-					TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(-StrechOutSpeed, 0, 0));
+					GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Diffs: %f, %f"), FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart), MaxLen));
+					TaserForkMesh->SetWorldLocation(TaserFork_CurWorldLocation + DeltaTime * TaserFork_WorldRotation_WhenAttackStart.Vector() * -StrechOutSpeed);
 				}
 				else
 					AttackStop();
@@ -183,6 +189,9 @@ void AWeaponTaser::AttackStart()
 
 	Super::AttackStart();
 	TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
+	TaserFork_WorldLocation_WhenAttackStart = TaserForkMesh->GetComponentLocation();
+	TaserFork_WorldRotation_WhenAttackStart = TaserForkMesh->GetComponentRotation();	
+	SetTaserForkAttached(false);
 	//bShouldStretchOut = true;
 }
 
@@ -199,7 +208,8 @@ void AWeaponTaser::AttackStop()
 
 	//bShouldStretchOut = false;
 	bHitTarget = false;
-	OnRep_bHitTarget();
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_bHitTarget();
 }
 
 void AWeaponTaser::BeginPlay()
@@ -254,7 +264,8 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			}			
 
 			bHitTarget = true;
-			OnRep_bHitTarget();
+			if(GetNetMode() == NM_ListenServer)
+				OnRep_bHitTarget();
 			Server_ActorBeingHit = OtherActor;
 			Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
 			Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();

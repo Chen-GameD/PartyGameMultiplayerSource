@@ -215,7 +215,11 @@ void AMCharacter::Attack_Implementation()
 		
 		if (CombineWeapon)
 		{
-			CombineWeapon->AttackStart();
+			if (CombineWeapon->WeaponType == EnumWeaponType::Taser)
+			{
+				FTimerHandle TimerHandle;
+				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]{ if(this)CombineWeapon->AttackStart(); }, 0.2f, false);
+			}				
 		}
 		else
 		{

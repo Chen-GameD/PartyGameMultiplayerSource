@@ -53,6 +53,8 @@ protected:
 	float Ratio_ScaleUpOnRelativeScale;
 	FVector TaserFork_RelativeLocation_WhenAttackStop;
 	FRotator TaserFork_RelativeRotation_WhenAttackStop;
+	FVector TaserFork_WorldLocation_WhenAttackStart;
+	FRotator TaserFork_WorldRotation_WhenAttackStart;
 	//FVector TaserFork_OriginalRelativeScale;
 
 	// For stretch behaviors
