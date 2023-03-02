@@ -19,19 +19,19 @@ class PARTYGAMEMULTIPLAYER_API ADamageManager : public AActor
 public:
 	ADamageManager() {};
 
-	// why not pass weapon pointer but AActor* DamageCauser(can be either weapon* or projectile)
-	// because weapon* may be destroyed or transfered to another player when projectile is apply damage
+	/* 
+		why not pass weapon pointer but AActor* DamageCauser(can be either weapon* or projectile)
+		because weapon* may be destroyed or transfered to another player when projectile is apply damage
+	*/
 	
 	// The damaged actors are determined when entering this function( however, they can be teammates )
-	static bool TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AActor* DamagedActor);
+	static bool TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AActor* DamagedActor, float DeltaTime);
+
 	// The damaged actors are not determined when entering this function( has to be cacluated by UGameplayStatics::ApplyRadialDamage() )
-	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage);
+	//static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage);
 	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage);
-	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
-	static bool ApplyBuff(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter);
-private:
 	
-public:
-	static float interval_ApplyDamage; // preset value for all constant damage
-private:
+	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
+	static bool ApplyBuff(EnumWeaponType WeaponType, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter, float DeltaTime);
+
 };

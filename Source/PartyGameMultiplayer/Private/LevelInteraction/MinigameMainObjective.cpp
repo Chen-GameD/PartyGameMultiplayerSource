@@ -2,10 +2,10 @@
 
 
 #include "LevelInteraction/MinigameMainObjective.h"
+
 #include "UObject/ConstructorHelpers.h"
 #include "Net/UnrealNetwork.h"
 #include "../PartyGameMultiplayerCharacter.h"
-#include "Weapon/DamageTypeToCharacter.h"
 //#include "Engine/TriggerBoxDamageTaker.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -15,6 +15,10 @@
 #include "Components/WidgetComponent.h"
 #include "Character/MCharacter.h"
 #include "GameBase/MGameMode.h"
+#include "Weapon/BaseWeapon.h"
+#include "Weapon/BaseProjectile.h"
+#include "Weapon/DamageTypeToCharacter.h"
+#include "Weapon/WeaponDataHelper.h"
 
 
 AMinigameMainObjective::AMinigameMainObjective()
@@ -71,10 +75,28 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 	if (CurrentHealth <= 0)
 		return 0.0f;
 
+	// Adjust the damage according to the minigame damage ratio
+	EnumWeaponType WeaponType = EnumWeaponType::None;
+	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		WeaponType = p->WeaponType;
+	if (WeaponType == EnumWeaponType::None)
+		return 0.0f;
+	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
+		DamageTaken *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
+	else
+		return 0.0f;
+
 	CurrentHealth -= DamageTaken;
 	if (CurrentHealth <= 0)
 	{
 		CurrentHealth = 0.0f;	
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_CurrentHealth();
+		}
 		if (SkeletalMesh)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
@@ -82,7 +104,7 @@ float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent 
 		}
 		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
 		{
-			killerPS->addScore(30);
+			killerPS->addScore(ScoreCanGet);
 		}
 
 		// Set timer and respawn this actor
@@ -127,10 +149,10 @@ void AMinigameMainObjective::OnRep_CurrentHealth()
 {
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
 
-	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
-	{
-		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
-	}
+	//if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
+	//{
+	//	healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
+	//}
 
 	if (CurrentHealth <= 0)
 	{
@@ -160,4 +182,9 @@ void AMinigameMainObjective::StartToRespawnActor()
 		MyGameMode->Server_RespawnMinigameObject();
 	}
 	AMinigameMainObjective::Destroy(true, true);
+}
+
+void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)
+{
+	ScoreCanGet = n_Score;
 }

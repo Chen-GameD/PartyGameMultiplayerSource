@@ -93,6 +93,14 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
 		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
 		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
+		spawnActor->UpdateScoreCanGet(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+		
+		// Update Minigame Hint
+		AMGameState* MyGameState = GetGameState<AMGameState>();
+		if (MyGameState)
+		{
+			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameHint);
+		}
 	}
 }
 
@@ -124,7 +132,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 0.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else
@@ -164,7 +172,7 @@ void AMGameMode::StartTheGame()
 		MyGameState->GameTime = MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].GameTime;
 		
 		MyGameState->IsGameStart = true;
-		MyGameState->StartGame();
+		MyGameState->Server_StartGame();
 	}
 
 	Server_RespawnMinigameObject();
@@ -214,16 +222,17 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 		CurrentPlayerNum++;
 
-		for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-		{
-			AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-
-			if (controller)
-			{
-				controller->Client_SynMeshWhenJoinSession();
-			}
-		}
+		// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+		// {
+		// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
+		//
+		// 	if (controller)
+		// 	{
+		// 		controller->Client_SynMeshWhenJoinSession();
+		// 	}
+		// }
 		//Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
+		Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
 	}
 }
 

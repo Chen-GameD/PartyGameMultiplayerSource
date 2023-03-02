@@ -5,6 +5,9 @@
 
 #include "Kismet/GameplayStatics.h"
 
+// deprecated
+// A very important preset value, suggests that the game would run normally as long as it surpass 20fps
+//float AWeaponDataHelper::interval_ApplyDamage = 0.03f;
 
 UDamageManagerDataAsset* AWeaponDataHelper::DamageManagerDataAsset = nullptr;
 
@@ -31,7 +34,7 @@ TMap<EnumWeaponType, EnumAttackType> AWeaponDataHelper::WeaponEnumToAttackTypeEn
 	{EnumWeaponType::Alarm, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Flamethrower, EnumAttackType::Constant},
 	{EnumWeaponType::Flamefork, EnumAttackType::OneHit},
-	{EnumWeaponType::Taser, EnumAttackType::OneHit},
+	{EnumWeaponType::Taser, EnumAttackType::Constant},
 	{EnumWeaponType::Alarmgun, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Bomb, EnumAttackType::SpawnProjectile},
 	{EnumWeaponType::Cannon, EnumAttackType::SpawnProjectile},
@@ -40,9 +43,9 @@ TMap<EnumWeaponType, EnumAttackType> AWeaponDataHelper::WeaponEnumToAttackTypeEn
 TMap<EnumAttackBuff, FString> AWeaponDataHelper::AttackBuffEnumToString_Map =
 {
 	{EnumAttackBuff::Burning, "Burning"},
-	{EnumAttackBuff::Paralysis, "Paralysis"},
-	{EnumAttackBuff::Blowing, "Blowing"},
 	{EnumAttackBuff::Knockback, "Knockback"},
+	//{EnumAttackBuff::Blowing, "Blowing"},
+	{EnumAttackBuff::Paralysis, "Paralysis"},
 };
 
 
@@ -51,7 +54,6 @@ AWeaponDataHelper::AWeaponDataHelper()
 {
 	if (!DamageManagerDataAsset)
 	{
-		//static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> DefaultDamageManagerDataAsset(*RandomFileName);
 		static ConstructorHelpers::FObjectFinder<UDamageManagerDataAsset> DefaultDamageManagerDataAsset(TEXT("/Game/DataFiles/Weapon/DamageManagerDataAsset.DamageManagerDataAsset"));
 		if (DefaultDamageManagerDataAsset.Succeeded())
 		{

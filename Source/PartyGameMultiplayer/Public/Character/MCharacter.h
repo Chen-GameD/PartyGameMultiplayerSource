@@ -8,6 +8,7 @@
 #include "GameFramework/Character.h"
 #include "UI/InventoryMenu.h"
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
 #include "MCharacter.generated.h"
 
@@ -75,7 +76,7 @@ public:
 	// customized TakeDamge Function
 	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
 
-	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector3d AttackedDir, 
+	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
 	/**	Update HealthBar UI for character */
@@ -123,6 +124,12 @@ public:
 
 	UFUNCTION()
 	float GetCurrentEnergyWeaponUIUpdatePercent();
+
+	UFUNCTION(BlueprintCallable)
+	void SetElectricShockAnimState(bool i_state);
+
+	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
+	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 	
 protected:
 
@@ -135,8 +142,8 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-	UFUNCTION()
-	void OnRep_IsOnGround();
+	UFUNCTION(NetMulticast, Reliable)
+	void CallJumpLandEffect();
 
 	UFUNCTION()
 	void OnRep_IsAllowDash();
@@ -206,7 +213,7 @@ protected:
 	// UI
 	// ======================
 	UFUNCTION(Client, Reliable)
-	void SetTipUI(bool isShowing);
+	void SetTipUI(bool isShowing, ABaseWeapon* CurrentTouchWeapon = nullptr);
 
 	// Collision
 	UFUNCTION(Category = "Weapon")
@@ -222,7 +229,6 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
-	virtual void ActByBuff(float DeltaTime);
 
 // Members
 // ==============================================================
@@ -260,9 +266,9 @@ public:
 	bool isFlamethrowerHeld = false;
 
 	// Anim state vector format: 
-	// [isSingleMelee, isSingleShooting, isDualMelee, isDualShooting, isDualHeavy, isLeftHeld, isRightHeld, isAttack]
+	// [isSingleMelee, isSingleShooting, isDualMelee, isDualShooting, isDualHeavy, isLeftHeld, isRightHeld, isAttack, isShock]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
-	TArray<bool> AnimState = {false, false, false, false, false, false, false, false};
+	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
 	// Scores Kill Death Array Format:
 	// [Scores, Kill, Death]
@@ -285,7 +291,9 @@ public:
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
 	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
-	FVector3d KnockbackDirection_DuringLastFrame;
+	FVector KnockbackDirection_SinceLastApplyBuff;
+	FVector TaserDragDirection_SinceLastApplyBuff;
+	bool BeingKnockbackBeforeThisTick;
 
 protected:
 
@@ -301,7 +309,7 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(ReplicatedUsing = OnRep_IsOnGround)
+	UPROPERTY(Replicated)
 	bool IsOnGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;

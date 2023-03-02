@@ -30,23 +30,27 @@ void UMCharacterFollowWidget::SetPlayerName(FString i_PlayerName)
 
 void UMCharacterFollowWidget::ShowTip()
 {
-	if (Tip_Left && Tip_Right && Tip_Left_Text && Tip_Right_Text)
+	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
 	{
 		Tip_Left->SetVisibility(ESlateVisibility::Visible);
 		Tip_Right->SetVisibility(ESlateVisibility::Visible);
-		Tip_Left_Text->SetVisibility(ESlateVisibility::Visible);
-		Tip_Right_Text->SetVisibility(ESlateVisibility::Visible);
+		//Tip_Left_Text->SetVisibility(ESlateVisibility::Visible);
+		//Tip_Right_Text->SetVisibility(ESlateVisibility::Visible);
+		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Visible);
+		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Visible);
 	}
 }
 
 void UMCharacterFollowWidget::HideTip()
 {
-	if (Tip_Left && Tip_Right && Tip_Left_Text && Tip_Right_Text)
+	if (Tip_Left && Tip_Right && /*Tip_Left_Text && Tip_Right_Text &&*/ Tip_Left_Weapon && Tip_Right_Weapon)
 	{
 		Tip_Left->SetVisibility(ESlateVisibility::Hidden);
 		Tip_Right->SetVisibility(ESlateVisibility::Hidden);
-		Tip_Left_Text->SetVisibility(ESlateVisibility::Hidden);
-		Tip_Right_Text->SetVisibility(ESlateVisibility::Hidden);
+		//Tip_Left_Text->SetVisibility(ESlateVisibility::Hidden);
+		//Tip_Right_Text->SetVisibility(ESlateVisibility::Hidden);
+		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Hidden);
+		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
@@ -65,6 +69,38 @@ void UMCharacterFollowWidget::SetWeaponEnergyUIVisibility(bool IsVisible)
 		{
 			InGame_WeaponEnergyCanvas->SetVisibility(ESlateVisibility::Hidden);
 		}
+	}
+}
+
+void UMCharacterFollowWidget::SetLeftWeaponTipUI(UTexture2D* texture)
+{
+	Tip_Left_Weapon->SetBrushFromTexture(texture);
+	FLinearColor LColorAndOpacity = Tip_Left_Weapon->ColorAndOpacity;
+	if(texture != nullptr)
+	{
+		LColorAndOpacity.A = 1;
+		Tip_Left_Weapon->SetColorAndOpacity(LColorAndOpacity);
+	}
+	else
+	{
+		LColorAndOpacity.A = 0;
+		Tip_Left_Weapon->SetColorAndOpacity(LColorAndOpacity);
+	}
+}
+
+void UMCharacterFollowWidget::SetRightWeaponTipUI(UTexture2D* texture)
+{
+	Tip_Right_Weapon->SetBrushFromTexture(texture);
+	FLinearColor LColorAndOpacity = Tip_Right_Weapon->ColorAndOpacity;
+	if(texture != nullptr)
+	{
+		LColorAndOpacity.A = 1;
+		Tip_Right_Weapon->SetColorAndOpacity(LColorAndOpacity);
+	}
+	else
+	{
+		LColorAndOpacity.A = 0;
+		Tip_Right_Weapon->SetColorAndOpacity(LColorAndOpacity);
 	}
 }
 

@@ -44,6 +44,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 		float GetRemainHealthPercentage() const { return CurrentHealth/MaxHealth; }
 
+	// Update Score
+	UFUNCTION()
+	void UpdateScoreCanGet(int n_Score);
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Health")
 		float MaxHealth;
@@ -66,5 +70,7 @@ protected:
 	//UPROPERTY(EditAnywhere, Category = "Components")
 	//TArray<class TriggerBoxDamageTaker*> ArrayUStaticMeshComponent;
 private:
+	UPROPERTY()
+	int ScoreCanGet;
 
 }; 

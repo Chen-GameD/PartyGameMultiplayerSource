@@ -2,6 +2,7 @@
 
 
 #include "Weapon/CombinedWeapon/ProjectileCannon.h"
+#include "Weapon/DamageManager.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -34,11 +35,12 @@ AProjectileCannon::AProjectileCannon()
 		CannonMesh->SetRelativeScale3D(FVector(8.0f, 8.0f, 8.0f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 1000.0f;
-	ProjectileMovementComponent->MaxSpeed = 1000.0f;
+	ProjectileMovementComponent->InitialSpeed = 700.0f;
+	ProjectileMovementComponent->MaxSpeed = 700.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 1.0f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.9f;
 
+	HasAppliedRadialDamage = false;
 }
 
 
@@ -50,6 +52,16 @@ void AProjectileCannon::Tick(float DeltaTime)
 	float DeltaRotation = DeltaTime * 300.0f;
 	NewRotation.Yaw += DeltaRotation;
 	CannonMesh->SetRelativeRotation(NewRotation);
+
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (0.5f <= TimePassed_SinceExplosion && !HasAppliedRadialDamage)
+		{
+			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
+			HasAppliedRadialDamage = true;
+		}
+	}
 }
 
 
@@ -70,4 +82,32 @@ void AProjectileCannon::OnRep_HasExploded()
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
 	}
+}
+
+
+void AProjectileCannon::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (HasExploded)
+		return;
+
+	if (Cast<ABaseWeapon>(OtherActor) || Cast<ABaseProjectile>(OtherActor))
+		return;
+	if (Cast<APawn>(OtherActor) && Controller && OtherActor == Controller->GetPawn())
+		return;
+
+	Origin = this->GetActorLocation();
+	HasExploded = true;
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_HasExploded();
+	}
+	HasAppliedRadialDamage = false;
+
+	// Direct Hit Damage
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+
+	// Cannon's Range Damage will be delayed
+	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
+	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
 }

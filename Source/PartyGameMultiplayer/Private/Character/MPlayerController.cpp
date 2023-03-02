@@ -88,6 +88,11 @@ void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 	}
 }
 
+AMInGameHUD* AMPlayerController::GetInGameHUD()
+{
+	return MyInGameHUD;
+}
+
 void AMPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -223,28 +228,46 @@ void AMPlayerController::StartTheGame()
 	//UWidgetLayoutLibrary::RemoveAllWidgets(GetWorld());
 
 	// Add timer UI
-	if (WB_GameTimerUIClass)
+	// if (WB_GameTimerUIClass)
+	// {
+	// 	if (!WB_GameTimerUI)
+	// 	{
+	// 		// Create menu on client
+	// 		if (IsLocalPlayerController())
+	// 		{
+	// 			WB_GameTimerUI = CreateWidget<UUserWidget>(this, WB_GameTimerUIClass);
+	// 			//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
+	// 			
+	// 			WB_GameTimerUI->AddToViewport();
+	// 			//FInputModeGameAndU
+	// 			FInputModeGameOnly inputMode;
+	// 			inputMode.SetConsumeCaptureMouseDown(false);
+	// 			SetInputMode(inputMode);
+	// 			// set our turn rate for input
+	// 			//TurnRateGamePad = 50.f;
+	// 			//
+	// 			bShowMouseCursor = true;
+	// 			DefaultMouseCursor = EMouseCursor::Default;
+	// 		}
+	// 	}
+	// }
+	
+	if (MyInGameHUD)
 	{
-		if (!WB_GameTimerUI)
-		{
-			// Create menu on client
-			if (IsLocalPlayerController())
-			{
-				WB_GameTimerUI = CreateWidget<UUserWidget>(this, WB_GameTimerUIClass);
-				//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
-				
-				WB_GameTimerUI->AddToViewport();
-				//FInputModeGameAndU
-				FInputModeGameOnly inputMode;
-				inputMode.SetConsumeCaptureMouseDown(false);
-				SetInputMode(inputMode);
-				// set our turn rate for input
-				//TurnRateGamePad = 50.f;
-				//
-				bShowMouseCursor = true;
-				DefaultMouseCursor = EMouseCursor::Default;
-			}
-		}
+		// Show and Init Game Status UI
+		MyInGameHUD->InGame_InitGameStatusWidgetContent();
+		
+		// Set the input mode
+		FInputModeGameOnly inputMode;
+		inputMode.SetConsumeCaptureMouseDown(false);
+		SetInputMode(inputMode);
+		bShowMouseCursor = true;
+		DefaultMouseCursor = EMouseCursor::Default;
+	}
+	else
+	{
+		// No HUD
+		// TODO
 	}
 }
 

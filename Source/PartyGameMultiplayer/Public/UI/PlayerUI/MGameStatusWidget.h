@@ -30,6 +30,8 @@ public:
 
 	UFUNCTION()
 	void UpdateMinigameInfo(FString i_Info);
+	UFUNCTION(BlueprintImplementableEvent)
+	void ShowMinigameInfoAnimation();
 
 protected:
 	// Team Score

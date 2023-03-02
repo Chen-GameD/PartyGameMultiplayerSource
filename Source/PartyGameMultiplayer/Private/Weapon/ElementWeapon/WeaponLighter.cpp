@@ -37,11 +37,3 @@ AWeaponLighter::AWeaponLighter()
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
 }
-
-
-void AWeaponLighter::CheckInitilization()
-{
-	Super::CheckInitilization();
-	// do something specific to this weapon
-	check(AttackHitEffect);
-}

@@ -36,20 +36,32 @@ public:
 ////////////////////////////////////////////////////
 /////Interface
 ////////////////////////////////////////////////////	
-	// Show InGame_PlayerStatusWidget
+	// Show or Hide InGame_PlayerStatusWidget
 	UFUNCTION()
-	void InGame_ShowPlayerStatusWidget();
+	void InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility n_Visibility);
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
 
-	// Show InGame_PlayerWeaponInfoWidget
+	// Show or Hide InGame_PlayerWeaponInfoWidget
 	UFUNCTION()
-	void InGame_ShowPlayerWeaponInfoWidget();
+	void InGame_SetVisibilityPlayerWeaponInfoWidget(ESlateVisibility n_Visibility);
 
-	//Show InGame_GameStatusWidget
+	// Show or Hide InGame_GameStatusWidget
 	UFUNCTION()
-	void InGame_ShowGameStatusWidget();
+	void InGame_SetVisibilityGameStatusWidget(ESlateVisibility n_Visibility);
+	// Update Team Score in total
+	UFUNCTION()
+	void InGame_UpdateTeamScore(int TeamIndex, int CurrentScore);
+	// Update Timer
+	UFUNCTION()
+	void InGame_UpdateTimer(int CurrentTimer);
+	// Show and update minigame hint ( with animation )
+	UFUNCTION()
+	void InGame_UpdateMinigameHint(FString i_Hint);
+	// Initialize the game status UI content
+	UFUNCTION()
+	void InGame_InitGameStatusWidgetContent();
 
 protected:
 	// In Game UI Class Ref

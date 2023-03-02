@@ -45,26 +45,26 @@ ABaseProjectile::ABaseProjectile()
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
 
-	//AttackHitEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackHitEffect_NSComponent"));
-	//AttackHitEffect_NSComponent->SetupAttachment(StaticMesh);
+	AttackOnEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_NSComponent"));
+	AttackOnEffect_NSComponent->SetupAttachment(StaticMesh);
 
 	LiveTime = 0.0f;
 	MaxLiveTime = 5.0f;
 
-	TotalTime_ApplyDamage = 0.0f;
-	TotalDamage_ForTotalTime = 0.0f;
+	TotalDamageTime = 0.0f;
+	TotalDamage = 0.0f;
 	Origin = FVector::ZeroVector;
 	DamageRadius = 0.0f;
 	bApplyConstantDamage = false;
-	BaseDamage = 0.0f;
 	HasExploded = false;
 	TimePassed_SinceExplosion = 0.0f;
-	TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
+	//TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
 }
 
 void ABaseProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);	
+	CurDeltaTime = DeltaTime;
 	
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -85,20 +85,14 @@ void ABaseProjectile::Tick(float DeltaTime)
 			if (bApplyConstantDamage)
 			{
 				// Explosion is finished
-				if (TotalTime_ApplyDamage < TimePassed_SinceExplosion)
+				if (TotalDamageTime < TimePassed_SinceExplosion)
 				{
 					Destroy();
 					return;
 				}
 
 				// Explosion is not finished
-				// TryApplyRadialDamage when reaches the timeinterval
-				if (ADamageManager::interval_ApplyDamage <= TimePassed_SinceLastTryApplyRadialDamage)
-				{
-					ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
-					TimePassed_SinceLastTryApplyRadialDamage = 0.0f;
-				}				
-				TimePassed_SinceLastTryApplyRadialDamage += DeltaTime;
+				ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, DeltaTime* TotalDamage / TotalDamageTime);
 			}	
 			TimePassed_SinceExplosion += DeltaTime;
 		}
@@ -123,10 +117,20 @@ void ABaseProjectile::BeginPlay()
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		auto pWeapon = Cast<ABaseWeapon>(GetOwner());
-		check(pWeapon && pWeapon->IsPickedUp);
+		if (!pWeapon || !pWeapon->IsPickedUp)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseProjectile::BeginPlay"));
+			Destroy();
+			return;
+		}
 		WeaponType = pWeapon->WeaponType;
 		Controller = pWeapon->GetHoldingController();
-		check(Controller);
+		if (!Controller)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseProjectile::BeginPlay"));
+			Destroy();
+			return;
+		}
 	}	
 
 	/* Assign member variables by map */
@@ -135,26 +139,30 @@ void ABaseProjectile::BeginPlay()
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-		TotalTime_ApplyDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		TotalDamageTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// total damage
 	ParName = WeaponName + "_TotalDamage";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
-		TotalDamage_ForTotalTime = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+		TotalDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// damage radius
 	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
 	// Is constant damage
-	if (0.0f < TotalTime_ApplyDamage)
+	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-	// BaseDamage
-	float numIntervals = TotalTime_ApplyDamage / ADamageManager::interval_ApplyDamage;
-	BaseDamage = bApplyConstantDamage ? (TotalDamage_ForTotalTime / numIntervals) : TotalDamage_ForTotalTime;
 
-	// Server duty
+	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
+	}
+
+	// Client(Listen Server)
+	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
+	{
+		if (AttackOnEffect_NSComponent)
+			AttackOnEffect_NSComponent->Activate();
 	}
 }
 
@@ -163,10 +171,16 @@ void ABaseProjectile::OnRep_HasExploded()
 {
 	if (HasExploded)
 	{
+		if (AttackOnEffect_NSComponent)
+		{
+			AttackOnEffect_NSComponent->Deactivate();  // Not working somehow
+			AttackOnEffect_NSComponent->SetVisibility(false);
+		}			
+
 		StaticMesh->SetVisibility(false);
 		ProjectileMovementComponent->StopMovementImmediately();		
 		if (AttackHitEffect_NSSystem)
-			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());	
+			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
 	}
 }
 
@@ -178,6 +192,7 @@ void ABaseProjectile::Destroyed()
 	if (AttackHitEffect_NSComponent)
 	{
 		AttackHitEffect_NSComponent->Deactivate();
+		AttackHitEffect_NSComponent->SetVisibility(false);
 		AttackHitEffect_NSComponent = nullptr;
 	}
 }
@@ -202,9 +217,13 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	}
 
 	// Direct Hit Damage
-	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor);
+	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 
 	// Range Damage		
-	ADamageManager::TryApplyRadialDamage(this, Controller, Origin, DamageRadius, BaseDamage);
-	DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+	if (0 < TotalDamage)
+	{
+		DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
+		if (!bApplyConstantDamage)
+			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
+	}	
 }

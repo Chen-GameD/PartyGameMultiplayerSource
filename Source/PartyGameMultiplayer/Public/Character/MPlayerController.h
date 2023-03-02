@@ -73,6 +73,10 @@ public:
 	// InGame UI
 	UFUNCTION()
 	void UI_InGame_UpdateHealth(float percentage);
+
+	// HUD getter
+	UFUNCTION(BlueprintCallable)
+	AMInGameHUD* GetInGameHUD();
 	
 protected:
 

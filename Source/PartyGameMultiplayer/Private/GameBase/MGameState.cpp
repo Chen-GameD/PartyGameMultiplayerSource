@@ -7,6 +7,15 @@
 #include "Net/UnrealNetwork.h"
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
+#include "GameFramework/GameSession.h"
+
+void AMGameState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	Team_1_Score = 0;
+	Team_2_Score = 0;
+}
 
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -15,9 +24,11 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	// Replicate
 	DOREPLIFETIME(AMGameState, IsGameStart);
 	DOREPLIFETIME(AMGameState, GameTime);
+	DOREPLIFETIME(AMGameState, Team_1_Score);
+	DOREPLIFETIME(AMGameState, Team_2_Score);
 }
 
-void AMGameState::SetClientStartGame_Implementation()
+void AMGameState::Client_SetClientStartGame_Implementation()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	
@@ -65,9 +76,13 @@ void AMGameState::SetClientStartGame_Implementation()
 void AMGameState::UpdateGameStartTimerUI()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+	// if (MyLocalPlayerController)
+	// {
+	// 	MyLocalPlayerController->UI_UpdateGameTimer();
+	// }
 	if (MyLocalPlayerController)
 	{
-		MyLocalPlayerController->UI_UpdateGameTimer();
+		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);
 	}
 }
 
@@ -76,7 +91,7 @@ void AMGameState::UpdateGameTime()
 	GameTime--;
 
 	FString TipInformation = FString::Printf(TEXT("Game time : %d"), GameTime);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TipInformation);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TipInformation);
 
 	if (GameTime <= 0)
 	{
@@ -91,11 +106,62 @@ void AMGameState::UpdateGameTime()
 	}
 }
 
-void AMGameState::StartGame_Implementation()
+void AMGameState::OnRep_Team_1_ScoreUpdate()
+{
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+
+		if (currentController->IsLocalPlayerController())
+		{
+			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
+			if (MyHUD)
+			{
+				MyHUD->InGame_UpdateTeamScore(1, Team_1_Score);
+			}
+		}
+	}
+}
+
+void AMGameState::OnRep_Team_2_ScoreUpdate()
+{
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+
+		if (currentController->IsLocalPlayerController())
+		{
+			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
+			if (MyHUD)
+			{
+				MyHUD->InGame_UpdateTeamScore(2, Team_2_Score);
+			}
+		}
+	}
+}
+
+void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& i_Hint)
+{
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+
+		if (currentController->IsLocalPlayerController())
+		{
+			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
+			if (MyHUD)
+			{
+				MyHUD->InGame_UpdateMinigameHint(i_Hint);
+			}
+		}
+	}
+}
+
+void AMGameState::Server_StartGame_Implementation()
 {
 	FString TipInformation = FString::Printf(TEXT("Start game timer!"));
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
-	SetClientStartGame();
+	Client_SetClientStartGame();
 }
