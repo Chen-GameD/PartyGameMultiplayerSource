@@ -50,31 +50,42 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 		spawnRotation = spawnPlayerStart->GetActorTransform().GetRotation().Rotator();
 
 		// Set skeletalMesh by team index
-		int index = 0;
-		AM_PlayerState* CurrentControllerPS = PlayerController->GetPlayerState<AM_PlayerState>();
-		if (CurrentControllerPS->TeamIndex == 1)
-		{
-			index = 0;
-		}
-		else if (CurrentControllerPS->TeamIndex == 2)
-		{
-			index = 1;
-		}
+		// int index = 0;
+		// AM_PlayerState* CurrentControllerPS = PlayerController->GetPlayerState<AM_PlayerState>();
+		// if (CurrentControllerPS->TeamIndex == 1)
+		// {
+		// 	index = 0;
+		// }
+		// else if (CurrentControllerPS->TeamIndex == 2)
+		// {
+		// 	index = 1;
+		// }
 		
-		USkeletalMesh* spawnCharacter = CharacterBPArray[index];
+		// USkeletalMesh* spawnCharacter = CharacterBPArray[index];
+		//
+		// APawn* spawnPawn = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
+		// AMCharacter* spawnActor = Cast<AMCharacter>(spawnPawn);
+		// spawnActor->Multicast_SetMesh(spawnCharacter);
+		//
+		//
+		// if (IsValid(spawnActor))
+		// {
+		// 	PlayerController->Possess(spawnActor);
+		// 	Cast<AMPlayerController>(PlayerController)->Client_RefreshWeaponUI();
+		// }
 
-		//ACharacter* charSpawned = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		//charSpawned->GetMesh()->SetSkeletalMesh(spawnCharacter);
-
-		APawn* spawnPawn = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		AMCharacter* spawnActor = Cast<AMCharacter>(spawnPawn);
-		spawnActor->Multicast_SetMesh(spawnCharacter);
-		
-
-		if (IsValid(spawnActor))
+		// Only Reset the location of the pawn and reset the status;
+		AMCharacter* MyCharacter = Cast<AMCharacter>(PlayerController->GetPawn());
+		if (MyCharacter)
 		{
-			PlayerController->Possess(spawnActor);
-			Cast<AMPlayerController>(PlayerController)->Client_RefreshWeaponUI();
+			MyCharacter->SetActorLocation(spawnLocation);
+			MyCharacter->SetActorRotation(spawnRotation);
+			MyCharacter->ResetCharacterStatus();
+
+			// Temp for syn mesh every time when player respawn
+			// After the customize function is finished
+			// Need to delete, let the mesh only update once when the client join an session
+			Cast<AMPlayerController>(PlayerController)->NetMulticast_SynMesh();
 		}
 	}
 }
@@ -166,6 +177,20 @@ void AMGameMode::NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady
 void AMGameMode::StartTheGame()
 {
 	AMGameState* MyGameState = GetGameState<AMGameState>();
+
+	// Double check if the skin information set correctly.
+	// Later probably will use some other way to do this.
+	// Like do the Sync after everyone joined the session and then show the game level ( Add an interval level for this )
+	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+	{
+		AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
+		
+		if (controller)
+		{
+			controller->NetMulticast_SynMesh();
+		}
+	}
+	
 	if (MyGameState)
 	{
 		// Set the game time
@@ -222,17 +247,26 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 		CurrentPlayerNum++;
 
-		// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-		// {
-		// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-		//
-		// 	if (controller)
-		// 	{
-		// 		controller->Client_SynMeshWhenJoinSession();
-		// 	}
-		// }
-		//Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
-		Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
+		 for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+		 {
+		 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
+		
+		 	if (controller)
+		 	{
+		 		controller->NetMulticast_SynMesh();
+		 	}
+		 }
+
+		// Init Character Follow widget on server side
+		// Client side will auto call when player state replicated to the client ( OnRep_PlayerState )
+		if (GetNetMode() == NM_ListenServer)
+		{
+			AMCharacter* MyCharacter = Cast<AMCharacter>(NewPlayer);
+			if (MyCharacter)
+			{
+				MyCharacter->OnRep_PlayerState();
+			}
+		}
 	}
 }
 

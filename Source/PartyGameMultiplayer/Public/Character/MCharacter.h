@@ -46,6 +46,8 @@ public:
 
 	virtual void Restart() override;
 
+	virtual void OnRep_PlayerState() override;
+
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -90,6 +92,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GetIsDead();
 
+	UFUNCTION(BlueprintCallable)
+	void SetIsDead(bool n_IsDead);
+
 	// Server force respawn after character die
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_ForceRespawn(float Delay);
@@ -105,10 +110,13 @@ public:
 	void Multicast_SetMesh(USkeletalMesh* i_changeMesh);
 
 	UFUNCTION()
-	void SetGameUIVisibility(bool isVisible);
+	void SetFollowWidgetVisibility(bool isVisible);
 
 	UFUNCTION()
-	void SetLocallyControlledGameUI(bool isVisible);
+	void SetFollowWidgetStatusAndInformation();
+
+	// UFUNCTION()
+	// void SetLocallyControlledGameUI(bool isVisible);
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);
@@ -130,6 +138,17 @@ public:
 
 	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
 	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
+
+	// Multicast die result
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_DieResult();
+
+	// Multicast respawn result
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_RespawnResult();
+
+	UFUNCTION()
+	void ResetCharacterStatus();
 	
 protected:
 
@@ -147,10 +166,6 @@ protected:
 
 	UFUNCTION()
 	void OnRep_IsAllowDash();
-
-	// Multicast die result
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_DieResult();
 
 	// Movement
 	// ==========================

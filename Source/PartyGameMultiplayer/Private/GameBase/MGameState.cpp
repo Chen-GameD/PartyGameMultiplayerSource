@@ -59,7 +59,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->StartTheGame();
-			MyLocalPlayerController->Client_SetGameUIVisibility(IsGameStart);
 			MyLocalPlayerController->AddWeaponUI();
 		}
 	}
@@ -68,7 +67,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->EndTheGame();
-			MyLocalPlayerController->Client_SetGameUIVisibility(IsGameStart);
 		}
 	}
 }
@@ -76,10 +74,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 void AMGameState::UpdateGameStartTimerUI()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
-	// if (MyLocalPlayerController)
-	// {
-	// 	MyLocalPlayerController->UI_UpdateGameTimer();
-	// }
 	if (MyLocalPlayerController)
 	{
 		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);

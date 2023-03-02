@@ -20,9 +20,13 @@ class PARTYGAMEMULTIPLAYER_API UMCharacterFollowWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetLocalControlledUI();
+	UFUNCTION()
+	void InitIsLocalControlledCharacterWidget(bool IsLocalControlled);
+	UFUNCTION()
 	void SetHealthToProgressBar(float percentage);
+	UFUNCTION()
 	void ShowTip();
+	UFUNCTION()
 	void HideTip();
 	UFUNCTION()
 	void SetPlayerName(FString i_PlayerName);
@@ -47,15 +51,11 @@ protected:
 	UTextBlock* PlayerName;
 
 	UPROPERTY(meta = (BindWidget))
+	UCanvasPanel* WeaponTipCanvas;
+	UPROPERTY(meta = (BindWidget))
 	UImage* Tip_Left;
 	UPROPERTY(meta = (BindWidget))
 	UImage* Tip_Right;
-
-	// UPROPERTY(meta = (BindWidget))
-	// UTextBlock* Tip_Left_Text;
-	// UPROPERTY(meta = (BindWidget))
-	// UTextBlock* Tip_Right_Text;
-
 	UPROPERTY(meta = (BindWidget))
 	UImage* Tip_Left_Weapon;
 	UPROPERTY(meta = (BindWidget))

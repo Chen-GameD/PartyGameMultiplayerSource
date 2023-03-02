@@ -7,11 +7,22 @@
 #include "Components/NamedSlot.h"
 #include "GameBase/MGameState.h"
 
-void UMCharacterFollowWidget::SetLocalControlledUI()
+void UMCharacterFollowWidget::InitIsLocalControlledCharacterWidget(bool IsLocalControlled)
 {
-	HealthBar->SetVisibility(ESlateVisibility::Hidden);
-	InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
-	PlayerName->SetVisibility(ESlateVisibility::Hidden);
+	if (IsLocalControlled)
+	{
+		HealthBar->SetVisibility(ESlateVisibility::Hidden);
+		PlayerName->SetVisibility(ESlateVisibility::Hidden);
+		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
+		WeaponTipCanvas->SetVisibility(ESlateVisibility::Visible);
+	}
+	else
+	{
+		HealthBar->SetVisibility(ESlateVisibility::Visible);
+		PlayerName->SetVisibility(ESlateVisibility::Visible);
+		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Hidden);
+		WeaponTipCanvas->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void UMCharacterFollowWidget::SetHealthToProgressBar(float percentage)
