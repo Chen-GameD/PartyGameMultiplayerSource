@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	// Login();
+	Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
@@ -64,9 +64,10 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 				SessionSettings.bIsLANMatch = IsLanServer;
 				SessionSettings.NumPublicConnections = NumberOfPublicConnections;
 				SessionSettings.bUsesPresence = true;
+				SessionSettings.bAllowJoinViaPresence = true;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
+				// SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
@@ -90,9 +91,10 @@ void UEOSGameInstance::FindSession()
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
-				SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-				SearchSettings->MaxSearchResults = 100;
+				//SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+				SearchSettings->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
+				SearchSettings->MaxSearchResults = 100;
 				
 				SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnFindSessionComplete);
 				SessionPtr->FindSessions(0, SearchSettings.ToSharedRef());
