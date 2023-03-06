@@ -290,7 +290,8 @@ void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisibl
 	// Open Current Player Status Widget
 	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
 	{
-		MyInGameHUD->StartGameUI();
+		auto name = GetPlayerState<AM_PlayerState>()->GetPlayerName();
+		MyInGameHUD->StartGameUI(name);
 	}
 }
 
