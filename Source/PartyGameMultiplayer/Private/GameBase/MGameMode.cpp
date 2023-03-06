@@ -220,6 +220,10 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
 			}
 		}
+
+		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
+		Cast<AMPlayerController>(NewPlayer)->GetPlayerState<AM_PlayerState>()->UpdatePlayerName(playerUsername);
+		
 		CurrentPlayerNum++;
 
 		// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)

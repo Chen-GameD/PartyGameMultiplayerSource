@@ -53,9 +53,10 @@ void AMInGameHUD::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
-void AMInGameHUD::StartGameUI()
+void AMInGameHUD::StartGameUI(FString& userName)
 {
 	InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility::Visible);
+	InGame_UpdatePlayerNameUI(userName);
 	InGame_SetVisibilityPlayerWeaponInfoWidget(ESlateVisibility::Visible);
 	InGame_SetVisibilityGameStatusWidget(ESlateVisibility::Visible);
 }
@@ -65,6 +66,14 @@ void AMInGameHUD::InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility n_Visi
 	if (InGame_PlayerStatusWidget)
 	{
 		InGame_PlayerStatusWidget->SetVisibility(n_Visibility);
+	}
+}
+
+void AMInGameHUD::InGame_UpdatePlayerNameUI(FString& userName)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->SetPlayerName(userName);
 	}
 }
 
