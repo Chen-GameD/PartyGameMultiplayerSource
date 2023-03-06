@@ -30,15 +30,6 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	//Replicate Action
 }
 
-// void AMPlayerController::InitCharacterFollowWidgetStatusAndInformation()
-// {
-// 	AMCharacter* MyPawn = Cast<AMCharacter>(GetPawn());
-// 	if (MyPawn)
-// 	{
-// 		MyPawn->SetFollowWidgetStatusAndInformation();
-// 	}
-// }
-
 // void AMPlayerController::UpdateLobbyMenu_Implementation()
 // {
 // 	if (IsLocalPlayerController())
@@ -231,6 +222,35 @@ void AMPlayerController::StartTheGame()
 			WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
+
+	// Remove All Widget
+	// TO DO: need to move UI from pawn to controller
+	//UWidgetLayoutLibrary::RemoveAllWidgets(GetWorld());
+
+	// Add timer UI
+	// if (WB_GameTimerUIClass)
+	// {
+	// 	if (!WB_GameTimerUI)
+	// 	{
+	// 		// Create menu on client
+	// 		if (IsLocalPlayerController())
+	// 		{
+	// 			WB_GameTimerUI = CreateWidget<UUserWidget>(this, WB_GameTimerUIClass);
+	// 			//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
+	// 			
+	// 			WB_GameTimerUI->AddToViewport();
+	// 			//FInputModeGameAndU
+	// 			FInputModeGameOnly inputMode;
+	// 			inputMode.SetConsumeCaptureMouseDown(false);
+	// 			SetInputMode(inputMode);
+	// 			// set our turn rate for input
+	// 			//TurnRateGamePad = 50.f;
+	// 			//
+	// 			bShowMouseCursor = true;
+	// 			DefaultMouseCursor = EMouseCursor::Default;
+	// 		}
+	// 	}
+	// }
 	
 	if (MyInGameHUD)
 	{
@@ -243,8 +263,6 @@ void AMPlayerController::StartTheGame()
 		SetInputMode(inputMode);
 		bShowMouseCursor = true;
 		DefaultMouseCursor = EMouseCursor::Default;
-
-		MyInGameHUD->StartGameUI();
 	}
 	else
 	{
@@ -253,55 +271,31 @@ void AMPlayerController::StartTheGame()
 	}
 }
 
-// void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
-// {
-// 	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
-// 	{
-// 		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
-//
-// 		if (pawn && !pawn->IsLocallyControlled())
-// 		{
-// 			pawn->SetFollowWidgetVisibility(isVisible);
-// 		}
-// 		else if (pawn && pawn->IsLocallyControlled())
-// 		{
-// 			pawn->SetLocallyControlledGameUI(isVisible);
-// 		}
-// 	}
-//
-// 	// Open Current Player Status Widget
-// 	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
-// 	{
-// 		MyInGameHUD->StartGameUI();
-// 	}
-// }
-
-void AMPlayerController::NetMulticast_SynMesh_Implementation()
+void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
 {
-	if (GetNetMode() == NM_Client)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client Start to setup mesh"));
-	}
-	else if (GetNetMode() == NM_ListenServer)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ListenServer Start to setup mesh"));
-	}
-	for (FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
+	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
 	{
 		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
-		
-		if (pawn)
+
+		if (pawn && !pawn->IsLocallyControlled())
 		{
-			AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(pawn->GetPlayerState());
-			if (MyPlayerState)
-			{
-				pawn->SetThisCharacterMesh(MyPlayerState->TeamIndex);
-			}
+			pawn->SetGameUIVisibility(isVisible);
 		}
+		else if (pawn && pawn->IsLocallyControlled())
+		{
+			pawn->SetLocallyControlledGameUI(isVisible);
+		}
+	}
+
+	// Open Current Player Status Widget
+	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
+	{
+		auto name = GetPlayerState<AM_PlayerState>()->GetPlayerName();
+		MyInGameHUD->StartGameUI(name);
 	}
 }
 
-void AMPlayerController::SynMesh()
+void AMPlayerController::Client_SynMeshWhenJoinSession_Implementation()
 {
 	for (FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
 	{
@@ -321,18 +315,18 @@ void AMPlayerController::SynMesh()
 void AMPlayerController::Server_RequestRespawn_Implementation()
 {
 	// Delete current controlled character
-	// GetPawn()->Destroy();
+	GetPawn()->Destroy();
 	
 	AMGameMode* myGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 
 	if (myGameMode)
 	{
 		myGameMode->Server_RespawnPlayer(this);
-		// AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		// if (myGameState)
-		// {
-		// 	Client_SetGameUIVisibility(myGameState->IsGameStart);
-		// }
+		AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (myGameState)
+		{
+			Client_SetGameUIVisibility(myGameState->IsGameStart);
+		}
 	}
 }
 

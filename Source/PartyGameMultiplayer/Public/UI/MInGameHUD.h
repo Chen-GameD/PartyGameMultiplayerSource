@@ -31,7 +31,7 @@ public:
 /////Gameplay
 ////////////////////////////////////////////////////
 	UFUNCTION()
-	void StartGameUI();
+	void StartGameUI(FString& userName);
 
 ////////////////////////////////////////////////////
 /////Interface
@@ -39,6 +39,9 @@ public:
 	// Show or Hide InGame_PlayerStatusWidget
 	UFUNCTION()
 	void InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility n_Visibility);
+	// Update PlayerName UI
+	UFUNCTION()
+	void InGame_UpdatePlayerNameUI(FString& userName);
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
