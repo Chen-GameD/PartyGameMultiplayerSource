@@ -32,7 +32,7 @@ protected:
 	UFUNCTION()
 		virtual void OnRep_ServerForkWorldTransform();
 	UFUNCTION()
-		virtual void OnRep_bHitTarget();
+		virtual void OnRep_IsForkOut();
 
 	void SetTaserForkAttached(bool bShouldAttachToWeapon);
 
@@ -51,8 +51,8 @@ protected:
 	FRotator TaserFork_OriginalRelativeRotation;
 	FVector TaserFork_OriginalRelativeScale;
 	float Ratio_ScaleUpOnRelativeScale;
-	FVector TaserFork_RelativeLocation_WhenAttackStop;
-	FRotator TaserFork_RelativeRotation_WhenAttackStop;
+	FVector TaserFork_WorldLocation_WhenAttackStop;
+	FRotator TaserFork_WorldRotation_WhenAttackStop;
 	FVector TaserFork_WorldLocation_WhenAttackStart;
 	FRotator TaserFork_WorldRotation_WhenAttackStart;
 	//FVector TaserFork_OriginalRelativeScale;
@@ -62,13 +62,11 @@ protected:
 	float MaxLen;
 	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
 	float StrechOutSpeed;
-	UPROPERTY(EditAnywhere, Category = "TaserFork_Stretch")
-	float StrechInSpeed;
-	bool IsForkOut;
-	float StrechInTime;
+	UPROPERTY(ReplicatedUsing = OnRep_IsForkOut)
+		bool IsForkOut;
 
 	// hit and attached
-	UPROPERTY(ReplicatedUsing = OnRep_bHitTarget)
+	UPROPERTY(Replicated)
 		bool bHitTarget;
 	bool bForkAttachedToWeapon; // used by both clients and server
 	AActor* Server_ActorBeingHit;

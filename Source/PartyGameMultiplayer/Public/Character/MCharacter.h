@@ -194,6 +194,8 @@ protected:
 	void SetDash();
 	void TurnOffDashEffect();
 
+	void AdjustMaxWalkSpeed();
+
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
 	UFUNCTION(Server, Reliable)

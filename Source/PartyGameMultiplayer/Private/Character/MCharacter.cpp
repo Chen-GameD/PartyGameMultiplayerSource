@@ -218,8 +218,10 @@ void AMCharacter::Attack_Implementation()
 			if (CombineWeapon->WeaponType == EnumWeaponType::Taser)
 			{
 				FTimerHandle TimerHandle;
-				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]{ if(this)CombineWeapon->AttackStart(); }, 0.2f, false);
-			}				
+				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this] { if (this)CombineWeapon->AttackStart(); }, 0.2f, false);
+			}
+			else
+				CombineWeapon->AttackStart();
 		}
 		else
 		{
@@ -300,6 +302,28 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 	}
 	
 }
+
+
+void AMCharacter::AdjustMaxWalkSpeed()
+{
+	// Adjust the walking speed according to the holding weapon
+	FString ParName = "";
+	if (CombineWeapon)
+		ParName = CombineWeapon->GetWeaponName();
+	else
+	{
+		if (LeftWeapon)
+			ParName = LeftWeapon->GetWeaponName();
+		else if (RightWeapon)
+			ParName = RightWeapon->GetWeaponName();
+	}
+	ParName += "_MaxWalkSpeedRatio";
+	float MaxWalkSpeedRatio = 1.0f;
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Parameter_Map.Contains(ParName))
+		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Parameter_Map[ParName];
+	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+}
+
 
 void AMCharacter::PickUp_Implementation(bool isLeft)
 {
@@ -1223,6 +1247,8 @@ void AMCharacter::BeginPlay()
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	//AdjustMaxWalkSpeed();
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
