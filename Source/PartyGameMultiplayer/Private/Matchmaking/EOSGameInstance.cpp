@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	Login("", "", "accountportal");
+	//Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
@@ -47,7 +47,7 @@ FString UEOSGameInstance::GetPlayerUsername()
 			}
 		}
 	}
-	return FString();
+	return FString("default-name");
 }
 
 void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections)
