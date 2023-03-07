@@ -279,11 +279,11 @@ void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisibl
 
 		if (pawn && !pawn->IsLocallyControlled())
 		{
-			pawn->SetGameUIVisibility(isVisible);
+			//pawn->SetGameUIVisibility(isVisible);
 		}
 		else if (pawn && pawn->IsLocallyControlled())
 		{
-			pawn->SetLocallyControlledGameUI(isVisible);
+			//pawn->SetLocallyControlledGameUI(isVisible);
 		}
 	}
 
@@ -295,7 +295,7 @@ void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisibl
 	}
 }
 
-void AMPlayerController::Client_SynMeshWhenJoinSession_Implementation()
+void AMPlayerController::NetMulticast_SynMesh_Implementation()
 {
 	for (FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
 	{

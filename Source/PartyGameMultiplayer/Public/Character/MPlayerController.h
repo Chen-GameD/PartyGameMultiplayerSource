@@ -60,14 +60,14 @@ public:
 	UFUNCTION()
 	void StartTheGame();
 
-	// UFUNCTION(Client, Reliable, BlueprintCallable)
-	// void Client_SetGameUIVisibility(bool isVisible);
+	UFUNCTION(Client, Reliable, BlueprintCallable)
+	void Client_SetGameUIVisibility(bool isVisible);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_SynMesh();
 
-	UFUNCTION()
-	void SynMesh();
+	// UFUNCTION()
+	// void SynMesh();
 
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();

@@ -142,7 +142,7 @@ void AMCharacter::OnRep_PlayerState()
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 	if (MyPlayerController)
 	{
-		MyPlayerController->SynMesh();
+		//MyPlayerController->SynMesh();
 		SetFollowWidgetStatusAndInformation();
 	}
 }
