@@ -20,7 +20,9 @@ void UMPlayerStatusWidget::NativeConstruct()
 	{
 		BuffInfo = CreateWidget<UMCharacterBuffWidget>(this, BuffInfoClass, "BuffWidget");
 		BuffSlot->AddChild(BuffInfo);
-		ToggleBuffUI(false);
+		ToggleBuffUI(true);
+		//ToggleFireBuffUI(false);
+		//ToggleShockBuffUI(false);
 	}
 
 	if (SkillSlot && SkillInfoClass)
@@ -70,18 +72,32 @@ void UMPlayerStatusWidget::ToggleShockBuffUI(bool IsShowing)
 	}
 }
 
-void UMPlayerStatusWidget::SkillUIUpdate(SkillType UseSkill, float percentage)
+void UMPlayerStatusWidget::OnSkillUse(SkillType UseSkill, float CoolDownTotalTime)
 {
 	if (SkillInfo)
 	{
 		switch (UseSkill)
 		{
 		case SkillType::SKILL_DASH:
-        		SkillInfo->UpdateDashInfo(percentage);
+        		SkillInfo->OnUseDashSkill(CoolDownTotalTime);
 			break;
 		default:
 			break;
 		}
 	}
-	
+}
+
+void UMPlayerStatusWidget::SkillUIOpacityUpdate(SkillType UseSkill, float percentage)
+{
+	if (SkillInfo)
+	{
+		switch (UseSkill)
+		{
+		case SkillType::SKILL_DASH:
+			SkillInfo->UpdateDashOpacity(percentage);
+			break;
+		default:
+			break;
+		}
+	}
 }

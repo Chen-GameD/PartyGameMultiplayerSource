@@ -16,6 +16,9 @@ class PARTYGAMEMULTIPLAYER_API UMCharacterBuffWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	
 	UFUNCTION()
 	void ToggleFireBuff(bool IsShowing);
 	UFUNCTION()
@@ -27,4 +30,7 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	UImage* ShockBuffImage;
+
+	bool IsFireBuffNeedReduceOpacity = false;
+	bool IsShockBuffNeedReduceOpacity = false;
 };

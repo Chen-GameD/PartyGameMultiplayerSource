@@ -92,6 +92,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
     DashDistance = 200.0f;
     DashTime = 0.2f;
     DashSpeed = DashDistance / DashTime;
+	DashCoolDown = 5.0f;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
 
@@ -616,7 +617,20 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 	StopJumping();
 }
 
-void AMCharacter::Dash_Implementation()
+void AMCharacter::Dash()
+{
+	// Update UI
+	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
+	if (MyPlayerController && IsAllowDash)
+	{
+		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
+	}
+	
+	// Call Server Dash
+	Server_Dash();
+}
+
+void AMCharacter::Server_Dash_Implementation()
 {
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
@@ -628,7 +642,7 @@ void AMCharacter::Dash_Implementation()
 			OnRep_IsAllowDash();
 		}
 
-		// Dash implement
+		// Server_Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
 		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
@@ -650,7 +664,7 @@ void AMCharacter::RefreshDash()
 	}
 
 	FTimerHandle tempHandle;
-	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, 1.5, false);
+	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
 }
 
 void AMCharacter::SetDash()

@@ -104,6 +104,38 @@ void AMInGameHUD::InGame_UpdatePlayerHealth(float percentage)
 	}
 }
 
+void AMInGameHUD::InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->OnSkillUse(UseSkill, CoolDownTotalTime);
+	}
+}
+
+void AMInGameHUD::InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percentage)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->SkillUIOpacityUpdate(UseSkill, percentage);
+	}
+}
+
+void AMInGameHUD::InGame_ToggleFireBuffWidget(bool IsShowing)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->ToggleFireBuffUI(IsShowing);
+	}
+}
+
+void AMInGameHUD::InGame_ToggleShockBuffWidget(bool IsShowing)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->ToggleShockBuffUI(IsShowing);
+	}
+}
+
 void AMInGameHUD::InGame_SetVisibilityPlayerWeaponInfoWidget(ESlateVisibility n_Visibility)
 {
 	if (InGame_PlayerWeaponInfoWidget)

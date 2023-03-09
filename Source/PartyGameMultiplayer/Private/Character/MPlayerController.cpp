@@ -66,6 +66,14 @@ void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 	}
 }
 
+void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
+	}
+}
+
 AMInGameHUD* AMPlayerController::GetInGameHUD()
 {
 	return MyInGameHUD ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());

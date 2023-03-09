@@ -210,9 +210,11 @@ protected:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
-	/* Called for Dash input */
-	UFUNCTION(Server, Reliable)
+	/* Called for Server_Dash input */
+	UFUNCTION()
 	void Dash();
+	UFUNCTION(Server, Reliable)
+	void Server_Dash();
 	void RefreshDash();
 	void SetDash();
 	void TurnOffDashEffect();
@@ -347,12 +349,16 @@ protected:
 	bool IsOnGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
-	UPROPERTY(EditAnywhere, Category = "Dash")
+	UPROPERTY(EditAnywhere, Category = "Server_Dash")
 	float DashDistance;
-	UPROPERTY(EditAnywhere, Category = "Dash")
+	UPROPERTY(EditAnywhere, Category = "Server_Dash")
 	float DashTime;
+	UPROPERTY(EditAnywhere, Category = "Server_Dash")
 	float OriginalMaxWalkSpeed;
+	UPROPERTY(EditAnywhere, Category = "Server_Dash")
 	float DashSpeed;
+	UPROPERTY(EditAnywhere, Category = "Server_Dash")
+	float DashCoolDown;
 	FTimerHandle DashingTimer;
 
 	// buff

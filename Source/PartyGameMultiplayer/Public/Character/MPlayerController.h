@@ -71,6 +71,9 @@ public:
 	UFUNCTION()
 	void UI_InGame_UpdateHealth(float percentage);
 
+	UFUNCTION()
+	void UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime);
+
 	// HUD getter
 	UFUNCTION(BlueprintCallable)
 	AMInGameHUD* GetInGameHUD();
