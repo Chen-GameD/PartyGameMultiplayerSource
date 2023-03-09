@@ -64,7 +64,7 @@ public:
 	void InGame_UpdateMinigameHint(FString i_Hint);
 	// Initialize the game status UI content
 	UFUNCTION()
-	void InGame_InitGameStatusWidgetContent();
+	void InGame_InitGameStatusAndPlayerStatusWidgetContent();
 
 protected:
 	// In Game UI Class Ref

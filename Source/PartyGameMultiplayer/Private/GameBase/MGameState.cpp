@@ -28,7 +28,7 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, Team_2_Score);
 }
 
-void AMGameState::Client_SetClientStartGame_Implementation()
+void AMGameState::OnRep_IsGameStart()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	
@@ -157,5 +157,5 @@ void AMGameState::Server_StartGame_Implementation()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
-	Client_SetClientStartGame();
+	OnRep_IsGameStart();
 }

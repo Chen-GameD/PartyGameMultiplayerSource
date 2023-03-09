@@ -38,6 +38,16 @@ void UMCharacterFollowWidget::SetPlayerName(FString i_PlayerName)
 	PlayerName->SetText(FText::FromString(i_PlayerName));
 }
 
+void UMCharacterFollowWidget::SetHealthBarRenderOpacity(float percentage)
+{
+	HealthBar->SetRenderOpacity(percentage);
+}
+
+void UMCharacterFollowWidget::SetPlayerNameRenderOpacity(float percentage)
+{
+	PlayerName->SetRenderOpacity(percentage);
+}
+
 
 void UMCharacterFollowWidget::ShowTip()
 {

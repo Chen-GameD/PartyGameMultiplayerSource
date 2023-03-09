@@ -3,12 +3,12 @@
 
 #include "GameBase/MGameMode.h"
 
+#include "EngineUtils.h"
 #include "M_PlayerState.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameState.h"
-#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/TransformCalculus3D.h"
 #include "Character/MCharacter.h"
@@ -75,41 +75,28 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 		
+		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
+		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
+		MyPlayerState->UpdatePlayerName(playerUsername);
+		// Server call OnRep_PlayerNameString once for sync
+		MyPlayerState->OnRep_PlayerNameString();
+		
 		CurrentPlayerNum++;
 
-		//  for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-		//  {
-		//  	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-		//
-		//  	if (controller)
-		//  	{
-		//  		controller->NetMulticast_SynMesh();
-		//  	}
-		//  }
-		//
-		// // Init Character Follow widget on server side
-		// // Client side will auto call when player state replicated to the client ( OnRep_PlayerState )
-		// if (GetNetMode() == NM_ListenServer)
-		// {
-		// 	AMCharacter* MyCharacter = Cast<AMCharacter>(NewPlayer);
-		// 	if (MyCharacter)
-		// 	{
-		// 		MyCharacter->OnRep_PlayerState();
-		// 	}
-		// }
+		if (NewPlayer->IsLocalPlayerController())
+		{
+			AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
+			if (MyPawn)
+			{
+				MyPawn->OnRep_PlayerState();
+			}
+		}
 	}
 }
 
 void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
-
-	// In Here, system already created a pawn for all clients and server.
-	// It's safe to update the player init information like skin and player name.
-
-	// Update player's Name (player status UI)
-	auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
-	Cast<AMPlayerController>(NewPlayer)->GetPlayerState<AM_PlayerState>()->UpdatePlayerName(playerUsername);
 }
 
 void AMGameMode::Logout(AController* Exiting)
@@ -188,31 +175,6 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 		spawnLocation = spawnPlayerStart->GetActorTransform().GetLocation();
 		spawnRotation = spawnPlayerStart->GetActorTransform().GetRotation().Rotator();
 
-		// Set skeletalMesh by team index
-		// int index = 0;
-		// AM_PlayerState* CurrentControllerPS = PlayerController->GetPlayerState<AM_PlayerState>();
-		// if (CurrentControllerPS->TeamIndex == 1)
-		// {
-		// 	index = 0;
-		// }
-		// else if (CurrentControllerPS->TeamIndex == 2)
-		// {
-		// 	index = 1;
-		// }
-		
-		// USkeletalMesh* spawnCharacter = CharacterBPArray[index];
-		//
-		// APawn* spawnPawn = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		// AMCharacter* spawnActor = Cast<AMCharacter>(spawnPawn);
-		// spawnActor->Multicast_SetMesh(spawnCharacter);
-		//
-		//
-		// if (IsValid(spawnActor))
-		// {
-		// 	PlayerController->Possess(spawnActor);
-		// 	Cast<AMPlayerController>(PlayerController)->Client_RefreshWeaponUI();
-		// }
-
 		// Only Reset the location of the pawn and reset the status;
 		AMCharacter* MyCharacter = Cast<AMCharacter>(PlayerController->GetPawn());
 		if (MyCharacter)
@@ -224,20 +186,13 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 			// Temp for syn mesh every time when player respawn
 			// After the customize function is finished
 			// Need to delete, let the mesh only update once when the client join an session
-			Cast<AMPlayerController>(PlayerController)->NetMulticast_SynMesh();
+			//Cast<AMPlayerController>(PlayerController)->NetMulticast_SynMesh();
 		}
 	}
 }
 
 void AMGameMode::Server_RespawnMinigameObject_Implementation()
 {
-	// if (MinigameObjectClass)
-	// {
-	// 	FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
-	// 	FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-	// 	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameObjectClass, spawnLocation, spawnRotation);
-	// }
-
 	if (MinigameDataAsset)
 	{
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
@@ -320,15 +275,31 @@ void AMGameMode::StartTheGame()
 	// Double check if the skin information set correctly.
 	// Later probably will use some other way to do this.
 	// Like do the Sync after everyone joined the session and then show the game level ( Add an interval level for this )
-	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-	{
-		AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-		
-		if (controller)
-		{
-			controller->NetMulticast_SynMesh();
-		}
-	}
+	// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+	// {
+	// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
+	// 	
+	// 	if (controller)
+	// 	{
+	// 		controller->NetMulticast_SynMesh();
+	// 	}
+	// }
+
+	// In Here, system already created a pawn for all clients and server.
+	// It's safe to update the player init information like skin and player name.
+	// AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
+	// if (MyPawn)
+	// {
+	// 	MyPawn->NetMulticast_InitNewPlayerInformation();
+	// }
+	// for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	// {
+	// 	AMCharacter* CurrentPawn = *PawnItr;
+	// 	if (CurrentPawn)
+	// 	{
+	// 		CurrentPawn->NetMulticast_InitNewPlayerInformation();
+	// 	}
+	// }
 	
 	if (MyGameState)
 	{

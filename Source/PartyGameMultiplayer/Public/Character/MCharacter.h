@@ -42,7 +42,7 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 // ==============================================================
 public:
 	// Sets default values for this character's properties
-	AMCharacter();
+	AMCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void Restart() override;
 
@@ -105,24 +105,30 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_Respawn();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetMesh(USkeletalMesh* i_changeMesh);
-
+	
 	UFUNCTION()
 	void SetFollowWidgetVisibility(bool isVisible);
 
-	UFUNCTION()
-	void SetFollowWidgetStatusAndInformation();
-
 	// UFUNCTION()
-	// void SetLocallyControlledGameUI(bool isVisible);
+	// void SetFollowWidgetStatusAndInformation();
+
+	UFUNCTION()
+	void SetLocallyControlledGameUI(bool isVisible);
+
+	UFUNCTION()
+	void SetPlayerNameUIInformation();
+
+	UFUNCTION()
+	void SetPlayerSkin();
+
+	UFUNCTION()
+	void InitFollowWidget();
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);
 
-	UFUNCTION()
-	void SetThisCharacterMesh(int TeamIndex);
+	// UFUNCTION()
+	// void SetThisCharacterMesh(int TeamIndex);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetCanMove(bool i_CanMove);
@@ -138,6 +144,8 @@ public:
 
 	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
 	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
+
+	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
 
 	// Multicast die result
 	UFUNCTION(NetMulticast, Reliable)
@@ -244,6 +252,11 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
 
+	// Keep Check PlayerFollowWidget is null or not every 0.5 sec;
+	// When it not null anymore, start to Init all the pawn related information
+	UFUNCTION()
+	void CheckPlayerFollowWidgetTick();
+
 
 // Members
 // ==============================================================
@@ -310,6 +323,12 @@ public:
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;
 
+	// UPROPERTY(EditAnywhere, Category="PlayerFollowWidget Tick Timer")
+	// float PlayerFollowWidget_ShowTime = 5.0;
+	// UPROPERTY()
+	// bool PlayerFollowWidget_NeedDisappear = false;
+	// UPROPERTY()
+	// float PlayerFollowWidget_RenderOpacity = 1;
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
@@ -362,4 +381,6 @@ protected:
 	//So it will sign to CurrentTouchedWeapon and get messed with other logic.
 	//So we add this bool to prevent that happen
 	bool IsPickingWeapon = false;
+
+	FTimerHandle InitPlayerInformationTimer;
 };

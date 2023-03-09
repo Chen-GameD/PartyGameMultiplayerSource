@@ -31,6 +31,11 @@ public:
 	UFUNCTION()
 	void SetPlayerName(FString i_PlayerName);
 
+	UFUNCTION()
+	void SetHealthBarRenderOpacity(float percentage);
+	UFUNCTION()
+	void SetPlayerNameRenderOpacity(float percentage);
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void SetWeaponEnergyProgressBar(float Percent);
 	UFUNCTION()

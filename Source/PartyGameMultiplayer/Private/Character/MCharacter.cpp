@@ -17,11 +17,12 @@
 #include "NiagaraComponent.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponConfig.h"
-#include "Weapon/JsonFactory.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include <Character/animUtils.h>
 
+#include "EngineUtils.h"
+#include "IDetailTreeNode.h"
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
@@ -30,7 +31,7 @@
 // Constructor
 // ===================================================
 #pragma region Constructor
-AMCharacter::AMCharacter()
+AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
 {
 	// Initialize the player's Health
 	MaxHealth = 100.0f;
@@ -139,11 +140,31 @@ void AMCharacter::OnRep_PlayerState()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer Playerstate Rep!"));
 	}
 
-	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	if (MyPlayerController)
+	if (PlayerFollowWidget->GetUserWidgetObject())
 	{
-		//MyPlayerController->SynMesh();
-		SetFollowWidgetStatusAndInformation();
+		SetPlayerNameUIInformation();
+		SetPlayerSkin();
+		InitFollowWidget();
+	}
+	else
+	{
+		GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
+	}
+}
+
+void AMCharacter::CheckPlayerFollowWidgetTick()
+{
+	if (PlayerFollowWidget->GetUserWidgetObject())
+	{
+		SetPlayerNameUIInformation();
+		SetPlayerSkin();
+		InitFollowWidget();
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer pawn's PlayerFollowWdiget is ready!"));
+		GetWorldTimerManager().ClearTimer(InitPlayerInformationTimer);
+	}
+	else
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ListenServer pawn's PlayerFollowWdiget is not ready!"));
 	}
 }
 #pragma endregion Constructor
@@ -734,9 +755,6 @@ void AMCharacter::OnHealthUpdate()
 		{
 			// Death
 			// to do
-			//FString deathMessage = FString::Printf(TEXT("You have been killed."));
-			//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
-			
 			// Force respawn
 			Server_ForceRespawn(5);
 		}
@@ -745,9 +763,6 @@ void AMCharacter::OnHealthUpdate()
 	//Server-specific functionality
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		//FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-
 		if (CurrentHealth <= 0)
 		{
 			if (CombineWeapon)
@@ -810,34 +825,20 @@ void AMCharacter::Client_Respawn_Implementation()
 // Multicast die result
 void AMCharacter::NetMulticast_DieResult_Implementation()
 {
-	// this->GetMesh()->SetSimulatePhysics(true);
-	// this->GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-	// this->GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	// this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
+	SetTipUI(false);
 }
 
 // Multicast respawn result
 void AMCharacter::NetMulticast_RespawnResult_Implementation()
 {
-	//IsDead = false;
-	// this->GetMesh()->SetSimulatePhysics(false);
-	// this->GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
-	// this->GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	// this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 	if (MyGameState && MyGameState->IsGameStart)
 	{
 		SetFollowWidgetVisibility(true);
 	}
-}
-
-void AMCharacter::Multicast_SetMesh_Implementation(USkeletalMesh* i_changeMesh)
-{
-	GetMesh()->SetSkeletalMesh(i_changeMesh);
 }
 
 void AMCharacter::SetFollowWidgetVisibility(bool isVisible)
@@ -847,66 +848,92 @@ void AMCharacter::SetFollowWidgetVisibility(bool isVisible)
 	{
 		if (isVisible)
 		{
-			//CharacterFollowWidget->HideTip();
 			CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
-			//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-			//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		}
 		else
 		{
-			//CharacterFollowWidget->HideTip();
         	CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
         }
 	}
 }
 
-void AMCharacter::SetFollowWidgetStatusAndInformation()
+void AMCharacter::SetPlayerNameUIInformation()
+{
+	if (GetNetMode() == NM_ListenServer)
+	{
+		FString Message = FString::Printf(TEXT("Set Player Name UI Information: ListenServer"));
+		GEngine->AddOnScreenDebugMessage(-1, 30.f, FColor::Red, Message);
+	}
+	else if (GetNetMode() == NM_Client)
+	{
+		FString Message = FString::Printf(TEXT("Set Player Name UI Information: Client"));
+		GEngine->AddOnScreenDebugMessage(-1, 30.f, FColor::Red, Message);
+	}
+	
+	// If this pawn is local controlled by a controller, then it needs update HUD
+	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetController());
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+	if (MyPlayerController && IsLocallyControlled() && MyPlayerState)
+	{
+		MyPlayerController->GetInGameHUD()->InGame_UpdatePlayerNameUI(MyPlayerState->PlayerNameString);
+	}
+
+	// Update FollowWidget player name UI
+	UMCharacterFollowWidget* MyFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+	if (MyPlayerState && MyFollowWidget)
+	{
+		MyFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
+	}
+}
+
+void AMCharacter::SetPlayerSkin()
+{
+	// TODO
+}
+
+void AMCharacter::InitFollowWidget()
 {
 	UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 	if (CharacterFollowWidget)
 	{
-		CharacterFollowWidget->InitIsLocalControlledCharacterWidget(IsLocallyControlled() ? true : false);
-
-		if (AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>())
-		{
-			CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
-		}
+		CharacterFollowWidget->InitIsLocalControlledCharacterWidget(IsLocallyControlled());
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
 	}
 }
 
-// void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
-// {
-// 	if (isVisible)
-// 	{
-// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-// 		CharacterFollowWidget->HideTip();
-// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
-// 		CharacterFollowWidget->InitIsLocalControlledCharacterWidget();
-// 	}
-// 	else
-// 	{
-// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-// 		CharacterFollowWidget->HideTip();
-// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
-// 	}
-// }
+void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
+{
+	if (isVisible)
+	{
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+		CharacterFollowWidget->InitIsLocalControlledCharacterWidget(IsLocallyControlled());
+	}
+	else
+	{
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
+	}
+}
 
 void AMCharacter::SetOutlineEffect(bool isVisible)
 {
 	GetMesh()->SetRenderCustomDepth(isVisible);
 }
 
-void AMCharacter::SetThisCharacterMesh(int TeamIndex)
-{
-	if (TeamIndex == 1)
-	{
-		GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
-	}
-	else
-	{
-		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
-	}
-}
+// void AMCharacter::SetThisCharacterMesh(int TeamIndex)
+// {
+// 	if (TeamIndex == 1)
+// 	{
+// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
+// 	}
+// 	else
+// 	{
+// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
+// 	}
+// }
 
 void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 {
@@ -1442,3 +1469,19 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		}
 	}		
 }
+
+// void AMCharacter::FollowWidget_PerTick(float DeltaTime)
+// {
+// 	if (PlayerFollowWidget_NeedDisappear)
+// 	{
+// 		PlayerFollowWidget_RenderOpacity -= DeltaTime;
+// 		PlayerFollowWidget_RenderOpacity = PlayerFollowWidget_RenderOpacity < 0 ? 0 : PlayerFollowWidget_RenderOpacity;
+// 		PlayerFollowWidget_NeedDisappear = false;
+// 		UMCharacterFollowWidget* MyPlayerFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		if (MyPlayerFollowWidget)
+// 		{
+// 			MyPlayerFollowWidget->SetHealthBarRenderOpacity(PlayerFollowWidget_RenderOpacity);
+// 			MyPlayerFollowWidget->SetPlayerNameRenderOpacity(PlayerFollowWidget_RenderOpacity);
+// 		}
+// 	}
+// }

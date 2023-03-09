@@ -49,7 +49,7 @@ public:
 	//void UpdateLobbyMenu();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void JoinATeam(int i_TeamIndex = 1, const FString& i_PlayerName = "");
+	void JoinATeam(int i_TeamIndex = 1);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void GetReadyButtonClick();
@@ -59,16 +59,7 @@ public:
 
 	UFUNCTION()
 	void StartTheGame();
-
-	UFUNCTION(Client, Reliable, BlueprintCallable)
-	void Client_SetGameUIVisibility(bool isVisible);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_SynMesh();
-
-	// UFUNCTION()
-	// void SynMesh();
-
+	
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();
 

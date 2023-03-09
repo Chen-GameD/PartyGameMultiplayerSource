@@ -16,13 +16,13 @@ class PARTYGAMEMULTIPLAYER_API AM_PlayerState : public APlayerState
 	GENERATED_BODY()
 public:
 
-	UPROPERTY(ReplicatedUsing=UpdateLobbyUIInformation, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_PlayerNameString, BlueprintReadOnly)
 	FString PlayerNameString = "CMY";
 
-	UPROPERTY(ReplicatedUsing=UpdateLobbyUIInformation, EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(ReplicatedUsing=OnRep_UpdateTeamIndex, EditAnywhere, BlueprintReadWrite)
 	int TeamIndex = 0;
 
-	UPROPERTY(ReplicatedUsing=UpdateLobbyUIInformation, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_UpdateReadyInformation, BlueprintReadOnly)
 	bool IsReady = false;
 
 	UFUNCTION(Server, Reliable)
@@ -35,7 +35,16 @@ public:
 	void UpdatePlayerReadyState();
 
 	UFUNCTION()
-	void UpdateLobbyUIInformation();
+	void OnRep_PlayerNameString();
+
+	UFUNCTION()
+	void OnRep_PlayerSkinInformation();
+
+	UFUNCTION()
+	void OnRep_UpdateTeamIndex();
+
+	UFUNCTION()
+	void OnRep_UpdateReadyInformation();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated)
 	int kill;

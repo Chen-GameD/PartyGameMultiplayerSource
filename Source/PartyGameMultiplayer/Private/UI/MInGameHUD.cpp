@@ -21,29 +21,38 @@ void AMInGameHUD::BeginPlay()
 	// Set all ref, and add them to the viewport but without displaying;
 	if (InGame_PlayerStatusWidgetClass)
 	{
-		InGame_PlayerStatusWidget = CreateWidget<UMPlayerStatusWidget>(GetWorld(), InGame_PlayerStatusWidgetClass, "PlayerStatusWidget");
-		if (InGame_PlayerStatusWidget)
+		if (!InGame_PlayerStatusWidget)
 		{
-			InGame_PlayerStatusWidget->AddToViewport();
-			InGame_PlayerStatusWidget->SetVisibility(ESlateVisibility::Hidden);
+			InGame_PlayerStatusWidget = CreateWidget<UMPlayerStatusWidget>(GetWorld(), InGame_PlayerStatusWidgetClass, "PlayerStatusWidget");
+			if (InGame_PlayerStatusWidget)
+			{
+				InGame_PlayerStatusWidget->AddToViewport();
+				InGame_PlayerStatusWidget->SetVisibility(ESlateVisibility::Hidden);
+			}
 		}
 	}
 	if (InGame_PlayerWeaponInfoWidgetClass)
 	{
-		InGame_PlayerWeaponInfoWidget = CreateWidget<UMPlayerWeaponInfoWidget>(GetWorld(), InGame_PlayerWeaponInfoWidgetClass, "PlayerWeaponInfoWidget");
-		if (InGame_PlayerWeaponInfoWidget)
+		if (!InGame_PlayerWeaponInfoWidget)
 		{
-			InGame_PlayerWeaponInfoWidget->AddToViewport();
-			InGame_PlayerWeaponInfoWidget->SetVisibility(ESlateVisibility::Hidden);
+			InGame_PlayerWeaponInfoWidget = CreateWidget<UMPlayerWeaponInfoWidget>(GetWorld(), InGame_PlayerWeaponInfoWidgetClass, "PlayerWeaponInfoWidget");
+			if (InGame_PlayerWeaponInfoWidget)
+			{
+				InGame_PlayerWeaponInfoWidget->AddToViewport();
+				InGame_PlayerWeaponInfoWidget->SetVisibility(ESlateVisibility::Hidden);
+			}
 		}
 	}
 	if (InGame_GameStatusWidgetClass)
 	{
-		InGame_GameStatusWidget = CreateWidget<UMGameStatusWidget>(GetWorld(), InGame_GameStatusWidgetClass, "GameStatusWidget");
-		if (InGame_GameStatusWidget)
+		if (!InGame_GameStatusWidget)
 		{
-			InGame_GameStatusWidget->AddToViewport();
-			InGame_GameStatusWidget->SetVisibility(ESlateVisibility::Hidden);
+			InGame_GameStatusWidget = CreateWidget<UMGameStatusWidget>(GetWorld(), InGame_GameStatusWidgetClass, "GameStatusWidget");
+			if (InGame_GameStatusWidget)
+			{
+				InGame_GameStatusWidget->AddToViewport();
+				InGame_GameStatusWidget->SetVisibility(ESlateVisibility::Hidden);
+			}
 		}
 	}
 }
@@ -71,6 +80,16 @@ void AMInGameHUD::InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility n_Visi
 
 void AMInGameHUD::InGame_UpdatePlayerNameUI(FString& userName)
 {
+	if (!InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget = CreateWidget<UMPlayerStatusWidget>(GetWorld(), InGame_PlayerStatusWidgetClass, "PlayerStatusWidget");
+		if (InGame_PlayerStatusWidget)
+		{
+    		InGame_PlayerStatusWidget->AddToViewport();
+    		InGame_PlayerStatusWidget->SetVisibility(ESlateVisibility::Hidden);
+    	}
+	}
+	
 	if (InGame_PlayerStatusWidget)
 	{
 		InGame_PlayerStatusWidget->SetPlayerName(userName);
@@ -137,7 +156,7 @@ void AMInGameHUD::InGame_UpdateMinigameHint(FString i_Hint)
 	}
 }
 
-void AMInGameHUD::InGame_InitGameStatusWidgetContent()
+void AMInGameHUD::InGame_InitGameStatusAndPlayerStatusWidgetContent()
 {
 	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
 	if (MyGameState)
@@ -146,6 +165,8 @@ void AMInGameHUD::InGame_InitGameStatusWidgetContent()
 		InGame_UpdateTimer(MyGameState->GameTime);
 		InGame_UpdateTeamScore(1, 0);
 		InGame_UpdateTeamScore(2, 0);
+		InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility::Visible);
+		InGame_UpdatePlayerHealth(1);
 		// Update Minigame Tip
 		// TODO
 	}
