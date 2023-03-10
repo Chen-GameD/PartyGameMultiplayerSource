@@ -22,7 +22,7 @@
 #include <Character/animUtils.h>
 
 #include "EngineUtils.h"
-#include "IDetailTreeNode.h"
+//#include "IDetailTreeNode.h"
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
