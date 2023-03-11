@@ -21,7 +21,8 @@ enum EnumWeaponType
 	Taser,
 	Alarmgun,
 	Bomb,
-	Cannon
+	Cannon,
+	Shell
 };
 
 enum EnumAttackType

@@ -336,6 +336,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	// ===========================================================================================================================
 	// TO DO
 
+	// Drop left/right weapon
 	if (CurrentTouchedWeapon.IsEmpty())
 	{
 		// Check if should drop weapon
@@ -367,6 +368,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			}
 		}
 	}
+	// Pickup left/right weapon
 	else if(!IsDead)
 	{
 		IsPickingWeapon = true;
@@ -454,16 +456,29 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	// Adjust the walking speed according to the holding weapon
 	FString ParName = "";
+	int CntShellHeld = 0;
 	if (CombineWeapon)
 		ParName = CombineWeapon->GetWeaponName();
 	else
 	{
 		if (LeftWeapon)
+		{
 			ParName = LeftWeapon->GetWeaponName();
-		else if (RightWeapon)
+			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
+		if (RightWeapon)
+		{
 			ParName = RightWeapon->GetWeaponName();
+			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
 	}
-	/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ParName);*/
+	if (1 == CntShellHeld)
+		ParName = "OneShell";
+	else if (2 == CntShellHeld)
+		ParName = "TwoShells";
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
 	float MaxWalkSpeedRatio = 1.0f;
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
 		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];

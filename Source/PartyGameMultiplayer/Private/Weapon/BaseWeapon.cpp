@@ -476,7 +476,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				OnRep_bAttackOverlap();
 			}
 
-			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
+			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Flamefork || WeaponType == EnumWeaponType::Bomb)
 				&& ApplyDamageCounter == 0 && HoldingController)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);

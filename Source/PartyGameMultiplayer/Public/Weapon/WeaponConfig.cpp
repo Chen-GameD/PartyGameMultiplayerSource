@@ -4,6 +4,10 @@
 #include "CombinedWeapon/WeaponFlamethrower.h"
 #include "CombinedWeapon/WeaponTaser.h"
 
+
+// init static member
+WeaponConfig* WeaponConfig::Instance = nullptr;
+
 FName WeaponConfig::GetWeaponSocketName(FString weaponName)
 {
 	return SocketName[weaponName];
