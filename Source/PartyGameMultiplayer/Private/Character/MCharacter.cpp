@@ -19,10 +19,10 @@
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "WaterBodyActor.h"
 #include <Character/animUtils.h>
 
 #include "EngineUtils.h"
-//#include "IDetailTreeNode.h"
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
@@ -95,6 +95,10 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	DashCoolDown = 5.0f;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
+
+	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
+	EffectGetHit->SetupAttachment(RootComponent);
+	EffectGetHit->bAutoActivate = false;
 
 	EffectRun = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectRun"));
 	EffectRun->SetupAttachment(RootComponent);
@@ -261,7 +265,13 @@ void AMCharacter::Attack_Implementation()
 		
 		if (CombineWeapon)
 		{
-			CombineWeapon->AttackStart();
+			if (CombineWeapon->WeaponType == EnumWeaponType::Taser)
+			{
+				FTimerHandle TimerHandle;
+				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this] { if (this)CombineWeapon->AttackStart(); }, 0.2f, false);
+			}
+			else
+				CombineWeapon->AttackStart();
 		}
 		else
 		{
@@ -340,8 +350,14 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 			this->AnimState[7] = false;
 		}
 	}
-	
 }
+
+
+void AMCharacter::AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
+{
+	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+}
+
 
 void AMCharacter::PickUp_Implementation(bool isLeft)
 {
@@ -364,6 +380,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	// ===========================================================================================================================
 	// TO DO
 
+	// Drop left/right weapon
 	if (CurrentTouchedWeapon.IsEmpty())
 	{
 		// Check if should drop weapon
@@ -385,7 +402,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (RightWeapon)
 			{
-				// Drop off left weapon
+				// Drop off right weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
@@ -394,10 +411,9 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				DropOffWeapon(isLeft);
 			}
 		}
-		return;
 	}
-	
-	if (CurrentTouchedWeapon[0] && !IsDead)
+	// Pickup left/right weapon
+	else if(!IsDead)
 	{
 		IsPickingWeapon = true;
 		if (isLeft)
@@ -406,7 +422,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// to do
 			FString InputMessage = FString::Printf(TEXT("You Pick Up Left."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, InputMessage);
-			
+
 			if (LeftWeapon)
 			{
 				// Drop off left weapon
@@ -421,13 +437,13 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
 			LeftWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
-			
+
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
 			// Check if need combine
 			if (RightWeapon)
-			{	
+			{
 				// Set isRightHeld Anim State
 				this->AnimState[6] = true;
 				OnCombineWeapon();
@@ -448,7 +464,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off left weapon
 				DropOffWeapon(isLeft);
 			}
-			
+
 			RightWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Right, RightWeapon->textureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
@@ -457,7 +473,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
-			
+
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
@@ -473,6 +489,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
 		}
 	}
+	
 
 	IsPickingWeapon = false;
 
@@ -480,6 +497,36 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	{
 		SetTextureInUI();
 	}
+
+	// Adjust the walking speed according to the holding weapon
+	FString ParName = "";
+	int CntShellHeld = 0;
+	if (CombineWeapon)
+		ParName = CombineWeapon->GetWeaponName();
+	else
+	{
+		if (LeftWeapon)
+		{
+			ParName = LeftWeapon->GetWeaponName();
+			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
+		if (RightWeapon)
+		{
+			ParName = RightWeapon->GetWeaponName();
+			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
+	}
+	if (1 == CntShellHeld)
+		ParName = "OneShell";
+	else if (2 == CntShellHeld)
+		ParName = "TwoShells";
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
+	float MaxWalkSpeedRatio = 1.0f;
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+	AdjustMaxWalkSpeed(MaxWalkSpeedRatio);
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -641,8 +688,8 @@ void AMCharacter::Server_Dash_Implementation()
 		{
 			OnRep_IsAllowDash();
 		}
-
-		// Server_Dash implement
+		
+		// Dash implement
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
 		DashSpeed = DashDistance / DashTime;
 		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
@@ -743,6 +790,19 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
+	if (EffectGetHit && !EffectGetHit->IsActive())
+	{
+		EffectGetHit->Activate(); 
+		// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
+		// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
+		float Delay = 0.1f;  
+		FTimerHandle timerHandle;
+		GetWorldTimerManager().SetTimer(timerHandle, [this]
+			{
+				EffectGetHit->Deactivate();
+			}, Delay, false);
+	}	
+
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())
@@ -852,6 +912,8 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 	if (MyGameState && MyGameState->IsGameStart)
 	{
 		SetFollowWidgetVisibility(true);
+		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+		CharacterFollowWidget->HideTip();
 	}
 }
 
@@ -1042,17 +1104,21 @@ void AMCharacter::CallJumpLandEffect_Implementation()
 
 void AMCharacter::OnRep_IsAllowDash()
 {
-	// Update client care only, like UI
-
-	// EffectDash
-	if (!EffectDash)
-		return;
-	
-	if (!IsAllowDash)
+	if (IsAllowDash)
 	{
-		EffectDash->Activate();
-		FTimerHandle tmpHandle;
-		GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
+		DashSpeed = DashDistance / DashTime;
+		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+
+		if (EffectDash)
+		{
+			EffectDash->Activate();
+			FTimerHandle tmpHandle;
+			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
+		}		
 	}
 }
 
@@ -1243,6 +1309,23 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (Cast<AWaterBody>(OtherActor))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor overlaps with the waterbody"));
+		// clear burning buff
+		if (CheckBuffMap(EnumAttackBuff::Burning))
+		{
+			BuffMap[EnumAttackBuff::Burning][1] = 0;  // set BuffRemainedTime
+		}
+		// apply saltcure buff
+		if (CheckBuffMap(EnumAttackBuff::Saltcure))
+		{
+			BuffMap[EnumAttackBuff::Saltcure][0] = 1.0f;
+		}
+		AdjustMaxWalkSpeed(0.5f);
+	}	
+
+
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
 	
@@ -1280,6 +1363,17 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (Cast<AWaterBody>(OtherActor))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor stops overlapping with the waterbody"));
+		// cancel saltcure buff
+		if (CheckBuffMap(EnumAttackBuff::Saltcure))
+		{
+			BuffMap[EnumAttackBuff::Saltcure][0] = 0;
+		}
+		AdjustMaxWalkSpeed(1.0f);
+	}
+	
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
 	
@@ -1305,6 +1399,8 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	DashSpeed = DashDistance / DashTime;
+
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
@@ -1389,8 +1485,8 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			float& BuffPoint = BuffMap[buffType][0];
+			if (0.0f < BuffPoint)
 			{
 				float DragSpeed = 0.0f;
 				FString ParName = "Paralysis_DragSpeed";
@@ -1406,8 +1502,8 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 			// don't apply knockback if the character is being paralyzed
 			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]))
 			{
-				float& BuffPoints = BuffMap[buffType][0];
-				if (1.0f <= BuffPoints)
+				float& BuffPoint = BuffMap[buffType][0];
+				if (1.0f <= BuffPoint)
 				{
 					float Knockback_MoveSpeed = 0.0f;
 					FString ParName = "Knockback_MoveSpeed";
@@ -1417,7 +1513,7 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 					KnockbackDirection_SinceLastApplyBuff *= Knockback_MoveSpeed;
 					LaunchCharacter(KnockbackDirection_SinceLastApplyBuff, true, false);
 					BeingKnockbackBeforeThisTick = true;
-					BuffPoints = 0.0f;
+					BuffPoint -= 1.0f;
 				}
 			}
 		}
@@ -1455,8 +1551,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			float& BuffPoint = BuffMap[buffType][0];
+			if (1.0f <= BuffPoint)
 			{
 				if (CanMove)
 				{
@@ -1464,7 +1560,6 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					SetElectricShockAnimState(true);
 					CanMove = false;
 				}
-				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
 			else
 			{
@@ -1481,6 +1576,20 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 		}
+		/* Saltcure */
+		buffType = EnumAttackBuff::Saltcure;
+		if (CheckBuffMap(buffType))
+		{
+			float& BuffPoint = BuffMap[buffType][0];
+			if (1.0f <= BuffPoint)
+			{
+				float SaltcureBuffDamagePerSecond = 5.0f;
+				//FString ParName = "BurningDamagePerSecond";
+				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				SetCurrentHealth(CurrentHealth - DeltaTime * SaltcureBuffDamagePerSecond);
+			}
+		}		
 	}		
 }
 

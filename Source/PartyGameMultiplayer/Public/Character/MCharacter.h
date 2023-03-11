@@ -219,6 +219,9 @@ protected:
 	void SetDash();
 	void TurnOffDashEffect();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
 	UFUNCTION(Server, Reliable)
@@ -306,6 +309,8 @@ public:
 	TArray<int> SKDArray = { 0, 0, 0 };
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectGetHit;
+	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
@@ -318,8 +323,8 @@ public:
 		TArray<USkeletalMesh*> CharacterBPArray;
 
 	// Buff Map
-	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
-	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
+	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime
+	// When the BuffPoint >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
@@ -365,7 +370,6 @@ protected:
 	bool CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
-	// to do
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon* LeftWeapon;
 	

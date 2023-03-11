@@ -21,7 +21,8 @@ enum EnumWeaponType
 	Taser,
 	Alarmgun,
 	Bomb,
-	Cannon
+	Cannon,
+	Shell
 };
 
 enum EnumAttackType
@@ -36,7 +37,8 @@ enum EnumAttackBuff
 	Burning,
 	Knockback,
 	//Blowing,
-	Paralysis
+	Paralysis,
+	Saltcure
 };
 
 

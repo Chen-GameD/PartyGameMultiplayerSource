@@ -103,8 +103,8 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 		UDamageType::StaticClass(),  //TSubclassOf<UDamageType> DamageTypeClass
 		IgnoredActors,				//const TArray<AActor*>& IgnoreActors
 		DamageCauser,		//AActor* DamageCauser
-		Controller				 //AController* InstigatedByController
-		//ECC_Visibility	  // DamagePreventionChannel
+		Controller,				 //AController* InstigatedByController
+		ECollisionChannel::ECC_MAX	  // DamagePreventionChannel
 	);
 
 	return true;
@@ -197,12 +197,12 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 			}		
 			// When it is paralysis, we will add DeltaTime(because that's the damage frequency of Taser), 
 			// not touch the BuffPoints	
-			if (AttackBuff == EnumAttackBuff::Paralysis)
-			{
-				buffTimeToAdd = DeltaTime;
-				BuffRemainedTime += buffTimeToAdd;
-				BuffAccumulatedTime += buffTimeToAdd;
-			}
+			//if (AttackBuff == EnumAttackBuff::Paralysis)
+			//{
+			//	buffTimeToAdd = DeltaTime;
+			//	BuffRemainedTime += buffTimeToAdd;
+			//	BuffAccumulatedTime += buffTimeToAdd;
+			//}
 			// When it is knockback, we will neither add time nor touch the BuffPoints
 		}
 	}	

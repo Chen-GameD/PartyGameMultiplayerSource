@@ -24,6 +24,7 @@ TMap<EnumWeaponType, FString> AWeaponDataHelper::WeaponEnumToString_Map =
 	{EnumWeaponType::Alarmgun, "Alarmgun"},
 	{EnumWeaponType::Bomb, "Bomb"},
 	{EnumWeaponType::Cannon, "Cannon"},
+	{EnumWeaponType::Shell, "Shell"},
 };
 
 TMap<EnumWeaponType, EnumAttackType> AWeaponDataHelper::WeaponEnumToAttackTypeEnum_Map =
@@ -46,6 +47,7 @@ TMap<EnumAttackBuff, FString> AWeaponDataHelper::AttackBuffEnumToString_Map =
 	{EnumAttackBuff::Knockback, "Knockback"},
 	//{EnumAttackBuff::Blowing, "Blowing"},
 	{EnumAttackBuff::Paralysis, "Paralysis"},
+	{EnumAttackBuff::Saltcure, "Saltcure"},
 };
 
 
