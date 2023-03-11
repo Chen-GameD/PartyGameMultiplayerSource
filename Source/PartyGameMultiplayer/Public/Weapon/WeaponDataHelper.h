@@ -36,7 +36,8 @@ enum EnumAttackBuff
 	Burning,
 	Knockback,
 	//Blowing,
-	Paralysis
+	Paralysis,
+	Saltcure
 };
 
 

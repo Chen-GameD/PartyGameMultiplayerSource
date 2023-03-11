@@ -1178,8 +1178,21 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if(Cast<AWaterBody>(OtherActor))
+	if (Cast<AWaterBody>(OtherActor))
+	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor overlaps with the waterbody"));
+		// clear burning buff
+		if (CheckBuffMap(EnumAttackBuff::Burning))
+		{
+			BuffMap[EnumAttackBuff::Burning][1] = 0;  // set BuffRemainedTime
+		}
+		// apply saltcure buff
+		if (CheckBuffMap(EnumAttackBuff::Saltcure))
+		{
+			BuffMap[EnumAttackBuff::Saltcure][0] = 1.0f;
+		}
+		AdjustMaxWalkSpeed(0.5f);
+	}	
 
 
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
@@ -1219,6 +1232,17 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	if (Cast<AWaterBody>(OtherActor))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor stops overlapping with the waterbody"));
+		// cancel saltcure buff
+		if (CheckBuffMap(EnumAttackBuff::Saltcure))
+		{
+			BuffMap[EnumAttackBuff::Saltcure][0] = 0;
+		}
+		AdjustMaxWalkSpeed(1.0f);
+	}
+	
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
 	
@@ -1422,5 +1446,19 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 		}
+		/* Saltcure */
+		buffType = EnumAttackBuff::Saltcure;
+		if (CheckBuffMap(buffType))
+		{
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
+			{
+				float SaltcureBuffDamagePerSecond = 5.0f;
+				//FString ParName = "BurningDamagePerSecond";
+				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				SetCurrentHealth(CurrentHealth - DeltaTime * SaltcureBuffDamagePerSecond);
+			}
+		}		
 	}		
 }

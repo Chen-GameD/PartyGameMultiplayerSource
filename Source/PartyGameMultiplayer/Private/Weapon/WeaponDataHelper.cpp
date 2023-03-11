@@ -46,6 +46,7 @@ TMap<EnumAttackBuff, FString> AWeaponDataHelper::AttackBuffEnumToString_Map =
 	{EnumAttackBuff::Knockback, "Knockback"},
 	//{EnumAttackBuff::Blowing, "Blowing"},
 	{EnumAttackBuff::Paralysis, "Paralysis"},
+	{EnumAttackBuff::Saltcure, "Saltcure"},
 };
 
 
