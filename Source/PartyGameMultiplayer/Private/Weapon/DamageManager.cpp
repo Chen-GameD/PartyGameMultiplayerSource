@@ -197,12 +197,12 @@ bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controlle
 			}		
 			// When it is paralysis, we will add DeltaTime(because that's the damage frequency of Taser), 
 			// not touch the BuffPoints	
-			if (AttackBuff == EnumAttackBuff::Paralysis)
-			{
-				buffTimeToAdd = DeltaTime;
-				BuffRemainedTime += buffTimeToAdd;
-				BuffAccumulatedTime += buffTimeToAdd;
-			}
+			//if (AttackBuff == EnumAttackBuff::Paralysis)
+			//{
+			//	buffTimeToAdd = DeltaTime;
+			//	BuffRemainedTime += buffTimeToAdd;
+			//	BuffAccumulatedTime += buffTimeToAdd;
+			//}
 			// When it is knockback, we will neither add time nor touch the BuffPoints
 		}
 	}	

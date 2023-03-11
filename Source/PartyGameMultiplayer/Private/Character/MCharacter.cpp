@@ -1354,8 +1354,8 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			float& BuffPoint = BuffMap[buffType][0];
+			if (0.0f < BuffPoint)
 			{
 				float DragSpeed = 0.0f;
 				FString ParName = "Paralysis_DragSpeed";
@@ -1371,8 +1371,8 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 			// don't apply knockback if the character is being paralyzed
 			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]))
 			{
-				float& BuffPoints = BuffMap[buffType][0];
-				if (1.0f <= BuffPoints)
+				float& BuffPoint = BuffMap[buffType][0];
+				if (1.0f <= BuffPoint)
 				{
 					float Knockback_MoveSpeed = 0.0f;
 					FString ParName = "Knockback_MoveSpeed";
@@ -1382,7 +1382,7 @@ void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
 					KnockbackDirection_SinceLastApplyBuff *= Knockback_MoveSpeed;
 					LaunchCharacter(KnockbackDirection_SinceLastApplyBuff, true, false);
 					BeingKnockbackBeforeThisTick = true;
-					BuffPoints = 0.0f;
+					BuffPoint -= 1.0f;
 				}
 			}
 		}
@@ -1420,8 +1420,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			float& BuffPoint = BuffMap[buffType][0];
+			if (1.0f <= BuffPoint)
 			{
 				if (CanMove)
 				{
@@ -1429,7 +1429,6 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					SetElectricShockAnimState(true);
 					CanMove = false;
 				}
-				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
 			else
 			{
@@ -1450,8 +1449,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Saltcure;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			float& BuffPoint = BuffMap[buffType][0];
+			if (1.0f <= BuffPoint)
 			{
 				float SaltcureBuffDamagePerSecond = 5.0f;
 				//FString ParName = "BurningDamagePerSecond";

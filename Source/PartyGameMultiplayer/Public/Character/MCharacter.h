@@ -293,8 +293,8 @@ public:
 		TArray<USkeletalMesh*> CharacterBPArray;
 
 	// Buff Map
-	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
-	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
+	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime
+	// When the BuffPoint >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;

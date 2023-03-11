@@ -15,6 +15,7 @@
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "LevelInteraction/MinigameMainObjective.h"
+#include "Character/MCharacter.h"
 
 
 AWeaponTaser::AWeaponTaser()
@@ -187,7 +188,32 @@ void AWeaponTaser::AttackStart()
 
 void AWeaponTaser::AttackStop()
 {
-	Super::AttackStop();
+	if (!bAttackOn || !GetOwner())
+		return;
+
+	bAttackOn = false;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+	for (auto& Elem : AttackObjectMap)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(Elem.Key))
+		{
+			if(pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
+				pMCharacter->BuffMap[EnumAttackBuff::Paralysis][0] -= 1.0f;
+		}
+	}
+	AttackObjectMap.Empty();
+
+	if (AttackType == EnumAttackType::Constant)
+		CD_CanRecover = false;
+	TimePassed_SinceAttackStop = 0.0f;
+
+	SetActorEnableCollision(bAttackOn);
+	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	//bShouldStretchOut = false;
 	bHitTarget = false;
