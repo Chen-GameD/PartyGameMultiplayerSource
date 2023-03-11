@@ -39,7 +39,7 @@ ABaseWeapon::ABaseWeapon()
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
-	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
+	DisplayCase->SetBoxExtent(FVector3d(90.0f, 90.0f, 90.0f));
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(DisplayCase);
@@ -366,17 +366,17 @@ void ABaseWeapon::Destroyed()
 
 void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 {
-	FVector NewLocation = WeaponMesh->GetComponentLocation();
-	FRotator NewRotation = WeaponMesh->GetComponentRotation();
+	FVector NewWorldLocation = WeaponMesh->GetComponentLocation();
+	FRotator NewWorldRotation = WeaponMesh->GetComponentRotation();
 	float RunningTime = GetGameTimeSinceCreation();
 	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
 	// Scale our height by a factor of 20
-	NewLocation.Z += DeltaHeight * 20.0f;   
+	NewWorldLocation.Z += DeltaHeight * 20.0f;
 	// Rotate by 20 degrees per second
 	float DeltaRotation = DeltaTime * 60.0f;    
-	NewRotation.Yaw += DeltaRotation;
-	WeaponMesh->SetWorldLocation(NewLocation);
-	WeaponMesh->SetWorldRotation(NewRotation);
+	NewWorldRotation.Yaw += DeltaRotation;
+	WeaponMesh->SetWorldLocation(NewWorldLocation);
+	WeaponMesh->SetWorldRotation(NewWorldRotation);
 }
 
 

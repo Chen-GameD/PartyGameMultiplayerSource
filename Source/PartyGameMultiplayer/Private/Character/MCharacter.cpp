@@ -18,7 +18,9 @@
 #include "Weapon/JsonFactory.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "WaterBodyActor.h"
 #include <Character/animUtils.h>
+
 
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
@@ -91,6 +93,10 @@ AMCharacter::AMCharacter()
     DashSpeed = DashDistance / DashTime;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
+
+	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
+	EffectGetHit->SetupAttachment(RootComponent);
+	EffectGetHit->bAutoActivate = false;
 
 	EffectRun = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectRun"));
 	EffectRun->SetupAttachment(RootComponent);
@@ -300,27 +306,11 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 			this->AnimState[7] = false;
 		}
 	}
-	
 }
 
 
-void AMCharacter::AdjustMaxWalkSpeed()
+void AMCharacter::AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
 {
-	// Adjust the walking speed according to the holding weapon
-	FString ParName = "";
-	if (CombineWeapon)
-		ParName = CombineWeapon->GetWeaponName();
-	else
-	{
-		if (LeftWeapon)
-			ParName = LeftWeapon->GetWeaponName();
-		else if (RightWeapon)
-			ParName = RightWeapon->GetWeaponName();
-	}
-	ParName += "_MaxWalkSpeedRatio";
-	float MaxWalkSpeedRatio = 1.0f;
-	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Parameter_Map.Contains(ParName))
-		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Parameter_Map[ParName];
 	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
 }
 
@@ -367,7 +357,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (RightWeapon)
 			{
-				// Drop off left weapon
+				// Drop off right weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
@@ -376,10 +366,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				DropOffWeapon(isLeft);
 			}
 		}
-		return;
 	}
-	
-	if (CurrentTouchedWeapon[0] && !IsDead)
+	else if(!IsDead)
 	{
 		IsPickingWeapon = true;
 		if (isLeft)
@@ -388,7 +376,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// to do
 			FString InputMessage = FString::Printf(TEXT("You Pick Up Left."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, InputMessage);
-			
+
 			if (LeftWeapon)
 			{
 				// Drop off left weapon
@@ -403,13 +391,13 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
 			LeftWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
-			
+
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
 			// Check if need combine
 			if (RightWeapon)
-			{	
+			{
 				// Set isRightHeld Anim State
 				this->AnimState[6] = true;
 				OnCombineWeapon();
@@ -430,7 +418,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off left weapon
 				DropOffWeapon(isLeft);
 			}
-			
+
 			RightWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Right, RightWeapon->textureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
@@ -439,7 +427,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
-			
+
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
@@ -455,6 +443,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
 		}
 	}
+	
 
 	IsPickingWeapon = false;
 
@@ -462,6 +451,23 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	{
 		SetTextureInUI();
 	}
+
+	// Adjust the walking speed according to the holding weapon
+	FString ParName = "";
+	if (CombineWeapon)
+		ParName = CombineWeapon->GetWeaponName();
+	else
+	{
+		if (LeftWeapon)
+			ParName = LeftWeapon->GetWeaponName();
+		else if (RightWeapon)
+			ParName = RightWeapon->GetWeaponName();
+	}
+	/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, ParName);*/
+	float MaxWalkSpeedRatio = 1.0f;
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+	AdjustMaxWalkSpeed(MaxWalkSpeedRatio);
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -612,8 +618,6 @@ void AMCharacter::Dash_Implementation()
 		}
 
 		// Dash implement
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
-		DashSpeed = DashDistance / DashTime;
 		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
@@ -712,6 +716,19 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
+	if (EffectGetHit && !EffectGetHit->IsActive())
+	{
+		EffectGetHit->Activate(); 
+		// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
+		// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
+		float Delay = 0.1f;  
+		FTimerHandle timerHandle;
+		GetWorldTimerManager().SetTimer(timerHandle, [this]
+			{
+				EffectGetHit->Deactivate();
+			}, Delay, false);
+	}	
+
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())
@@ -961,17 +978,21 @@ void AMCharacter::CallJumpLandEffect_Implementation()
 
 void AMCharacter::OnRep_IsAllowDash()
 {
-	// Update client care only, like UI
-
-	// EffectDash
-	if (!EffectDash)
-		return;
-	
-	if (!IsAllowDash)
+	if (IsAllowDash)
 	{
-		EffectDash->Activate();
-		FTimerHandle tmpHandle;
-		GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
+		DashSpeed = DashDistance / DashTime;
+		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+
+		if (EffectDash)
+		{
+			EffectDash->Activate();
+			FTimerHandle tmpHandle;
+			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
+		}		
 	}
 }
 
@@ -1157,6 +1178,10 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if(Cast<AWaterBody>(OtherActor))
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor overlaps with the waterbody"));
+
+
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
 	
@@ -1219,6 +1244,8 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	DashSpeed = DashDistance / DashTime;
+
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
@@ -1247,8 +1274,6 @@ void AMCharacter::BeginPlay()
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	//AdjustMaxWalkSpeed();
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)

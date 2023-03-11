@@ -32,5 +32,5 @@ public:
 	TMap<FString, float> MiniGame_Damage_Map;
 
 	UPROPERTY(EditAnywhere, Category = "Damage Manager")
-	TMap<FString, float> Character_Parameter_Map;
+	TMap<FString, float> Character_MaxWalkSpeed_Map;
 };

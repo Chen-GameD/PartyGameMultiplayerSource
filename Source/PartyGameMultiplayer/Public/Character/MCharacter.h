@@ -194,7 +194,8 @@ protected:
 	void SetDash();
 	void TurnOffDashEffect();
 
-	void AdjustMaxWalkSpeed();
+	UFUNCTION(NetMulticast, Reliable)
+	void AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -278,6 +279,8 @@ public:
 	TArray<int> SKDArray = { 0, 0, 0 };
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectGetHit;
+	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
@@ -327,7 +330,6 @@ protected:
 	bool CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
-	// to do
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon* LeftWeapon;
 	
