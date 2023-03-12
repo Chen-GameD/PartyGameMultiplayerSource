@@ -10,6 +10,9 @@
 #include "Components/PrimitiveComponent.h"
 #include "Net/UnrealNetwork.h"
 
+#include "Weapon/DamageManager.h"
+#include "Weapon/DamageType/MeleeDamageType.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 
 AWeaponLighter::AWeaponLighter()
 {
@@ -35,5 +38,42 @@ AWeaponLighter::AWeaponLighter()
 	if (DefaultAttackHitEffect.Succeeded())
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
+	}
+}
+
+
+void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (IsPickedUp && GetOwner())
+	{
+		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+			Cast<AMinigameMainObjective>(OtherActor))
+		{
+			if (!AttackObjectMap.Contains(OtherActor))
+				AttackObjectMap.Add(OtherActor);
+			AttackObjectMap[OtherActor] = 0.0f;
+			bAttackOverlap = true;
+			// Listen server
+			if (GetNetMode() == NM_ListenServer)
+			{
+				OnRep_bAttackOverlap();
+			}
+
+			if (AttackType != EnumAttackType::Constant && ApplyDamageCounter == 0 && HoldingController)
+			{
+				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+				// Add burning buff points
+				FString ParName = "Lighter_Burning_PointsToAdd_PerHit";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				{
+					float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("buffPointsToAdd: %f"), buffPointsToAdd));
+				}
+				ApplyDamageCounter++;
+			}
+		}
 	}
 }

@@ -101,7 +101,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{
+			{				
 				// change the transform of the TaserFork
 				if (Server_ActorBeingHit)
 				{
@@ -115,11 +115,16 @@ void AWeaponTaser::Tick(float DeltaTime)
 					CurRotation.Yaw = Server_TaserForkRotationYaw_WhenHit + (bNowVectorIsOnTheRight ? Angle : -Angle);
 					TaserForkMesh->SetWorldRotation(CurRotation);
 				}
+				
 				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
+					// Apply paralysis buff(drag towards the attacker)
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacter, DeltaTime);
+					// Stop attack when the character is dead
 					if (pCharacter->GetIsDead())
 						AttackStop();
 				}
+				// Stop attack when the MinigameMainObjective is dead
 				else if (AMinigameMainObjective* pMinigameMainObjective = Cast<AMinigameMainObjective>(Server_ActorBeingHit))
 				{
 					if (pMinigameMainObjective->GetCurrentHealth() <= 0)
@@ -130,6 +135,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
 		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
 	}
+	
 	// if attack stops, the fork will be back instantly
 	if (!bAttackOn)
 	{
@@ -150,12 +156,6 @@ void AWeaponTaser::Tick(float DeltaTime)
 			if (TaserForkMesh->GetRelativeScale3D() != TaserFork_OriginalRelativeScale)
 				TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
 		}
-	}
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
-		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
 	}
 
 }

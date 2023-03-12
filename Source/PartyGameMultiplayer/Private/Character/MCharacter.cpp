@@ -96,6 +96,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
 
+	Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+
 	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
 	EffectGetHit->SetupAttachment(RootComponent);
 	EffectGetHit->bAutoActivate = false;
@@ -117,7 +119,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->bAutoActivate = false;
 
 	CanMove = true;
-	BeingKnockbackBeforeThisTick = false;
 }
 
 void AMCharacter::Restart()
@@ -1096,12 +1097,12 @@ void AMCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
-void AMCharacter::CallJumpLandEffect_Implementation()
+void AMCharacter::CallJumpLandEffect_Implementation(bool bOnGround)
 {
 	if (!EffectJump || !EffectLand)
 		return;
 
-	if (IsOnGround)
+	if (bOnGround)
 	{
 		EffectLand->Activate();
 		EffectJump->Deactivate();
@@ -1154,21 +1155,21 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);
 
-		EnumWeaponType WeaponType = EnumWeaponType::None;
-		float DeltaTime_DamageCauser = 0;
-		if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		{
-			WeaponType = p->WeaponType;
-			DeltaTime_DamageCauser = p->CurDeltaTime;
-		}
-		if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		{
-			WeaponType = p->WeaponType;
-			DeltaTime_DamageCauser = p->CurDeltaTime;
-		}
-		if (WeaponType == EnumWeaponType::None)
-			return false;
-		ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
+		//EnumWeaponType WeaponType = EnumWeaponType::None;
+		//float DeltaTime_DamageCauser = 0;
+		//if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		//{
+		//	WeaponType = p->WeaponType;
+		//	DeltaTime_DamageCauser = p->CurDeltaTime;
+		//}
+		//if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		//{
+		//	WeaponType = p->WeaponType;
+		//	DeltaTime_DamageCauser = p->CurDeltaTime;
+		//}
+		//if (WeaponType == EnumWeaponType::None)
+		//	return false;
+		//ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
 
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
@@ -1184,33 +1185,6 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 
 		return damageApplied;
 	}
-
-	return 0.0f;
-}
-
-
-float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser)
-{
-	//if (!IsDead)
-	//{
-	//	float damageApplied = CurrentHealth - DamageTaken;
-	//	SetCurrentHealth(damageApplied);
-
-	//	// Score Kill Death Handling
-	//	if (CurrentHealth <= 0 && HasAuthority()) {
-	//		if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
-	//			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-	//				killerPS->addScore(5);
-	//				killerPS->addKill(1);
-	//			}
-	//			if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-	//				myPS->addDeath(1);
-	//			}
-	//		}
-	//	}
-
-	//	return damageApplied;
-	//}
 
 	return 0.0f;
 }
@@ -1442,11 +1416,13 @@ void AMCharacter::Tick(float DeltaTime)
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
 		if (oldIsOnGround != IsOnGround)
 		{
-			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]) &&
-				!(BeingKnockbackBeforeThisTick))
-				CallJumpLandEffect();
+			if(IsOnGround && 55.0f < Server_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
+				CallJumpLandEffect(true);
 		}
-		BeingKnockbackBeforeThisTick = false;
+		if (!IsOnGround)
+			Server_MaxHeightDuringLastTimeOffGround = FMath::Max(Server_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
+		else
+			Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	}
 
 	// Client(Listen Server)
@@ -1473,58 +1449,6 @@ void AMCharacter::Tick(float DeltaTime)
 	}
 }
 #pragma endregion Engine life cycle function
-
-
-void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
-{
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		if (!AWeaponDataHelper::DamageManagerDataAsset)
-			return;
-
-		EnumAttackBuff buffType;
-		/* Paralysis */
-		buffType = EnumAttackBuff::Paralysis;
-		if (CheckBuffMap(buffType))
-		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (0.0f < BuffPoint)
-			{
-				float DragSpeed = 0.0f;
-				FString ParName = "Paralysis_DragSpeed";
-				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-					DragSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetActorLocation(GetActorLocation() + TaserDragDirection_SinceLastApplyBuff * DragSpeed * DeltaTime);
-			}
-		}
-		/* Knockback */
-		buffType = EnumAttackBuff::Knockback;
-		if (CheckBuffMap(buffType))
-		{
-			// don't apply knockback if the character is being paralyzed
-			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]))
-			{
-				float& BuffPoint = BuffMap[buffType][0];
-				if (1.0f <= BuffPoint)
-				{
-					float Knockback_MoveSpeed = 0.0f;
-					FString ParName = "Knockback_MoveSpeed";
-					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-						Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-					KnockbackDirection_SinceLastApplyBuff.Z = 0.0f;
-					KnockbackDirection_SinceLastApplyBuff *= Knockback_MoveSpeed;
-					LaunchCharacter(KnockbackDirection_SinceLastApplyBuff, true, false);
-					BeingKnockbackBeforeThisTick = true;
-					BuffPoint -= 1.0f;
-				}
-			}
-		}
-
-		KnockbackDirection_SinceLastApplyBuff = FVector::ZeroVector;
-		TaserDragDirection_SinceLastApplyBuff = FVector::ZeroVector;
-	}
-}
 
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {

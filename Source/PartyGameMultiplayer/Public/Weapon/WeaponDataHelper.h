@@ -51,12 +51,10 @@ public:
 	AWeaponDataHelper();
 
 public:
-	//static float interval_ApplyDamage; // preset value for all constant damage
-
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
+	static float interval_ConstantWeaponApplyKnockback;
 
 	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
 	static TMap<EnumWeaponType, EnumAttackType> WeaponEnumToAttackTypeEnum_Map;
 	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
-
 };

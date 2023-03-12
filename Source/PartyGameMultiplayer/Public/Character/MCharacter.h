@@ -75,9 +75,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	// customized TakeDamge Function
-	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
-
 	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
@@ -142,7 +139,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
 	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 
 	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
@@ -170,7 +166,7 @@ protected:
 	void OnHealthUpdate();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void CallJumpLandEffect();
+	void CallJumpLandEffect(bool bOnGround);
 
 	UFUNCTION()
 	void OnRep_IsAllowDash();
@@ -327,8 +323,8 @@ public:
 	float Server_MaxWalkSpeed;
 
 	// Buff Map
-	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime
-	// When the BuffPoint >= 1, the buff will be activated
+	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
+	// When the BuffPoints >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
@@ -356,6 +352,7 @@ protected:
 	// Action
 	UPROPERTY(Replicated)
 	bool IsOnGround;
+	float Server_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
 	UPROPERTY(EditAnywhere, Category = "Server_Dash")

@@ -10,6 +10,7 @@
 //float AWeaponDataHelper::interval_ApplyDamage = 0.03f;
 
 UDamageManagerDataAsset* AWeaponDataHelper::DamageManagerDataAsset = nullptr;
+float AWeaponDataHelper::interval_ConstantWeaponApplyKnockback = 0.05f;
 
 TMap<EnumWeaponType, FString> AWeaponDataHelper::WeaponEnumToString_Map =
 {

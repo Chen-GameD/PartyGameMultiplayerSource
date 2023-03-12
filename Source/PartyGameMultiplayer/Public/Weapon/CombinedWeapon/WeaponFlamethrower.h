@@ -14,9 +14,8 @@ class PARTYGAMEMULTIPLAYER_API AWeaponFlamethrower : public ABaseWeapon
 // MEMBER METHODS
 public:
 	AWeaponFlamethrower();
-
+	virtual void Tick(float DeltaTime) override;
 protected:
-
 private:
 
 // MEMBER VARIABLES
