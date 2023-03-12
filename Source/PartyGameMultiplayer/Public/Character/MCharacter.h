@@ -219,8 +219,10 @@ protected:
 	void SetDash();
 	void TurnOffDashEffect();
 
+	float Server_GetMaxWalkSpeedRatioByWeapons();
+
 	UFUNCTION(NetMulticast, Reliable)
-	void AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -321,6 +323,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
+
+	float Server_MaxWalkSpeed;
 
 	// Buff Map
 	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime

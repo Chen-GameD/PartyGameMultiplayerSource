@@ -29,7 +29,7 @@ AProjectileBomb::AProjectileBomb()
 	ProjectileMovementComponent->InitialSpeed = 800.0f;
 	ProjectileMovementComponent->MaxSpeed = 800.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.65f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.15f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
