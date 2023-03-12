@@ -22,11 +22,7 @@
 #include "WaterBodyActor.h"
 #include <Character/animUtils.h>
 
-<<<<<<< HEAD
-
-=======
 #include "EngineUtils.h"
->>>>>>> Merge/Merge_AmosCMY_0311
 #include "Character/MPlayerController.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
@@ -916,12 +912,9 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		SetFollowWidgetVisibility(true);
 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		CharacterFollowWidget->HideTip();
-<<<<<<< HEAD
 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
 		//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
-=======
->>>>>>> Merge/Merge_AmosCMY_0311
 	}
 }
 
