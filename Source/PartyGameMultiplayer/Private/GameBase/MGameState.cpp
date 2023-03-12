@@ -28,7 +28,7 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, Team_2_Score);
 }
 
-void AMGameState::Client_SetClientStartGame_Implementation()
+void AMGameState::OnRep_IsGameStart()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	
@@ -59,7 +59,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->StartTheGame();
-			MyLocalPlayerController->Client_SetGameUIVisibility(IsGameStart);
 			MyLocalPlayerController->AddWeaponUI();
 		}
 	}
@@ -68,7 +67,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->EndTheGame();
-			MyLocalPlayerController->Client_SetGameUIVisibility(IsGameStart);
 		}
 	}
 }
@@ -76,10 +74,6 @@ void AMGameState::Client_SetClientStartGame_Implementation()
 void AMGameState::UpdateGameStartTimerUI()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
-	// if (MyLocalPlayerController)
-	// {
-	// 	MyLocalPlayerController->UI_UpdateGameTimer();
-	// }
 	if (MyLocalPlayerController)
 	{
 		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);
@@ -163,5 +157,5 @@ void AMGameState::Server_StartGame_Implementation()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
-	Client_SetClientStartGame();
+	OnRep_IsGameStart();
 }

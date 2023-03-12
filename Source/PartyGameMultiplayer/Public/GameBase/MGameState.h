@@ -21,7 +21,7 @@ public:
 	/** Property replication */
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UPROPERTY(ReplicatedUsing=Client_SetClientStartGame, BlueprintReadWrite)
+	UPROPERTY(ReplicatedUsing=OnRep_IsGameStart, BlueprintReadWrite)
 	bool IsGameStart = false;
 
 	// 300 sec by default
@@ -31,8 +31,8 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 
-	UFUNCTION(Client, Reliable)
-	void Client_SetClientStartGame();
+	UFUNCTION()
+	void OnRep_IsGameStart();
 
 	UFUNCTION()
 	void UpdateGameStartTimerUI();

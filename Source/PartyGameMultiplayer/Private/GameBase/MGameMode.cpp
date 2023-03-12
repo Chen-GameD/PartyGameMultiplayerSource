@@ -3,12 +3,12 @@
 
 #include "GameBase/MGameMode.h"
 
+#include "EngineUtils.h"
 #include "M_PlayerState.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameState.h"
-#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/TransformCalculus3D.h"
 #include "Character/MCharacter.h"
@@ -25,6 +25,132 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("GameMode Init JsonObject_1 failed"));*/
 
 	CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
+}
+
+void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+}
+
+void AMGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (NewPlayer)
+	{
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
+		{
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			if(NewPlayer->IsLocalController())
+			{
+				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
+				if(LocalPlayer)
+				{
+					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+				}
+				else
+				{
+					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+					check(IsValid(NetConnectionRef));
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				}
+			}
+			else
+			{
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				check(IsValid(NetConnectionRef));
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+			}
+		
+			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+			if(UniqueNetId == nullptr)
+				return;
+			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
+			if(bRegistrationSuccess)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
+			}
+		}
+		
+		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
+		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
+		MyPlayerState->UpdatePlayerName(playerUsername);
+		// Server call OnRep_PlayerNameString once for sync
+		MyPlayerState->OnRep_PlayerNameString();
+		
+		CurrentPlayerNum++;
+
+		if (NewPlayer->IsLocalPlayerController())
+		{
+			AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
+			if (MyPawn)
+			{
+				MyPawn->OnRep_PlayerState();
+			}
+		}
+	}
+}
+
+void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+}
+
+void AMGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	if (Exiting)
+	{
+		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
+		{
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			if(NewPlayer->IsLocalController())
+			{
+				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
+				if(LocalPlayer)
+				{
+					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+				}
+				else
+				{
+					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+					check(IsValid(NetConnectionRef));
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				}
+			}
+			else
+			{
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				check(IsValid(NetConnectionRef));
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+			}
+		
+			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+			if(UniqueNetId == nullptr)
+				return;
+			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
+			if(bRegistrationSuccess)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+			}
+		}
+
+		CurrentPlayerNum--;
+
+		if (CurrentPlayerNum <= 0)
+		{
+			// Need to restart the server level
+			//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+		}
+	}
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
@@ -49,45 +175,24 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 		spawnLocation = spawnPlayerStart->GetActorTransform().GetLocation();
 		spawnRotation = spawnPlayerStart->GetActorTransform().GetRotation().Rotator();
 
-		// Set skeletalMesh by team index
-		int index = 0;
-		AM_PlayerState* CurrentControllerPS = PlayerController->GetPlayerState<AM_PlayerState>();
-		if (CurrentControllerPS->TeamIndex == 1)
+		// Only Reset the location of the pawn and reset the status;
+		AMCharacter* MyCharacter = Cast<AMCharacter>(PlayerController->GetPawn());
+		if (MyCharacter)
 		{
-			index = 0;
-		}
-		else if (CurrentControllerPS->TeamIndex == 2)
-		{
-			index = 1;
-		}
-		
-		USkeletalMesh* spawnCharacter = CharacterBPArray[index];
+			MyCharacter->SetActorLocation(spawnLocation);
+			MyCharacter->SetActorRotation(spawnRotation);
+			MyCharacter->ResetCharacterStatus();
 
-		//ACharacter* charSpawned = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		//charSpawned->GetMesh()->SetSkeletalMesh(spawnCharacter);
-
-		APawn* spawnPawn = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		AMCharacter* spawnActor = Cast<AMCharacter>(spawnPawn);
-		spawnActor->Multicast_SetMesh(spawnCharacter);
-		
-
-		if (IsValid(spawnActor))
-		{
-			PlayerController->Possess(spawnActor);
-			Cast<AMPlayerController>(PlayerController)->Client_RefreshWeaponUI();
+			// Temp for syn mesh every time when player respawn
+			// After the customize function is finished
+			// Need to delete, let the mesh only update once when the client join an session
+			//Cast<AMPlayerController>(PlayerController)->NetMulticast_SynMesh();
 		}
 	}
 }
 
 void AMGameMode::Server_RespawnMinigameObject_Implementation()
 {
-	// if (MinigameObjectClass)
-	// {
-	// 	FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
-	// 	FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-	// 	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameObjectClass, spawnLocation, spawnRotation);
-	// }
-
 	if (MinigameDataAsset)
 	{
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
@@ -166,6 +271,36 @@ void AMGameMode::NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady
 void AMGameMode::StartTheGame()
 {
 	AMGameState* MyGameState = GetGameState<AMGameState>();
+
+	// Double check if the skin information set correctly.
+	// Later probably will use some other way to do this.
+	// Like do the Sync after everyone joined the session and then show the game level ( Add an interval level for this )
+	// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+	// {
+	// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
+	// 	
+	// 	if (controller)
+	// 	{
+	// 		controller->NetMulticast_SynMesh();
+	// 	}
+	// }
+
+	// In Here, system already created a pawn for all clients and server.
+	// It's safe to update the player init information like skin and player name.
+	// AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
+	// if (MyPawn)
+	// {
+	// 	MyPawn->NetMulticast_InitNewPlayerInformation();
+	// }
+	// for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	// {
+	// 	AMCharacter* CurrentPawn = *PawnItr;
+	// 	if (CurrentPawn)
+	// 	{
+	// 		CurrentPawn->NetMulticast_InitNewPlayerInformation();
+	// 	}
+	// }
+	
 	if (MyGameState)
 	{
 		// Set the game time
@@ -176,122 +311,6 @@ void AMGameMode::StartTheGame()
 	}
 
 	Server_RespawnMinigameObject();
-}
-
-void AMGameMode::PostLogin(APlayerController* NewPlayer)
-{
-	Super::PostLogin(NewPlayer);
-
-	if (NewPlayer)
-	{
-		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
-		{
-			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(NewPlayer->IsLocalController())
-			{
-				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
-				if(LocalPlayer)
-				{
-					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
-				}
-				else
-				{
-					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-					check(IsValid(NetConnectionRef));
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
-				}
-			}
-			else
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				check(IsValid(NetConnectionRef));
-				UniqueNetIdRepl = NetConnectionRef->PlayerId;
-			}
-		
-			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId == nullptr)
-				return;
-			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
-			if(bRegistrationSuccess)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
-			}
-		}
-
-		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
-		Cast<AMPlayerController>(NewPlayer)->GetPlayerState<AM_PlayerState>()->UpdatePlayerName(playerUsername);
-		
-		CurrentPlayerNum++;
-
-		// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-		// {
-		// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-		//
-		// 	if (controller)
-		// 	{
-		// 		controller->Client_SynMeshWhenJoinSession();
-		// 	}
-		// }
-		//Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
-		Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
-	}
-}
-
-void AMGameMode::Logout(AController* Exiting)
-{
-	Super::Logout(Exiting);
-
-	if (Exiting)
-	{
-		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
-		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
-		{
-			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(NewPlayer->IsLocalController())
-			{
-				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
-				if(LocalPlayer)
-				{
-					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
-				}
-				else
-				{
-					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-					check(IsValid(NetConnectionRef));
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
-				}
-			}
-			else
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				check(IsValid(NetConnectionRef));
-				UniqueNetIdRepl = NetConnectionRef->PlayerId;
-			}
-		
-			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId == nullptr)
-				return;
-			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
-			if(bRegistrationSuccess)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
-			}
-		}
-
-		CurrentPlayerNum--;
-
-		if (CurrentPlayerNum <= 0)
-		{
-			// Need to restart the server level
-			//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
-		}
-	}
 }
 
 void AMGameMode::TestRestartLevel()

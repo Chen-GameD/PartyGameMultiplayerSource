@@ -45,6 +45,14 @@ public:
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
+	// Update Player Skill UI
+	void InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime);
+	// Update Player Skill Opacity
+	void InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percentage);
+	// Toggle Player Buff Widget
+	void InGame_ToggleFireBuffWidget(bool IsShowing);
+	void InGame_ToggleShockBuffWidget(bool IsShowing);
+	
 
 	// Show or Hide InGame_PlayerWeaponInfoWidget
 	UFUNCTION()
@@ -64,7 +72,7 @@ public:
 	void InGame_UpdateMinigameHint(FString i_Hint);
 	// Initialize the game status UI content
 	UFUNCTION()
-	void InGame_InitGameStatusWidgetContent();
+	void InGame_InitGameStatusAndPlayerStatusWidgetContent();
 
 protected:
 	// In Game UI Class Ref

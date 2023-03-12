@@ -3,6 +3,7 @@
 
 #include "Character/MPlayerController.h"
 
+#include "EngineUtils.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
@@ -30,23 +31,11 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	//Replicate Action
 }
 
-// void AMPlayerController::UpdateLobbyMenu_Implementation()
-// {
-// 	if (IsLocalPlayerController())
-// 	{
-// 		UI_UpdateLobbyMenu();
-// 	}
-// }
-
-void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex, const FString& i_PlayerName)
+void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
 	{
-		if (i_PlayerName != "")
-		{
-			GetPlayerState<AM_PlayerState>()->UpdatePlayerName(i_PlayerName);
-		}
 		GetPlayerState<AM_PlayerState>()->UpdateTeamIndex(i_TeamIndex);
 	}
 }
@@ -56,17 +45,6 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
 	MyServerPlayerState->UpdatePlayerReadyState();
-	// if (MyServerPlayerState->TeamIndex != 0)
-	// {
-	// 	if (MyServerPlayerState->IsReady == true)
-	// 	{
-	// 		MyServerPlayerState->IsReady = false;
-	// 	}
-	// 	else
-	// 	{
-	// 		MyServerPlayerState->IsReady = true;
-	// 	}
-	// }
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
@@ -88,9 +66,17 @@ void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 	}
 }
 
+void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
+	}
+}
+
 AMInGameHUD* AMPlayerController::GetInGameHUD()
 {
-	return MyInGameHUD;
+	return MyInGameHUD ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
 }
 
 void AMPlayerController::BeginPlay()
@@ -103,37 +89,6 @@ void AMPlayerController::BeginPlay()
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
 		check(MyInGameHUD);
 	}
-	
-	// if (IsLocalPlayerController())
-	// {
-	// 	UI_ShowLobbyMenu();
- //        
-	// 	// Get Name and update to playerstate
-	// 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
-	// 	UMGameInstance* MyGameInstance = Cast<UMGameInstance>(GetGameInstance());
-	// 	if (MyPlayerState && MyGameInstance)
-	// 	{
-	// 		MyPlayerState->UpdatePlayerName(MyGameInstance->PlayerName);
-	// 		MyPlayerState->UpdateTeamIndex();
-	// 	}
-	// 	//GetPlayerState<AM_PlayerState>()->UpdatePlayerName(Cast<UMGameInstance>(GetGameInstance())->PlayerName);
- //        
-	// 	//GetPlayerState<AM_PlayerState>()->UpdateTeamIndex();
-	// }
-	
-
-	// if (IsLocalPlayerController())
-	// {
-	// 	//FInputModeGameAndU
-	// 	FInputModeGameOnly inputMode;
-	// 	inputMode.SetConsumeCaptureMouseDown(false);
-	// 	SetInputMode(inputMode);
-	// 	// set our turn rate for input
-	// 	TurnRateGamePad = 50.f;
-	//
-	// 	bShowMouseCursor = true;
-	// 	DefaultMouseCursor = EMouseCursor::Default;
-	// }
 }
 
 void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
@@ -155,14 +110,6 @@ void AMPlayerController::SetupInputComponent()
 	
 	InputComponent->BindAxis("Move Forward / Backward", this, &AMPlayerController::MoveForward);
 	InputComponent->BindAxis("Move Right / Left", this, &AMPlayerController::MoveRight);
-
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	//InputComponent->BindAxis("Turn Right / Left Mouse", this, &AMPlayerController::AddControllerYawInput);
-	//InputComponent->BindAxis("Turn Right / Left Gamepad", this, &AMPlayerController::TurnAtRate);
-	//InputComponent->BindAxis("Look Up / Down Mouse", this, &AMPlayerController::AddControllerPitchInput);
-	//InputComponent->BindAxis("Look Up / Down Gamepad", this, &AMPlayerController::LookUpAtRate);
 
 	// handle touch devices
 	InputComponent->BindTouch(IE_Pressed, this, &AMPlayerController::TouchStarted);
@@ -222,40 +169,11 @@ void AMPlayerController::StartTheGame()
 			WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
-
-	// Remove All Widget
-	// TO DO: need to move UI from pawn to controller
-	//UWidgetLayoutLibrary::RemoveAllWidgets(GetWorld());
-
-	// Add timer UI
-	// if (WB_GameTimerUIClass)
-	// {
-	// 	if (!WB_GameTimerUI)
-	// 	{
-	// 		// Create menu on client
-	// 		if (IsLocalPlayerController())
-	// 		{
-	// 			WB_GameTimerUI = CreateWidget<UUserWidget>(this, WB_GameTimerUIClass);
-	// 			//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
-	// 			
-	// 			WB_GameTimerUI->AddToViewport();
-	// 			//FInputModeGameAndU
-	// 			FInputModeGameOnly inputMode;
-	// 			inputMode.SetConsumeCaptureMouseDown(false);
-	// 			SetInputMode(inputMode);
-	// 			// set our turn rate for input
-	// 			//TurnRateGamePad = 50.f;
-	// 			//
-	// 			bShowMouseCursor = true;
-	// 			DefaultMouseCursor = EMouseCursor::Default;
-	// 		}
-	// 	}
-	// }
 	
 	if (MyInGameHUD)
 	{
 		// Show and Init Game Status UI
-		MyInGameHUD->InGame_InitGameStatusWidgetContent();
+		MyInGameHUD->InGame_InitGameStatusAndPlayerStatusWidgetContent();
 		
 		// Set the input mode
 		FInputModeGameOnly inputMode;
@@ -269,45 +187,14 @@ void AMPlayerController::StartTheGame()
 		// No HUD
 		// TODO
 	}
-}
 
-void AMPlayerController::Client_SetGameUIVisibility_Implementation(bool isVisible)
-{
-	for(FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
+	// Update All Pawn's FollowWidget status
+	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
 	{
-		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
-
-		if (pawn && !pawn->IsLocallyControlled())
+		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
+		if (MyPawn)
 		{
-			pawn->SetGameUIVisibility(isVisible);
-		}
-		else if (pawn && pawn->IsLocallyControlled())
-		{
-			pawn->SetLocallyControlledGameUI(isVisible);
-		}
-	}
-
-	// Open Current Player Status Widget
-	if (MyInGameHUD && IsLocalPlayerController() && isVisible)
-	{
-		auto name = GetPlayerState<AM_PlayerState>()->GetPlayerName();
-		MyInGameHUD->StartGameUI(name);
-	}
-}
-
-void AMPlayerController::Client_SynMeshWhenJoinSession_Implementation()
-{
-	for (FConstPawnIterator iterator = GetWorld()->GetPawnIterator(); iterator; ++iterator)
-	{
-		AMCharacter* pawn = Cast<AMCharacter>(*iterator);
-		
-		if (pawn)
-		{
-			AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(pawn->GetPlayerState());
-			if (MyPlayerState)
-			{
-				pawn->SetThisCharacterMesh(MyPlayerState->TeamIndex);
-			}
+			MyPawn->SetFollowWidgetVisibility(true);
 		}
 	}
 }
@@ -315,18 +202,18 @@ void AMPlayerController::Client_SynMeshWhenJoinSession_Implementation()
 void AMPlayerController::Server_RequestRespawn_Implementation()
 {
 	// Delete current controlled character
-	GetPawn()->Destroy();
+	//GetPawn()->Destroy();
 	
 	AMGameMode* myGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 
 	if (myGameMode)
 	{
 		myGameMode->Server_RespawnPlayer(this);
-		AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		if (myGameState)
-		{
-			Client_SetGameUIVisibility(myGameState->IsGameStart);
-		}
+		// AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		// if (myGameState)
+		// {
+		// 	Client_SetGameUIVisibility(myGameState->IsGameStart);
+		// }
 	}
 }
 
