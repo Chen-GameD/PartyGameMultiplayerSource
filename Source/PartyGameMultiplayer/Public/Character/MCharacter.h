@@ -165,9 +165,6 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void CallJumpLandEffect(bool bOnGround);
-
 	UFUNCTION()
 	void OnRep_IsAllowDash();
 
@@ -205,6 +202,9 @@ protected:
 	DECLARE_DELEGATE_OneParam(FIsMeleeRelease, bool);
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
+
+	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
+	void Zoom(bool bZoomOut);
 
 	/* Called for Server_Dash input */
 	UFUNCTION()
@@ -321,6 +321,11 @@ public:
 		TArray<USkeletalMesh*> CharacterBPArray;
 
 	float Server_MaxWalkSpeed;
+	float Client_LowSpeedWalkAccumulateTime;
+	float CurFov;
+	float MinFov;
+	float MaxFov;
+	bool bShouldZoomOut;
 
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
@@ -350,7 +355,6 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(Replicated)
 	bool IsOnGround;
 	float Server_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)

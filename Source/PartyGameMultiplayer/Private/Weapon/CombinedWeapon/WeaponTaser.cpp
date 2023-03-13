@@ -260,20 +260,26 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 
 	if (IsPickedUp && GetOwner())
 	{
-		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor))
 		{
-			// Check if it hits teammates
-			if (auto pCharacterBeingHit = Cast<ACharacter>(OtherActor))
+			// if it is AMCharacter
+			if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
 			{
+				// Check if it hits teammates
 				auto MyController = HoldingController;
 				if (!MyController)
 					return;
 				AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
 				AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-
 				if (!MyPS || !TheOtherCharacterPS || MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				{
+					AttackStop();
 					return;
+				}
+				// Apply paralysis buff
+				if (pCharacterBeingHit->CheckBuffMap(EnumAttackBuff::Paralysis))
+					pCharacterBeingHit->BuffMap[EnumAttackBuff::Paralysis][0] += 1.0f;
 			}
 
 			bHitTarget = true;
@@ -298,13 +304,14 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			if (ApplyDamageCounter == 0 && HoldingController)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
 				ApplyDamageCounter++;
 			}
 		}
 		else
 		{
 			// if hit something other than the following(like building, rocks, etc), the attack should stop
-			if (!Cast<ACharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
+			if (!Cast<AMCharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
 				AttackStop();
 		}
 	}

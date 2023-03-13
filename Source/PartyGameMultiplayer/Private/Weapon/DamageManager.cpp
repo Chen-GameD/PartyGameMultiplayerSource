@@ -138,7 +138,7 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 
 bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* Controller, class AMCharacter* DamagedCharacter, float DeltaTime)
 {	
-	if (!DamagedCharacter->CheckBuffMap(AttackBuff) || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !Controller || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	/* Knockback */

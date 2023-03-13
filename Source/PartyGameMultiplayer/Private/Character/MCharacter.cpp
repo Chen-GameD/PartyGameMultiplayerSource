@@ -15,6 +15,7 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
@@ -72,6 +73,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	CurFov = MinFov = 90.0f;
+	MaxFov = 108.0f;
 
 	//Create HealthBar UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -97,6 +100,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	//MeshRotation = GetMesh()->GetRelativeRotation();
 
 	Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+	Client_LowSpeedWalkAccumulateTime = 0;
 
 	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
 	EffectGetHit->SetupAttachment(RootComponent);
@@ -187,7 +191,6 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsDead);
 
 	//Replicate Action
-	DOREPLIFETIME(AMCharacter, IsOnGround);
 	DOREPLIFETIME(AMCharacter, IsAllowDash);
 
 	//DOREPLIFETIME(AMCharacter, MeshRotation);
@@ -231,6 +234,9 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMCharacter::Dash);
 
+	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
+	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
+
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &AMCharacter::TouchStopped);
@@ -258,7 +264,7 @@ void AMCharacter::Attack_Implementation()
 	if ((LeftWeapon || RightWeapon || CombineWeapon) && !IsDead)
 	{
 		// Can't Attack(No WeaponAttackStart, No attack animation) during Paralysis
-		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0.0f < BuffMap[EnumAttackBuff::Paralysis][1])
+		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 1.0f <= BuffMap[EnumAttackBuff::Paralysis][0])
 			return;
 
 		FString AttackMessage = FString::Printf(TEXT("You Start Attack."));
@@ -669,6 +675,11 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 		return;
 
 	StopJumping();
+}
+
+void AMCharacter::Zoom(bool bZoomOut)
+{
+	bShouldZoomOut = bZoomOut;
 }
 
 void AMCharacter::Dash()
@@ -1097,23 +1108,6 @@ void AMCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
-void AMCharacter::CallJumpLandEffect_Implementation(bool bOnGround)
-{
-	if (!EffectJump || !EffectLand)
-		return;
-
-	if (bOnGround)
-	{
-		EffectLand->Activate();
-		EffectJump->Deactivate();
-	}
-	else
-	{
-		EffectJump->Activate();
-		EffectLand->Deactivate();
-	}
-}
-
 void AMCharacter::OnRep_IsAllowDash()
 {
 	if (!IsAllowDash)
@@ -1377,7 +1371,6 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
@@ -1410,41 +1403,78 @@ void AMCharacter::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
+		// Deal with buff
 		ActByBuff_PerTick(DeltaTime);
-
-		bool oldIsOnGround = IsOnGround;
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-		if (oldIsOnGround != IsOnGround)
-		{
-			if(IsOnGround && 55.0f < Server_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
-				CallJumpLandEffect(true);
-		}
-		if (!IsOnGround)
-			Server_MaxHeightDuringLastTimeOffGround = FMath::Max(Server_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
-		else
-			Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
-			return;
-
-		// EffectRun
-		if (EffectRun->IsActive() == false)
+		// Zoom
+		float ZoomOutSpeed = 100.0f;
+		float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+		if (bShouldZoomOut)
 		{
-			if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
+			if (CurFov < MaxFov)
 			{
-				EffectRun->Activate();
+				CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+				FollowCamera->SetFieldOfView(CurFov);
 			}
 		}
 		else
 		{
-			if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
+			if (MinFov < CurFov)
 			{
-				EffectRun->Deactivate();
+				CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+				FollowCamera->SetFieldOfView(CurFov);
 			}
+		}
+		// Effect Land/Jump
+		bool oldIsOnGround = IsOnGround;
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (oldIsOnGround != IsOnGround)
+		{
+			// call land effect when landing hard
+			if (IsOnGround && 30.0f < Server_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
+			{
+				if (EffectLand && EffectLand->GetAsset())
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectLand->GetAsset(), EffectLand->GetComponentLocation());
+			}
+			// call jump effect when jumping hard
+			if (!IsOnGround && 500.0f < GetCharacterMovement()->Velocity.Z)
+			{
+				if (EffectJump && EffectJump->GetAsset())
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectJump->GetAsset(), EffectJump->GetComponentLocation());
+			}
+		}		
+		if (!IsOnGround)
+			Server_MaxHeightDuringLastTimeOffGround = FMath::Max(Server_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
+		else
+			Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+
+		// EffectRun
+		if (OriginalMaxWalkSpeed * 0.15f < GetCharacterMovement()->Velocity.Size())
+		{
+			if (IsOnGround)
+			{
+				if (EffectRun && !(EffectRun->IsActive()))
+					EffectRun->Activate();
+			}	
+			else
+			{				
+				if (EffectRun && EffectRun->IsActive())
+					EffectRun->Deactivate();				
+			}
+			Client_LowSpeedWalkAccumulateTime = 0;
+		}
+		else
+		{
+			Client_LowSpeedWalkAccumulateTime += DeltaTime;
+			if (0.5f < Client_LowSpeedWalkAccumulateTime)
+			{
+				if (EffectRun && EffectRun->IsActive())
+					EffectRun->Deactivate();
+			}			
 		}
 	}
 }
@@ -1478,8 +1508,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (1.0f <= BuffPoint)
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
 			{
 				if (CanMove)
 				{
@@ -1507,8 +1537,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Saltcure;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (1.0f <= BuffPoint)
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
 			{
 				float SaltcureBuffDamagePerSecond = 5.0f;
 				//FString ParName = "BurningDamagePerSecond";

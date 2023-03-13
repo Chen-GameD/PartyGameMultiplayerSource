@@ -462,7 +462,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 {
 	if (IsPickedUp && GetOwner())
 	{
-		if( (Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor) )
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
@@ -491,7 +491,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 {
 	if (IsPickedUp && GetOwner())
 	{
-		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor))
 		{
 			if (AttackObjectMap.Contains(OtherActor))
