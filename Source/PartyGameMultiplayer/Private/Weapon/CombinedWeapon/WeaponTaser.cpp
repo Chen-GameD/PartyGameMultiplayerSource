@@ -202,7 +202,7 @@ void AWeaponTaser::AttackStop()
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(Elem.Key))
 		{
-			if(pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
+			if(pMCharacter == Server_ActorBeingHit && pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
 				pMCharacter->BuffMap[EnumAttackBuff::Paralysis][0] -= 1.0f;
 		}
 	}
