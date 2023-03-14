@@ -35,6 +35,7 @@ ABaseWeapon::ABaseWeapon()
 	WeaponType = EnumWeaponType::None;
 	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
+	bAttackOn = false;
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
