@@ -272,13 +272,7 @@ void AMCharacter::Attack_Implementation()
 
 		if (CombineWeapon)
 		{
-			if (CombineWeapon->WeaponType == EnumWeaponType::Taser)
-			{
-				FTimerHandle TimerHandle;
-				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this] { if (this)CombineWeapon->AttackStart(); }, 0.2f, false);
-			}
-			else
-				CombineWeapon->AttackStart();
+			CombineWeapon->AttackStart();
 		}
 		else
 		{
@@ -924,7 +918,7 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	SetTipUI(false);
 }
 
-// Multicast respawn result
+// Multicast respawn result, reset all kinds of variables
 void AMCharacter::NetMulticast_RespawnResult_Implementation()
 {
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
@@ -937,6 +931,7 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
 		//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 	}
 }
 

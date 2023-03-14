@@ -135,8 +135,6 @@ void AWeaponTaser::Tick(float DeltaTime)
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
 		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
 	}
-	
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (bAttackOn ? TEXT("true") : TEXT("false")));
 
 	// if attack stops, the fork will be back instantly
 	if (!bAttackOn)
@@ -215,7 +213,8 @@ void AWeaponTaser::AttackStart()
 
 void AWeaponTaser::AttackStop()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Enter Taser AttackStop"));
+	if (!bAttackOn || !GetOwner())
+		return;
 	bAttackOn = false;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -241,7 +240,6 @@ void AWeaponTaser::AttackStop()
 	
 	SetTaserForkAttached(true);
 	bHitTarget = false;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, (bAttackOn ? TEXT("AttackStopEnding: true") : TEXT("AttackStopEnding: false")));
 }
 
 void AWeaponTaser::BeginPlay()
