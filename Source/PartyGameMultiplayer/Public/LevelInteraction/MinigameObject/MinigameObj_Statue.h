@@ -16,5 +16,20 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Statue : public AMinigameMainObjecti
 
 public:
 	AMinigameObj_Statue();
+
+	virtual void BeginPlay() override;
+
+protected:
+	// only is called on server
+	UFUNCTION(Category = "Weapon")
+	virtual void OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION(Category = "Weapon")
+	virtual void OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+protected:
+	UPROPERTY(EditAnywhere, Category = "Components")
+	UStaticMeshComponent* RootMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPrimitiveComponent* ShellOverlapComponent;
 	
 };
