@@ -194,7 +194,8 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
 		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
 		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
-		spawnActor->UpdateScoreCanGet(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+		if(spawnActor && MinigameDataAsset)
+			spawnActor->UpdateScoreCanGet(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
 		
 		// Update Minigame Hint
 		AMGameState* MyGameState = GetGameState<AMGameState>();

@@ -1,8 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "LevelInteraction/TriggerBoxJumpPad.h"
-#include "GameFramework/Character.h"
+
+#include "NiagaraComponent.h"
 #include "DrawDebugHelpers.h"
+
+#include "GameFramework/Character.h"
+#include "Character/MCharacter.h"
+
 
 ATriggerBoxJumpPad::ATriggerBoxJumpPad()
 {
@@ -35,8 +40,9 @@ void ATriggerBoxJumpPad::BeginPlay()
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
-    if (OtherActor && OtherActor != this && pCharacter) {
+    AMCharacter* pCharacter = Cast<AMCharacter>(OtherActor);
+    if (OtherActor && OtherActor != this && pCharacter) 
+    {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character enters the Jump Pad"));
         pCharacter->LaunchCharacter(LaunchVelocity, bXYOverride, bZOverride);
     }
@@ -44,9 +50,10 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, cl
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
-    if (OtherActor && OtherActor != this && pCharacter) {
+    AMCharacter* pCharacter = Cast<AMCharacter>(OtherActor);
+
+    if (OtherActor && OtherActor != this && pCharacter) 
+    {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character exits the Jump Pad"));
-        //pCharacter->StopJumping();
     }
 }

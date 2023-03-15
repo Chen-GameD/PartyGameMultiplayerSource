@@ -49,7 +49,7 @@ void AWeaponCannon::SpawnProjectile()
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
 		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + 
-						FMath::RandRange(0.6f, 0.9f) * pCharacter->GetActorUpVector() + 
+						FMath::RandRange(1.1f, 1.3f) * pCharacter->GetActorUpVector() + 
 						FMath::RandRange(-0.2f, 0.2f) * pCharacter->GetActorRightVector()).Rotation();  // character up with random bias
 
 		FActorSpawnParameters spawnParameters;

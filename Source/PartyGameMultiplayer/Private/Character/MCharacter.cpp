@@ -15,6 +15,7 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
@@ -72,6 +73,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	CurFov = MinFov = 90.0f;
+	MaxFov = 108.0f;
 
 	//Create HealthBar UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -89,12 +92,15 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsAllowDash = true;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-    DashDistance = 200.0f;
-    DashTime = 0.2f;
-    DashSpeed = DashDistance / DashTime;
+	DashDistance = 200.0f;
+	DashTime = 0.2f;
+	DashSpeed = DashDistance / DashTime;
 	DashCoolDown = 5.0f;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
+
+	Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+	Client_LowSpeedWalkAccumulateTime = 0;
 
 	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
 	EffectGetHit->SetupAttachment(RootComponent);
@@ -117,7 +123,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->bAutoActivate = false;
 
 	CanMove = true;
-	BeingKnockbackBeforeThisTick = false;
 }
 
 void AMCharacter::Restart()
@@ -127,7 +132,7 @@ void AMCharacter::Restart()
 	if (IsLocallyControlled())
 	{
 		AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-		playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+		playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
 	}
 }
 
@@ -186,9 +191,8 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsDead);
 
 	//Replicate Action
-	DOREPLIFETIME(AMCharacter, IsOnGround);
 	DOREPLIFETIME(AMCharacter, IsAllowDash);
-	
+
 	//DOREPLIFETIME(AMCharacter, MeshRotation);
 
 	//Replicate weapons information
@@ -208,7 +212,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	// Replicate AnimState
 	DOREPLIFETIME(AMCharacter, AnimState);
 	// Replicate SKD Array
-	DOREPLIFETIME(AMCharacter, SKDArray); 
+	DOREPLIFETIME(AMCharacter, SKDArray);
 }
 #pragma endregion Replicated Properties
 
@@ -229,6 +233,9 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction<FPickUpDelegate>("PickUpRight", IE_Pressed, this, &AMCharacter::PickUp, false);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMCharacter::Dash);
+
+	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
+	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMCharacter::TouchStarted);
@@ -257,21 +264,15 @@ void AMCharacter::Attack_Implementation()
 	if ((LeftWeapon || RightWeapon || CombineWeapon) && !IsDead)
 	{
 		// Can't Attack(No WeaponAttackStart, No attack animation) during Paralysis
-		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0.0f < BuffMap[EnumAttackBuff::Paralysis][1])
+		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 1.0f <= BuffMap[EnumAttackBuff::Paralysis][0])
 			return;
 
 		FString AttackMessage = FString::Printf(TEXT("You Start Attack."));
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AttackMessage);
-		
+
 		if (CombineWeapon)
 		{
-			if (CombineWeapon->WeaponType == EnumWeaponType::Taser)
-			{
-				FTimerHandle TimerHandle;
-				GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this] { if (this)CombineWeapon->AttackStart(); }, 0.2f, false);
-			}
-			else
-				CombineWeapon->AttackStart();
+			CombineWeapon->AttackStart();
 		}
 		else
 		{
@@ -301,7 +302,7 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 			{
 				FString AttackMessage = FString::Printf(TEXT("You Stop Attack."));
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AttackMessage);
-        		
+
 				if (CombineWeapon)
 				{
 					CombineWeapon->AttackStop();
@@ -317,7 +318,7 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 						RightWeapon->AttackStop();
 					}
 				}
-        
+
 				// Set isAttack to False
 				this->AnimState[7] = false;
 			}
@@ -329,7 +330,7 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 		{
 			FString AttackMessage = FString::Printf(TEXT("You Stop Attack."));
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, AttackMessage);
-        		
+
 			if (CombineWeapon)
 			{
 				CombineWeapon->AttackStop();
@@ -345,17 +346,50 @@ void AMCharacter::StopAttack_Implementation(bool isMeleeRelease)
 					RightWeapon->AttackStop();
 				}
 			}
-        
+
 			// Set isAttack to False
 			this->AnimState[7] = false;
 		}
 	}
 }
 
-
-void AMCharacter::AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
+float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 {
-	GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	FString ParName = "";
+	int CntShellHeld = 0;
+	if (CombineWeapon)
+		ParName = CombineWeapon->GetWeaponName();
+	else
+	{
+		if (LeftWeapon)
+		{
+			ParName = LeftWeapon->GetWeaponName();
+			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
+		if (RightWeapon)
+		{
+			ParName = RightWeapon->GetWeaponName();
+			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
+				CntShellHeld++;
+		}
+	}
+	if (1 == CntShellHeld)
+		ParName = "OneShell";
+	else if (2 == CntShellHeld)
+		ParName = "TwoShells";
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
+	float MaxWalkSpeedRatio = 1.0f;
+	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+	return MaxWalkSpeedRatio;
+}
+
+
+void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
+{
+	Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
 }
 
 
@@ -395,7 +429,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
-				
+
 			}
 		}
 		else
@@ -413,7 +447,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		}
 	}
 	// Pickup left/right weapon
-	else if(!IsDead)
+	else if (!IsDead)
 	{
 		IsPickingWeapon = true;
 		if (isLeft)
@@ -489,7 +523,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
 		}
 	}
-	
+
 
 	IsPickingWeapon = false;
 
@@ -499,34 +533,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	FString ParName = "";
-	int CntShellHeld = 0;
-	if (CombineWeapon)
-		ParName = CombineWeapon->GetWeaponName();
-	else
-	{
-		if (LeftWeapon)
-		{
-			ParName = LeftWeapon->GetWeaponName();
-			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
-				CntShellHeld++;
-		}
-		if (RightWeapon)
-		{
-			ParName = RightWeapon->GetWeaponName();
-			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
-				CntShellHeld++;
-		}
-	}
-	if (1 == CntShellHeld)
-		ParName = "OneShell";
-	else if (2 == CntShellHeld)
-		ParName = "TwoShells";
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
-	float MaxWalkSpeedRatio = 1.0f;
-	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-	AdjustMaxWalkSpeed(MaxWalkSpeedRatio);
+	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -555,7 +562,7 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 			RightWeapon->SetActorHiddenInGame(false);
 			this->AnimState[6] = true;
 		}
-		
+
 		AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
 
 		if (RightWeapon)
@@ -586,7 +593,7 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 			LeftWeapon->SetActorHiddenInGame(false);
 			this->AnimState[5] = true;
 		}
-		
+
 		// Need to update weapon type for anim
 		AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
 
@@ -601,7 +608,7 @@ void AMCharacter::OnCombineWeapon()
 {
 	if (IsDead)
 		return;
-	
+
 	if (LeftWeapon && RightWeapon)
 	{
 		if (CombineWeapon)
@@ -624,15 +631,15 @@ void AMCharacter::OnCombineWeapon()
 			isHoldingCombineWeapon = false;
 			return;
 		}
-		
+
 		FString CombineMessage = FString::Printf(TEXT("Combine weapon reference name is: ")) + combineWeaponRef->GetName();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, CombineMessage);
 
-		ABaseWeapon* spawnedCombineWeapon = GetWorld()->SpawnActor<ABaseWeapon>(combineWeaponRef, FVector(0,0,0), FRotator::ZeroRotator);
+		ABaseWeapon* spawnedCombineWeapon = GetWorld()->SpawnActor<ABaseWeapon>(combineWeaponRef, FVector(0, 0, 0), FRotator::ZeroRotator);
 		CombineWeapon = spawnedCombineWeapon;
-		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower || 
-							CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
-							CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
+		isFlamethrowerHeld = (CombineWeapon->WeaponType == EnumWeaponType::Flamethrower ||
+			CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
+			CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 
@@ -652,7 +659,7 @@ void AMCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	if (IsDead)
 		return;
-	
+
 	Jump();
 }
 
@@ -660,8 +667,13 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	if (IsDead)
 		return;
-	
+
 	StopJumping();
+}
+
+void AMCharacter::Zoom(bool bZoomOut)
+{
+	bShouldZoomOut = bZoomOut;
 }
 
 void AMCharacter::Dash()
@@ -672,7 +684,7 @@ void AMCharacter::Dash()
 	{
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
 	}
-	
+
 	// Call Server Dash
 	Server_Dash();
 }
@@ -683,16 +695,16 @@ void AMCharacter::Server_Dash_Implementation()
 	{
 		IsAllowDash = false;
 
+		
+
 		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
 		{
 			OnRep_IsAllowDash();
 		}
-		
+
 		// Dash implement
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Dashing"));
-		DashSpeed = DashDistance / DashTime;
-		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
+		NetMulticast_AdjustMaxWalkSpeed(DashSpeed/OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
 		GetWorld()->GetTimerManager().SetTimer(DashingTimer, this, &AMCharacter::RefreshDash, DashTime, false);
@@ -712,6 +724,8 @@ void AMCharacter::RefreshDash()
 
 	FTimerHandle tempHandle;
 	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
+
+	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 }
 
 void AMCharacter::SetDash()
@@ -728,7 +742,7 @@ void AMCharacter::TurnAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerYawInput(Rate * TurnRateGamePad * GetWorld()->GetDeltaSeconds());
-	
+
 }
 
 void AMCharacter::LookUpAtRate(float Rate)
@@ -741,7 +755,7 @@ void AMCharacter::MoveForward(float Value)
 {
 	if (IsDead)
 		return;
-	
+
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is forward
@@ -759,7 +773,7 @@ void AMCharacter::MoveRight(float Value)
 {
 	if (IsDead)
 		return;
-	
+
 	if ((Controller != nullptr) && (Value != 0.0f))
 	{
 		// find out which way is right
@@ -792,16 +806,16 @@ void AMCharacter::OnHealthUpdate()
 {
 	if (EffectGetHit && !EffectGetHit->IsActive())
 	{
-		EffectGetHit->Activate(); 
+		EffectGetHit->Activate();
 		// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
 		// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-		float Delay = 0.1f;  
+		float Delay = 0.1f;
 		FTimerHandle timerHandle;
 		GetWorldTimerManager().SetTimer(timerHandle, [this]
 			{
 				EffectGetHit->Deactivate();
 			}, Delay, false);
-	}	
+	}
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -812,19 +826,19 @@ void AMCharacter::OnHealthUpdate()
 		else
 		{
 			AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-			playerController->UI_InGame_UpdateHealth(CurrentHealth/MaxHealth);
+			playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
 		}
 	}
-	
+
 	if (IsDead)
 		return;
-	
+
 	//Client-specific functionality
 	if (IsLocallyControlled())
 	{
 		//FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-		
+
 		if (CurrentHealth <= 0)
 		{
 			// Death
@@ -904,7 +918,7 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	SetTipUI(false);
 }
 
-// Multicast respawn result
+// Multicast respawn result, reset all kinds of variables
 void AMCharacter::NetMulticast_RespawnResult_Implementation()
 {
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
@@ -914,6 +928,10 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		SetFollowWidgetVisibility(true);
 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 		CharacterFollowWidget->HideTip();
+		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+		//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
+		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 	}
 }
 
@@ -928,8 +946,8 @@ void AMCharacter::SetFollowWidgetVisibility(bool isVisible)
 		}
 		else
 		{
-        	CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
-        }
+			CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 }
 
@@ -945,7 +963,7 @@ void AMCharacter::SetPlayerNameUIInformation()
 		FString Message = FString::Printf(TEXT("Set Player Name UI Information: Client"));
 		GEngine->AddOnScreenDebugMessage(-1, 30.f, FColor::Red, Message);
 	}
-	
+
 	// If this pawn is local controlled by a controller, then it needs update HUD
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetController());
 	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
@@ -1023,7 +1041,7 @@ bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
 	{
 		BuffMap.Add(AttackBuff);
 		TArray<float> buffParArr;
-		for(int i = 0; i < 3; i++)
+		for (int i = 0; i < 3; i++)
 			buffParArr.Add(0.0f);
 		BuffMap[AttackBuff] = buffParArr;
 	}
@@ -1034,7 +1052,7 @@ bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
 float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
 {
 	float retValue = -1;
-	
+
 	if (CombineWeapon)
 	{
 		if (CombineWeapon->CD_MaxEnergy > 0)
@@ -1085,40 +1103,16 @@ void AMCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
-void AMCharacter::CallJumpLandEffect_Implementation()
-{
-	if (!EffectJump || !EffectLand)
-		return;
-
-	if (IsOnGround)
-	{
-		EffectLand->Activate();
-		EffectJump->Deactivate();
-	}
-	else
-	{
-		EffectJump->Activate();
-		EffectLand->Deactivate();
-	}
-}
-
 void AMCharacter::OnRep_IsAllowDash()
 {
-	if (IsAllowDash)
+	if (!IsAllowDash)
 	{
-		DashSpeed = DashDistance / DashTime;
-		GetCharacterMovement()->MaxWalkSpeed = DashSpeed;
-	}
-	else
-	{
-		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
-
 		if (EffectDash)
 		{
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
-		}		
+		}
 	}
 }
 
@@ -1148,30 +1142,30 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			return 0.0f;
 
 		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);		
+		SetCurrentHealth(damageApplied);
 
-		EnumWeaponType WeaponType = EnumWeaponType::None;
-		float DeltaTime_DamageCauser = 0;
-		if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		{
-			WeaponType = p->WeaponType;
-			DeltaTime_DamageCauser = p->CurDeltaTime;
-		}			
-		if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		{
-			WeaponType = p->WeaponType;
-			DeltaTime_DamageCauser = p->CurDeltaTime;
-		}
-		if (WeaponType == EnumWeaponType::None)
-			return false;
-		ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
+		//EnumWeaponType WeaponType = EnumWeaponType::None;
+		//float DeltaTime_DamageCauser = 0;
+		//if (auto p = Cast<ABaseWeapon>(DamageCauser))
+		//{
+		//	WeaponType = p->WeaponType;
+		//	DeltaTime_DamageCauser = p->CurDeltaTime;
+		//}
+		//if (auto p = Cast<ABaseProjectile>(DamageCauser))
+		//{
+		//	WeaponType = p->WeaponType;
+		//	DeltaTime_DamageCauser = p->CurDeltaTime;
+		//}
+		//if (WeaponType == EnumWeaponType::None)
+		//	return false;
+		//ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
 
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
 			CombineWeapon->AttackStop();
 
 		// Score Kill Death Handling
-		if (CurrentHealth <= 0 && HasAuthority()) 
+		if (CurrentHealth <= 0 && HasAuthority())
 		{
 			AttackerPS->addScore(5);
 			AttackerPS->addKill(1);
@@ -1185,37 +1179,10 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 }
 
 
-float AMCharacter::TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser)
-{
-	//if (!IsDead)
-	//{
-	//	float damageApplied = CurrentHealth - DamageTaken;
-	//	SetCurrentHealth(damageApplied);
-
-	//	// Score Kill Death Handling
-	//	if (CurrentHealth <= 0 && HasAuthority()) {
-	//		if (auto killer = Cast<AMCharacter>(DamageCauser->GetHoldingPlayer())) {
-	//			if (AM_PlayerState* killerPS = killer->GetPlayerState<AM_PlayerState>()) {
-	//				killerPS->addScore(5);
-	//				killerPS->addKill(1);
-	//			}
-	//			if (AM_PlayerState* myPS = GetPlayerState<AM_PlayerState>()) {
-	//				myPS->addDeath(1);
-	//			}
-	//		}
-	//	}
-
-	//	return damageApplied;
-	//}
-
-	return 0.0f;
-}
-
-
 void AMCharacter::SetHealthBarUI()
 {
 	UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-	healthBar->SetHealthToProgressBar(CurrentHealth/MaxHealth);
+	healthBar->SetHealthToProgressBar(CurrentHealth / MaxHealth);
 }
 #pragma endregion Health
 
@@ -1231,7 +1198,7 @@ void AMCharacter::UpdateSKD(int scoreToAdd, int killToAdd, int deathToAdd) {
 
 bool AMCharacter::GetIsDead()
 {
-	return IsDead; 
+	return IsDead;
 }
 
 void AMCharacter::SetIsDead(bool n_IsDead)
@@ -1307,7 +1274,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 // ===========================================
 #pragma region Collision
 void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
-			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (Cast<AWaterBody>(OtherActor))
 	{
@@ -1322,13 +1289,13 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 		{
 			BuffMap[EnumAttackBuff::Saltcure][0] = 1.0f;
 		}
-		AdjustMaxWalkSpeed(0.5f);
-	}	
+		NetMulticast_AdjustMaxWalkSpeed(0.5f);
+	}
 
 
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
-	
+
 	ABaseWeapon* tempWeaponTouched = Cast<ABaseWeapon>(OtherActor);
 	if (tempWeaponTouched && !IsDead)
 	{
@@ -1371,19 +1338,19 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 		{
 			BuffMap[EnumAttackBuff::Saltcure][0] = 0;
 		}
-		AdjustMaxWalkSpeed(1.0f);
+		NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 	}
-	
+
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
-	
+
 	ABaseWeapon* tempWeaponTouched = Cast<ABaseWeapon>(OtherActor);
 	if (tempWeaponTouched && !IsDead)
 	{
 		if (CurrentTouchedWeapon.Contains(tempWeaponTouched))
 		{
 			CurrentTouchedWeapon.Remove(tempWeaponTouched);
-		
+
 			// Output: WeaponEngOverlap
 			FString CollisionMessage = FString::Printf(TEXT("Remove Weapon in array : %s"), *tempWeaponTouched->GetWeaponName());
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, CollisionMessage);
@@ -1398,8 +1365,6 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	DashSpeed = DashDistance / DashTime;
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -1433,95 +1398,82 @@ void AMCharacter::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
+		// Deal with buff
 		ActByBuff_PerTick(DeltaTime);
-
-		bool oldIsOnGround = IsOnGround;
-		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
-		if (oldIsOnGround != IsOnGround)
-		{
-			if( !(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]) && 
-				 !(BeingKnockbackBeforeThisTick) )
-			CallJumpLandEffect();
-		}
-		BeingKnockbackBeforeThisTick = false;
 	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1])
-			return;
-
-		// EffectRun
-		if (EffectRun->IsActive() == false)
+		// Zoom
+		float ZoomOutSpeed = 100.0f;
+		float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+		if (bShouldZoomOut)
 		{
-			if (OriginalMaxWalkSpeed * 0.6f <= GetCharacterMovement()->Velocity.Size() && IsAllowDash)
+			if (CurFov < MaxFov)
 			{
-				EffectRun->Activate(); 
-			}				
+				CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+				FollowCamera->SetFieldOfView(CurFov);
+			}
 		}
 		else
 		{
-			if (GetCharacterMovement()->Velocity.Size() < OriginalMaxWalkSpeed * 0.6f || !IsAllowDash || !IsOnGround)
+			if (MinFov < CurFov)
 			{
-				EffectRun->Deactivate();
-			}				
+				CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+				FollowCamera->SetFieldOfView(CurFov);
+			}
+		}
+		// Effect Land/Jump
+		bool oldIsOnGround = IsOnGround;
+		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
+		if (oldIsOnGround != IsOnGround)
+		{
+			// call land effect when landing hard
+			if (IsOnGround && 30.0f < Server_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
+			{
+				if (EffectLand && EffectLand->GetAsset())
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectLand->GetAsset(), EffectLand->GetComponentLocation());
+			}
+			// call jump effect when jumping hard
+			if (!IsOnGround && 500.0f < GetCharacterMovement()->Velocity.Z)
+			{
+				if (EffectJump && EffectJump->GetAsset())
+					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectJump->GetAsset(), EffectJump->GetComponentLocation());
+			}
+		}		
+		if (!IsOnGround)
+			Server_MaxHeightDuringLastTimeOffGround = FMath::Max(Server_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
+		else
+			Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+
+		// EffectRun
+		if (OriginalMaxWalkSpeed * 0.15f < GetCharacterMovement()->Velocity.Size())
+		{
+			if (IsOnGround)
+			{
+				if (EffectRun && !(EffectRun->IsActive()))
+					EffectRun->Activate();
+			}	
+			else
+			{				
+				if (EffectRun && EffectRun->IsActive())
+					EffectRun->Deactivate();				
+			}
+			Client_LowSpeedWalkAccumulateTime = 0;
+		}
+		else
+		{
+			Client_LowSpeedWalkAccumulateTime += DeltaTime;
+			if (0.5f < Client_LowSpeedWalkAccumulateTime)
+			{
+				if (EffectRun && EffectRun->IsActive())
+					EffectRun->Deactivate();
+			}			
 		}
 	}
 }
 #pragma endregion Engine life cycle function
-
-
-void AMCharacter::ActByBuff_PerDamage(float DeltaTime)
-{
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		if (!AWeaponDataHelper::DamageManagerDataAsset)
-			return;
-
-		EnumAttackBuff buffType;
-		/* Paralysis */
-		buffType = EnumAttackBuff::Paralysis;
-		if (CheckBuffMap(buffType))
-		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (0.0f < BuffPoint)
-			{
-				float DragSpeed = 0.0f;
-				FString ParName = "Paralysis_DragSpeed";
-				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-					DragSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetActorLocation(GetActorLocation() + TaserDragDirection_SinceLastApplyBuff * DragSpeed * DeltaTime);
-			}
-		}
-		/* Knockback */
-		buffType = EnumAttackBuff::Knockback;
-		if (CheckBuffMap(buffType))
-		{
-			// don't apply knockback if the character is being paralyzed
-			if (!(CheckBuffMap(EnumAttackBuff::Paralysis) && 0 < BuffMap[EnumAttackBuff::Paralysis][1]))
-			{
-				float& BuffPoint = BuffMap[buffType][0];
-				if (1.0f <= BuffPoint)
-				{
-					float Knockback_MoveSpeed = 0.0f;
-					FString ParName = "Knockback_MoveSpeed";
-					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-						Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-					KnockbackDirection_SinceLastApplyBuff.Z = 0.0f;
-					KnockbackDirection_SinceLastApplyBuff *= Knockback_MoveSpeed;
-					LaunchCharacter(KnockbackDirection_SinceLastApplyBuff, true, false);
-					BeingKnockbackBeforeThisTick = true;
-					BuffPoint -= 1.0f;
-				}
-			}
-		}
-
-		KnockbackDirection_SinceLastApplyBuff = FVector::ZeroVector;
-		TaserDragDirection_SinceLastApplyBuff = FVector::ZeroVector;
-	}
-}
 
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
@@ -1551,8 +1503,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Paralysis;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (1.0f <= BuffPoint)
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
 			{
 				if (CanMove)
 				{
@@ -1580,8 +1532,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		buffType = EnumAttackBuff::Saltcure;
 		if (CheckBuffMap(buffType))
 		{
-			float& BuffPoint = BuffMap[buffType][0];
-			if (1.0f <= BuffPoint)
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
 			{
 				float SaltcureBuffDamagePerSecond = 5.0f;
 				//FString ParName = "BurningDamagePerSecond";
@@ -1589,8 +1541,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth - DeltaTime * SaltcureBuffDamagePerSecond);
 			}
-		}		
-	}		
+		}
+	}
 }
 
 // void AMCharacter::FollowWidget_PerTick(float DeltaTime)
