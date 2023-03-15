@@ -231,6 +231,7 @@ void AWeaponTaser::AttackStop()
 		}
 	}
 	AttackObjectMap.Empty();
+	Server_ActorBeingHit = nullptr;
 
 	if (AttackType == EnumAttackType::Constant)
 		CD_CanRecover = false;
@@ -298,7 +299,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					return;
 				}
 				// Apply paralysis buff
-				if (pCharacterBeingHit->CheckBuffMap(EnumAttackBuff::Paralysis))
+				if (!Server_ActorBeingHit && pCharacterBeingHit->CheckBuffMap(EnumAttackBuff::Paralysis))
 					pCharacterBeingHit->BuffMap[EnumAttackBuff::Paralysis][0] += 1.0f;
 			}
 
