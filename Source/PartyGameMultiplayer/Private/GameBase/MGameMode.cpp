@@ -75,12 +75,8 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 		
-		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
 		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
-		MyPlayerState->UpdatePlayerName(playerUsername);
-		// Server call OnRep_PlayerNameString once for sync
-		MyPlayerState->OnRep_PlayerNameString();
-		
+		MyPlayerState->SetPlayerNameFromUsername();
 		CurrentPlayerNum++;
 
 		if (NewPlayer->IsLocalPlayerController())

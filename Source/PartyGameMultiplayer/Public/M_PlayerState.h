@@ -17,7 +17,7 @@ class PARTYGAMEMULTIPLAYER_API AM_PlayerState : public APlayerState
 public:
 
 	UPROPERTY(ReplicatedUsing=OnRep_PlayerNameString, BlueprintReadOnly)
-	FString PlayerNameString = "CMY";
+	FString PlayerNameString = "default-name";
 
 	UPROPERTY(ReplicatedUsing=OnRep_UpdateTeamIndex, EditAnywhere, BlueprintReadWrite)
 	int TeamIndex = 0;
@@ -30,6 +30,9 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void UpdatePlayerName(const FString& i_Name);
+
+	UFUNCTION(Client, Reliable)
+	void SetPlayerNameFromUsername();
 
 	UFUNCTION(Server, Reliable)
 	void UpdatePlayerReadyState();
