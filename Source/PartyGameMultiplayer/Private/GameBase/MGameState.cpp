@@ -91,6 +91,10 @@ void AMGameState::UpdateGameTime()
 	{
 		// Game end
 		IsGameStart = false;
+		if (GetNetMode() == NM_ListenServer)
+		{
+			OnRep_IsGameStart();
+		}
 		GetWorldTimerManager().ClearTimer(GameStartTimerHandle);
 	}
 	

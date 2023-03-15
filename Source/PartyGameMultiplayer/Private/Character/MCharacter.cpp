@@ -160,6 +160,12 @@ void AMCharacter::OnRep_PlayerState()
 	{
 		GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
 	}
+
+	// AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
+	// if (MyPlayerController)
+	// {
+	// 	MyPlayerController->UI_UpdateLobbyMenu();
+	// }
 }
 
 void AMCharacter::CheckPlayerFollowWidgetTick()
