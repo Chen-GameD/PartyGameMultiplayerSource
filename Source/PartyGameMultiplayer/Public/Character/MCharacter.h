@@ -10,7 +10,11 @@
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
+#include "../Matchmaking/EOSGameInstance.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Kismet/KismetMaterialLibrary.h"
 #include "MCharacter.generated.h"
+
 
 //#define IS_LISTEN_SERVER
 
@@ -321,6 +325,12 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TArray<FName> CharacterMatParamNameArray;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		UMaterialParameterCollection* characaterMaterialParameterCollection;
 
 	// Buff Map
 	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime

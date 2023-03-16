@@ -965,6 +965,12 @@ void AMCharacter::SetPlayerNameUIInformation()
 void AMCharacter::SetPlayerSkin()
 {
 	// TODO
+	UEOSGameInstance* gameInstance = Cast<UEOSGameInstance>(GetGameInstance());
+	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection,
+		CharacterMatParamNameArray[gameInstance->characterIndex], gameInstance->colorPicked);
+	gameInstance->colorPicked;
+
+	GetMesh()->SetSkeletalMesh(CharacterBPArray[gameInstance->characterIndex]);
 }
 
 void AMCharacter::InitFollowWidget()
