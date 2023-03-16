@@ -16,6 +16,12 @@ class PARTYGAMEMULTIPLAYER_API ATriggerBoxJumpPad : public ATriggerBox
 public:
 	ATriggerBoxJumpPad();
 
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_WhenCharacterEnterTriggerBoxJumpPad();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void WhenCharacterEnterTriggerBoxJumpPad();
+
 	UFUNCTION()
 		void OnJumpPadOverlapBegin(class AActor* OverlappedActor, class AActor* OtherActor);
 	UFUNCTION()
