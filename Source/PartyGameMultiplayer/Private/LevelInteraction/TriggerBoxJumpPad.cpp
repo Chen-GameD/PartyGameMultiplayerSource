@@ -62,5 +62,6 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, clas
 
 void ATriggerBoxJumpPad::NetMulticast_WhenCharacterEnterTriggerBoxJumpPad_Implementation()
 {
+    //if(GetLocalRole() == ROLE_AutonomousProxy)
     WhenCharacterEnterTriggerBoxJumpPad();
 }

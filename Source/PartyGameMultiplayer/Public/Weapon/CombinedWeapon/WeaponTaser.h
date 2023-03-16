@@ -45,6 +45,8 @@ protected:
 		class UStaticMeshComponent* TaserForkMesh;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* AttackOnEffect_TaserFork;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* AttackOnEffect_Wire;
 
 	// TaserFork original transform
 	FVector TaserFork_OriginalRelativeLocation;

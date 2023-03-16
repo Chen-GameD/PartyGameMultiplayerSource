@@ -56,6 +56,9 @@ AWeaponTaser::AWeaponTaser()
 	AttackOnEffect_TaserFork = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect_TaserFork"));
 	AttackOnEffect_TaserFork->SetupAttachment(TaserForkMesh);
 
+	AttackOnEffect_Wire = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_Wire"));
+	AttackOnEffect_Wire->SetupAttachment(WeaponMesh);
+
 	// Currently, they are decided by derived BP
 	//MaxLen = 0.0f;
 	//StrechOutSpeed = 360.0f;
@@ -81,6 +84,8 @@ void AWeaponTaser::Tick(float DeltaTime)
 		// if attack on
 		if (bAttackOn)
 		{
+			//UNiagaraSystem* NS_AttackOnEffect_Wire = AttackOnEffect_Wire->GetAsset();
+			//if()
 			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
 			if (!bHitTarget)
 			{
@@ -259,6 +264,7 @@ void AWeaponTaser::OnRep_bAttackOn()
 	if (bAttackOn)
 	{
 		AttackOnEffect_TaserFork->Activate();
+		AttackOnEffect_Wire->Activate();
 		TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
 		SetTaserForkAttached(false);
 	}
@@ -266,6 +272,7 @@ void AWeaponTaser::OnRep_bAttackOn()
 	{
 		TimePassed_SinceAttackStop = 0.0f;
 		AttackOnEffect_TaserFork->Deactivate();
+		AttackOnEffect_Wire->Deactivate();
 		SetTaserForkAttached(true);
 
 		TaserFork_WorldLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
