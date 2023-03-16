@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	//Login("", "", "accountportal");
+	Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)

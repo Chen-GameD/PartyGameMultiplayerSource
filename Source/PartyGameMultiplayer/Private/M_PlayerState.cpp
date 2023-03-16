@@ -6,6 +6,8 @@
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
+#include "Kismet/GameplayStatics.h"
+#include "Matchmaking/EOSGameInstance.h"
 
 void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 {
@@ -100,6 +102,12 @@ void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
 	{
 		OnRep_UpdateTeamIndex();
 	}
+}
+
+void AM_PlayerState::SetPlayerNameFromUsername_Implementation()
+{
+	PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	UpdatePlayerName(PlayerNameString);
 }
 
 void AM_PlayerState::OnRep_PlayerNameString()

@@ -26,10 +26,10 @@ AProjectileBomb::AProjectileBomb()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 800.0f;
-	ProjectileMovementComponent->MaxSpeed = 800.0f;
+	ProjectileMovementComponent->InitialSpeed = 1100.0f;
+	ProjectileMovementComponent->MaxSpeed = 1100.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.65f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.2f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
@@ -80,6 +80,8 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+	// Apply knockback buff
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
 
 	// Bomb's Range Damage will be delayed
 	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);

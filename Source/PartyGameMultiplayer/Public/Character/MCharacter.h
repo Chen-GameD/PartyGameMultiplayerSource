@@ -10,11 +10,7 @@
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
-#include "../Matchmaking/EOSGameInstance.h"
-#include "Materials/MaterialParameterCollection.h"
-#include "Kismet/KismetMaterialLibrary.h"
 #include "MCharacter.generated.h"
-
 
 //#define IS_LISTEN_SERVER
 
@@ -78,9 +74,6 @@ public:
 	/** Event for taking damage. Overridden from APawn.*/
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-
-	// customized TakeDamge Function
-	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
 
 	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
@@ -146,7 +139,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
 	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 
 	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
@@ -172,9 +164,6 @@ protected:
 
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void CallJumpLandEffect();
 
 	UFUNCTION()
 	void OnRep_IsAllowDash();
@@ -214,6 +203,9 @@ protected:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
+	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
+	void Zoom(bool bZoomOut);
+
 	/* Called for Server_Dash input */
 	UFUNCTION()
 	void Dash();
@@ -223,8 +215,10 @@ protected:
 	void SetDash();
 	void TurnOffDashEffect();
 
+	float Server_GetMaxWalkSpeedRatioByWeapons();
+
 	UFUNCTION(NetMulticast, Reliable)
-	void AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -326,15 +320,16 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		TArray<FName> CharacterMatParamNameArray;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-		UMaterialParameterCollection* characaterMaterialParameterCollection;
+	float Server_MaxWalkSpeed;
+	float Client_LowSpeedWalkAccumulateTime;
+	float CurFov;
+	float MinFov;
+	float MaxFov;
+	bool bShouldZoomOut;
 
 	// Buff Map
-	// BuffName: BuffPoint, BuffRemainedTime, BuffAccumulatedTime
-	// When the BuffPoint >= 1, the buff will be activated
+	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
+	// When the BuffPoints >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
@@ -360,8 +355,8 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(Replicated)
 	bool IsOnGround;
+	float Server_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
 	UPROPERTY(EditAnywhere, Category = "Server_Dash")

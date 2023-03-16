@@ -75,12 +75,8 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 		
-		auto playerUsername = Cast<UEOSGameInstance>(GetGameInstance())->GetPlayerUsername();
 		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
-		MyPlayerState->UpdatePlayerName(playerUsername);
-		// Server call OnRep_PlayerNameString once for sync
-		MyPlayerState->OnRep_PlayerNameString();
-		
+		MyPlayerState->SetPlayerNameFromUsername();
 		CurrentPlayerNum++;
 
 		if (NewPlayer->IsLocalPlayerController())
@@ -198,7 +194,7 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
 		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
 		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
-		if(spawnActor)
+		if(spawnActor && MinigameDataAsset)
 			spawnActor->UpdateScoreCanGet(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
 		
 		// Update Minigame Hint
@@ -238,7 +234,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 0.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else

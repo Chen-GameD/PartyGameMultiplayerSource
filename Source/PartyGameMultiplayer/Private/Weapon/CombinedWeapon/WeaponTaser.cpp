@@ -101,7 +101,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{
+			{				
 				// change the transform of the TaserFork
 				if (Server_ActorBeingHit)
 				{
@@ -115,11 +115,16 @@ void AWeaponTaser::Tick(float DeltaTime)
 					CurRotation.Yaw = Server_TaserForkRotationYaw_WhenHit + (bNowVectorIsOnTheRight ? Angle : -Angle);
 					TaserForkMesh->SetWorldRotation(CurRotation);
 				}
+				
 				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
+					// Apply paralysis buff(drag towards the attacker)
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacter, DeltaTime);
+					// Stop attack when the character is dead
 					if (pCharacter->GetIsDead())
 						AttackStop();
 				}
+				// Stop attack when the MinigameMainObjective is dead
 				else if (AMinigameMainObjective* pMinigameMainObjective = Cast<AMinigameMainObjective>(Server_ActorBeingHit))
 				{
 					if (pMinigameMainObjective->GetCurrentHealth() <= 0)
@@ -130,6 +135,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
 		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
 	}
+
 	// if attack stops, the fork will be back instantly
 	if (!bAttackOn)
 	{
@@ -151,12 +157,6 @@ void AWeaponTaser::Tick(float DeltaTime)
 				TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
 		}
 	}
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		ServerForkWorldLocation = TaserForkMesh->GetComponentLocation();
-		ServerForkWorldRotation = TaserForkMesh->GetComponentRotation();
-	}
 
 }
 
@@ -174,23 +174,47 @@ void AWeaponTaser::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLif
 
 void AWeaponTaser::AttackStart()
 {
-	if (IsForkOut)
+	if (bAttackOn || !GetOwner() || IsForkOut)
 		return;
 
-	Super::AttackStart();
+	// If the weapon has cd
+	if (0 < CD_MaxEnergy)
+	{
+		if (AttackType == EnumAttackType::Constant)
+		{
+			if (CD_LeftEnergy <= 0)
+				return;
+		}
+		else
+		{
+			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+				CD_LeftEnergy -= CD_MinEnergyToAttak;
+			else
+				return;
+		}
+	}
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_bAttackOn();
+	}
+	ApplyDamageCounter = 0;
+
+	SetActorEnableCollision(bAttackOn);
+
 	TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
 	TaserFork_WorldLocation_WhenAttackStart = TaserForkMesh->GetComponentLocation();
 	TaserFork_WorldRotation_WhenAttackStart = TaserForkMesh->GetComponentRotation();
 	IsForkOut = true;
 	SetTaserForkAttached(false);
-	//bShouldStretchOut = true;
 }
 
 void AWeaponTaser::AttackStop()
 {
 	if (!bAttackOn || !GetOwner())
 		return;
-
 	bAttackOn = false;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -202,20 +226,20 @@ void AWeaponTaser::AttackStop()
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(Elem.Key))
 		{
-			if(pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
+			if(pMCharacter == Server_ActorBeingHit && pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
 				pMCharacter->BuffMap[EnumAttackBuff::Paralysis][0] -= 1.0f;
 		}
 	}
 	AttackObjectMap.Empty();
+	Server_ActorBeingHit = nullptr;
 
 	if (AttackType == EnumAttackType::Constant)
 		CD_CanRecover = false;
 	TimePassed_SinceAttackStop = 0.0f;
 
 	SetActorEnableCollision(bAttackOn);
-	//AttackDetectComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-	//bShouldStretchOut = false;
+	
+	SetTaserForkAttached(true);
 	bHitTarget = false;
 }
 
@@ -236,16 +260,13 @@ void AWeaponTaser::OnRep_bAttackOn()
 	{
 		AttackOnEffect_TaserFork->Activate();
 		TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
-		if (bForkAttachedToWeapon)
-			SetTaserForkAttached(false);
+		SetTaserForkAttached(false);
 	}
 	else
 	{
 		TimePassed_SinceAttackStop = 0.0f;
 		AttackOnEffect_TaserFork->Deactivate();
-
-		if (!bForkAttachedToWeapon)
-			SetTaserForkAttached(true);
+		SetTaserForkAttached(true);
 
 		TaserFork_WorldLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
 		TaserFork_WorldRotation_WhenAttackStop = TaserForkMesh->GetRelativeRotation();
@@ -260,20 +281,26 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 
 	if (IsPickedUp && GetOwner())
 	{
-		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor))
 		{
-			// Check if it hits teammates
-			if (auto pCharacterBeingHit = Cast<ACharacter>(OtherActor))
+			// if it is AMCharacter
+			if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
 			{
+				// Check if it hits teammates
 				auto MyController = HoldingController;
 				if (!MyController)
 					return;
 				AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
 				AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-
 				if (!MyPS || !TheOtherCharacterPS || MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				{
+					AttackStop();
 					return;
+				}
+				// Apply paralysis buff
+				if (!Server_ActorBeingHit && pCharacterBeingHit->CheckBuffMap(EnumAttackBuff::Paralysis))
+					pCharacterBeingHit->BuffMap[EnumAttackBuff::Paralysis][0] += 1.0f;
 			}
 
 			bHitTarget = true;
@@ -298,13 +325,14 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			if (ApplyDamageCounter == 0 && HoldingController)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
 				ApplyDamageCounter++;
 			}
 		}
 		else
 		{
 			// if hit something other than the following(like building, rocks, etc), the attack should stop
-			if (!Cast<ACharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
+			if (!Cast<AMCharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
 				AttackStop();
 		}
 	}
@@ -345,7 +373,7 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 
 void AWeaponTaser::OnRep_IsForkOut()
 {
-	if (IsForkOut)
+	/*if (IsForkOut)
 	{
 		if (bForkAttachedToWeapon)
 			SetTaserForkAttached(false);
@@ -354,15 +382,18 @@ void AWeaponTaser::OnRep_IsForkOut()
 	{
 		if (!bForkAttachedToWeapon)
 			SetTaserForkAttached(true);
-	}
+	}*/
 }
 
 
 void AWeaponTaser::SetTaserForkAttached(bool bShouldAttachToWeapon)
 {
+	if (bShouldAttachToWeapon == bForkAttachedToWeapon)
+		return;
+
 	// Attach Back to Weapon
 	if (bShouldAttachToWeapon)
-	{
+	{	
 		TaserForkMesh->AttachToComponent(WeaponMesh, FAttachmentTransformRules::KeepWorldTransform);
 		bForkAttachedToWeapon = true;
 	}
