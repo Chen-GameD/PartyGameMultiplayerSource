@@ -11,6 +11,8 @@
 
 ATriggerBoxJumpPad::ATriggerBoxJumpPad()
 {
+    bReplicates = true;
+
     LaunchVelocity = FVector(0.0f, 0.0f, 1000.0f);
     bXYOverride = false;
     bZOverride = true;
@@ -62,6 +64,5 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, clas
 
 void ATriggerBoxJumpPad::NetMulticast_WhenCharacterEnterTriggerBoxJumpPad_Implementation()
 {
-    //if(GetLocalRole() == ROLE_AutonomousProxy)
     WhenCharacterEnterTriggerBoxJumpPad();
 }

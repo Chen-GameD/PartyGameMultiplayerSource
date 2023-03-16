@@ -19,8 +19,8 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_WhenCharacterEnterTriggerBoxJumpPad();
 
-	//UFUNCTION(BlueprintImplementableEvent)
-	void WhenCharacterEnterTriggerBoxJumpPad() { GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("WhenCharacterEnterTriggerBoxJumpPad")); };
+	UFUNCTION(BlueprintImplementableEvent)
+		void WhenCharacterEnterTriggerBoxJumpPad();
 
 	UFUNCTION()
 		void OnJumpPadOverlapBegin(class AActor* OverlappedActor, class AActor* OtherActor);
