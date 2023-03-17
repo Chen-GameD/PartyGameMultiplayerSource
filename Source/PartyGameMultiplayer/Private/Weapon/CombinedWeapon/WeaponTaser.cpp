@@ -56,8 +56,8 @@ AWeaponTaser::AWeaponTaser()
 	AttackOnEffect_TaserFork = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect_TaserFork"));
 	AttackOnEffect_TaserFork->SetupAttachment(TaserForkMesh);
 
-	AttackOnEffect_Wire = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_Wire"));
-	AttackOnEffect_Wire->SetupAttachment(WeaponMesh);
+	ElecWire_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ElecWire_NSComponent"));
+	ElecWire_NSComponent->SetupAttachment(WeaponMesh);
 
 	// Currently, they are decided by derived BP
 	//MaxLen = 0.0f;
@@ -84,8 +84,6 @@ void AWeaponTaser::Tick(float DeltaTime)
 		// if attack on
 		if (bAttackOn)
 		{
-			//UNiagaraSystem* NS_AttackOnEffect_Wire = AttackOnEffect_Wire->GetAsset();
-			//if()
 			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
 			if (!bHitTarget)
 			{
@@ -149,18 +147,12 @@ void AWeaponTaser::Tick(float DeltaTime)
 		{
 			TaserForkMesh->SetRelativeLocation(TaserFork_OriginalRelativeLocation);
 			TaserForkMesh->SetRelativeRotation(TaserFork_OriginalRelativeRotation);
-			IsForkOut = false;
 		}
-		else
-		{
-			IsForkOut = false;
-		}
-
-		if (!IsForkOut)
-		{
-			if (TaserForkMesh->GetRelativeScale3D() != TaserFork_OriginalRelativeScale)
-				TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
-		}
+		if (TaserForkMesh->GetRelativeScale3D() != TaserFork_OriginalRelativeScale)
+			TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
+		IsForkOut = false;
+		if (GetNetMode() == NM_ListenServer)
+			OnRep_IsForkOut();
 	}
 
 }
@@ -213,6 +205,8 @@ void AWeaponTaser::AttackStart()
 	TaserFork_WorldLocation_WhenAttackStart = TaserForkMesh->GetComponentLocation();
 	TaserFork_WorldRotation_WhenAttackStart = TaserForkMesh->GetComponentRotation();
 	IsForkOut = true;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsForkOut();
 	SetTaserForkAttached(false);
 }
 
@@ -264,7 +258,6 @@ void AWeaponTaser::OnRep_bAttackOn()
 	if (bAttackOn)
 	{
 		AttackOnEffect_TaserFork->Activate();
-		AttackOnEffect_Wire->Activate();
 		TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale * Ratio_ScaleUpOnRelativeScale);
 		SetTaserForkAttached(false);
 	}
@@ -272,7 +265,6 @@ void AWeaponTaser::OnRep_bAttackOn()
 	{
 		TimePassed_SinceAttackStop = 0.0f;
 		AttackOnEffect_TaserFork->Deactivate();
-		AttackOnEffect_Wire->Deactivate();
 		SetTaserForkAttached(true);
 
 		TaserFork_WorldLocation_WhenAttackStop = TaserForkMesh->GetRelativeLocation();
@@ -380,16 +372,16 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 
 void AWeaponTaser::OnRep_IsForkOut()
 {
-	/*if (IsForkOut)
+	if (IsForkOut)
 	{
-		if (bForkAttachedToWeapon)
-			SetTaserForkAttached(false);
+		ElecWire_NSComponent->Activate();
+		ElecWire_NSComponent->SetVisibility(true);
 	}
 	else
 	{
-		if (!bForkAttachedToWeapon)
-			SetTaserForkAttached(true);
-	}*/
+		ElecWire_NSComponent->Deactivate();
+		ElecWire_NSComponent->SetVisibility(false);
+	}
 }
 
 
