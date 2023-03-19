@@ -3,6 +3,9 @@
 
 #include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 
+#include "Components/SphereComponent.h"
+#include "Engine/StaticMeshActor.h"
+#include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
 
 AMinigameObj_Statue::AMinigameObj_Statue()
@@ -10,6 +13,14 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));
 	RootMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	RootMesh->SetupAttachment(RootComponent);
+
+	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMesh->SetupAttachment(RootMesh);
+
+	ShellOverlapComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ShellOverlapSphere"));
+	ShellOverlapComponent->SetupAttachment(RootMesh);
+	ShellOverlapComponent->SetSphereRadius(300, true);
+	
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
 }
@@ -50,10 +61,24 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 		{
 			this->CurrentHealth--;
 			// Detect which player drop the shell
-			// TODO...
+			// TODO...as
 			
 			// Consider respawn the shell
 			// TODO...
+
+
+			// Spawn a shell mesh and attach to the socket
+			if (ShellMeshRef)
+			{
+				AStaticMeshActor* NewShellActor = GetWorld()->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), OtherActor->GetActorLocation(), OtherActor->GetActorRotation());
+				NewShellActor->SetMobility(EComponentMobility::Stationary);
+				UStaticMeshComponent* NewMeshComponent = NewShellActor->GetStaticMeshComponent();
+				if (NewMeshComponent)
+				{
+					NewMeshComponent->SetStaticMesh(ShellMeshRef);
+					GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("Shell Spawn Success!"));
+				}
+			}
 			
 			// Destroy Shell
 			OtherActor->Destroy();

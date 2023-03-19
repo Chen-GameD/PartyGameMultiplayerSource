@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/BoxComponent.h"
+#include "Engine/StaticMeshActor.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 #include "MinigameObj_Statue.generated.h"
 
@@ -30,6 +32,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
 	UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	UPrimitiveComponent* ShellOverlapComponent;
-	
+	class USphereComponent* ShellOverlapComponent;
+	UPROPERTY(EditAnywhere, Category = "Components")
+	USkeletalMeshComponent* SkeletalMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ShellMeshRef")
+	UStaticMesh* ShellMeshRef;
 };
