@@ -337,8 +337,17 @@ void AMPlayerController::PlayerTick(float DeltaTime)
     FVector HitLocation = FVector::ZeroVector;
     FHitResult Hit;
 
-	GetHitResultUnderCursor(ECC_Visibility, true, Hit);
+	GetHitResultUnderCursor(ECC_EngineTraceChannel1, true, Hit);
 	HitLocation = Hit.Location;
+	{
+		FVector Start = HitLocation; // set the start point of the line
+		FVector End = HitLocation + -FVector::UpVector*200; // set the end point of the line
+		FColor Color = FColor::Red; // set the color of the line to red
+		float Duration = 2.0f; // set the duration of the line to 2 seconds
+		float Thickness = 5.0f; // set the thickness of the line to 5 units
+		DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
+	}
+	
     
 	// Direct the Pawn towards that location
 	APawn* const MyPawn = GetPawn();

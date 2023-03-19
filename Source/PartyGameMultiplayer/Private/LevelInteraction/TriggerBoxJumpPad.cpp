@@ -11,6 +11,8 @@
 
 ATriggerBoxJumpPad::ATriggerBoxJumpPad()
 {
+    bReplicates = true;
+
     LaunchVelocity = FVector(0.0f, 0.0f, 1000.0f);
     bXYOverride = false;
     bZOverride = true;
@@ -45,6 +47,7 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, cl
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character enters the Jump Pad"));
         pCharacter->LaunchCharacter(LaunchVelocity, bXYOverride, bZOverride);
+        NetMulticast_WhenCharacterEnterTriggerBoxJumpPad();
     }
 }
 
@@ -56,4 +59,10 @@ void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, clas
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character exits the Jump Pad"));
     }
+}
+
+
+void ATriggerBoxJumpPad::NetMulticast_WhenCharacterEnterTriggerBoxJumpPad_Implementation()
+{
+    WhenCharacterEnterTriggerBoxJumpPad();
 }

@@ -56,6 +56,9 @@ AWeaponTaser::AWeaponTaser()
 	AttackOnEffect_TaserFork = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect_TaserFork"));
 	AttackOnEffect_TaserFork->SetupAttachment(TaserForkMesh);
 
+	ElecWire_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ElecWire_NSComponent"));
+	ElecWire_NSComponent->SetupAttachment(WeaponMesh);
+
 	// Currently, they are decided by derived BP
 	//MaxLen = 0.0f;
 	//StrechOutSpeed = 360.0f;
@@ -144,18 +147,12 @@ void AWeaponTaser::Tick(float DeltaTime)
 		{
 			TaserForkMesh->SetRelativeLocation(TaserFork_OriginalRelativeLocation);
 			TaserForkMesh->SetRelativeRotation(TaserFork_OriginalRelativeRotation);
-			IsForkOut = false;
 		}
-		else
-		{
-			IsForkOut = false;
-		}
-
-		if (!IsForkOut)
-		{
-			if (TaserForkMesh->GetRelativeScale3D() != TaserFork_OriginalRelativeScale)
-				TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
-		}
+		if (TaserForkMesh->GetRelativeScale3D() != TaserFork_OriginalRelativeScale)
+			TaserForkMesh->SetRelativeScale3D(TaserFork_OriginalRelativeScale);
+		IsForkOut = false;
+		if (GetNetMode() == NM_ListenServer)
+			OnRep_IsForkOut();
 	}
 
 }
@@ -208,6 +205,8 @@ void AWeaponTaser::AttackStart()
 	TaserFork_WorldLocation_WhenAttackStart = TaserForkMesh->GetComponentLocation();
 	TaserFork_WorldRotation_WhenAttackStart = TaserForkMesh->GetComponentRotation();
 	IsForkOut = true;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsForkOut();
 	SetTaserForkAttached(false);
 }
 
@@ -373,16 +372,16 @@ void AWeaponTaser::OnRep_ServerForkWorldTransform()
 
 void AWeaponTaser::OnRep_IsForkOut()
 {
-	/*if (IsForkOut)
+	if (IsForkOut)
 	{
-		if (bForkAttachedToWeapon)
-			SetTaserForkAttached(false);
+		ElecWire_NSComponent->Activate();
+		ElecWire_NSComponent->SetVisibility(true);
 	}
 	else
 	{
-		if (!bForkAttachedToWeapon)
-			SetTaserForkAttached(true);
-	}*/
+		ElecWire_NSComponent->Deactivate();
+		ElecWire_NSComponent->SetVisibility(false);
+	}
 }
 
 
