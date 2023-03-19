@@ -122,6 +122,9 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
 
+	CursorHitPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CursorHitPlane"));
+	CursorHitPlane->SetupAttachment(RootComponent);
+
 	CanMove = true;
 }
 
@@ -1400,6 +1403,12 @@ void AMCharacter::BeginPlay()
 			}
 		}
 	}
+
+	if (!IsLocallyControlled())
+	{
+		CursorHitPlane->SetCollisionProfileName(TEXT("NoCollision"));
+		CursorHitPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}		
 }
 
 

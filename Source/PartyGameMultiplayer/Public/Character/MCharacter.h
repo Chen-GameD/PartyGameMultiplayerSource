@@ -396,6 +396,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;
 
+	UPROPERTY(EditAnywhere)
+	class UStaticMeshComponent* CursorHitPlane;
+
 	UFUNCTION()
 	void SetTextureInUI();
 

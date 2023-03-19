@@ -336,65 +336,32 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	
-    // Look for the touch location
-    FVector HitLocation = FVector::ZeroVector;
-    FHitResult Hit;
-	GetHitResultUnderCursor(ECC_GameTraceChannel1, true, Hit);
-	HitLocation = Hit.Location;
+    // Rotate the character by mouse
+    FHitResult Hit;	
+	bool successHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, true, Hit); // ECC_GameTraceChannel1 is Cursor; Only Character's CursorHitPlance would block this channel
+	if (successHit)
 	{
-		FVector Start = HitLocation; // set the start point of the line
-		FVector End = HitLocation + -FVector::UpVector*200; // set the end point of the line
-		FColor Color = FColor::Red; // set the color of the line to red
-		float Duration = 2.0f; // set the duration of the line to 2 seconds
-		float Thickness = 5.0f; // set the thickness of the line to 5 units
-		DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
-	}
-	
-	FVector RotationVector;
-	{
-		FVector2D CursorPos;
-		GetMousePosition(CursorPos.X, CursorPos.Y);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("cursor: %f, %f"), CursorPos.X, CursorPos.Y));
-	
-		UGameViewportClient* GameViewport = GetWorld()->GetGameViewport();
-		FVector2D ViewportSize;
-		GameViewport->GetViewportSize(ViewportSize);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ViewportSize: %f, %f"), ViewportSize.X, ViewportSize.Y));
-		FVector2D ScreenCenter = ViewportSize * 0.5;
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ScreenCenter: %f, %f"), ScreenCenter.X, ScreenCenter.Y));
-
-		FVector2D CursorCoordinate = CursorPos - ScreenCenter;
-		CursorCoordinate.Y = -CursorCoordinate.Y;
-		float theta = FMath::Atan(CursorCoordinate.Y / CursorCoordinate.X);
-		//float theta_InDegrees = FMath::RadiansToDegrees(theta);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CursorCoordinate: %f, %f"), CursorCoordinate.X, CursorCoordinate.Y));
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("theta: %f"),  FMath::RadiansToDegrees(theta)));
-		
-		FVector Axis(0.0f, 0.0f, 1.0f);
-		FQuat Rotation = FQuat(Axis, -theta);
-		RotationVector = FVector((CursorCoordinate.X < 0 ? 1.0f : -1.0f), 0.0f, 0.0f);
-		RotationVector = Rotation.RotateVector(RotationVector);
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Rotation: %f, %f, %f"), Rotation.X, Rotation.Y, Rotation.Z));
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("RotationVector: %f, %f, %f"), RotationVector.X, RotationVector.Y, RotationVector.Z));
-		
-		/*FVector2D ScreenLocation;
-		bool bResult = UGameplayStatics::ProjectWorldToScreen(this, GetPawn()->GetActorLocation(), ScreenLocation);	*/
-
-		UGameViewportClient* ViewportClient = Cast<ULocalPlayer>(this->Player)->ViewportClient;
-	}	
-    
-	// Direct the Pawn towards that location
-	APawn* const MyPawn = GetPawn();
-	AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if(MyPawn && MyGameState && CanMove)
-	{
-		if (MyGameState->IsGameStart)
+		FVector HitLocation = Hit.Location;
+		//// Draw Debug Line
+		//{
+		//	FVector Start = HitLocation;
+		//	FVector End = HitLocation + -FVector::UpVector*200;
+		//	FColor Color = FColor::Red;
+		//	float Duration = 2.0f;
+		//	float Thickness = 5.0f;
+		//	DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
+		//}	
+		APawn* const MyPawn = GetPawn();
+		AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyPawn && MyGameState && CanMove)
 		{
-			FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
-			FRotator WorldRotator = WorldDirection.Rotation();
-			//FRotator WorldRotator = RotationVector.Rotation();
-			//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
-			SetControlRotation(WorldRotator);
+			if (MyGameState->IsGameStart)
+			{
+				FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
+				FRotator WorldRotator = WorldDirection.Rotation();
+				//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
+				SetControlRotation(WorldRotator);
+			}
 		}
 	}
 }
