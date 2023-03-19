@@ -7,6 +7,8 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "GameBase/MGameInstance.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
@@ -14,6 +16,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
+
 
 // Constructor
 // ===================================================
@@ -319,8 +322,7 @@ void AMPlayerController::PlayerTick(float DeltaTime)
     // Look for the touch location
     FVector HitLocation = FVector::ZeroVector;
     FHitResult Hit;
-
-	GetHitResultUnderCursor(ECC_EngineTraceChannel1, true, Hit);
+	GetHitResultUnderCursor(ECC_GameTraceChannel1, true, Hit);
 	HitLocation = Hit.Location;
 	{
 		FVector Start = HitLocation; // set the start point of the line
@@ -331,6 +333,38 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 		DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
 	}
 	
+	FVector RotationVector;
+	{
+		FVector2D CursorPos;
+		GetMousePosition(CursorPos.X, CursorPos.Y);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("cursor: %f, %f"), CursorPos.X, CursorPos.Y));
+	
+		UGameViewportClient* GameViewport = GetWorld()->GetGameViewport();
+		FVector2D ViewportSize;
+		GameViewport->GetViewportSize(ViewportSize);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ViewportSize: %f, %f"), ViewportSize.X, ViewportSize.Y));
+		FVector2D ScreenCenter = ViewportSize * 0.5;
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("ScreenCenter: %f, %f"), ScreenCenter.X, ScreenCenter.Y));
+
+		FVector2D CursorCoordinate = CursorPos - ScreenCenter;
+		CursorCoordinate.Y = -CursorCoordinate.Y;
+		float theta = FMath::Atan(CursorCoordinate.Y / CursorCoordinate.X);
+		//float theta_InDegrees = FMath::RadiansToDegrees(theta);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("CursorCoordinate: %f, %f"), CursorCoordinate.X, CursorCoordinate.Y));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("theta: %f"),  FMath::RadiansToDegrees(theta)));
+		
+		FVector Axis(0.0f, 0.0f, 1.0f);
+		FQuat Rotation = FQuat(Axis, -theta);
+		RotationVector = FVector((CursorCoordinate.X < 0 ? 1.0f : -1.0f), 0.0f, 0.0f);
+		RotationVector = Rotation.RotateVector(RotationVector);
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Rotation: %f, %f, %f"), Rotation.X, Rotation.Y, Rotation.Z));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("RotationVector: %f, %f, %f"), RotationVector.X, RotationVector.Y, RotationVector.Z));
+		
+		/*FVector2D ScreenLocation;
+		bool bResult = UGameplayStatics::ProjectWorldToScreen(this, GetPawn()->GetActorLocation(), ScreenLocation);	*/
+
+		UGameViewportClient* ViewportClient = Cast<ULocalPlayer>(this->Player)->ViewportClient;
+	}	
     
 	// Direct the Pawn towards that location
 	APawn* const MyPawn = GetPawn();
@@ -341,6 +375,7 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 		{
 			FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
 			FRotator WorldRotator = WorldDirection.Rotation();
+			//FRotator WorldRotator = RotationVector.Rotation();
 			//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
 			SetControlRotation(WorldRotator);
 		}

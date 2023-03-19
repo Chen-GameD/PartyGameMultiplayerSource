@@ -389,6 +389,7 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 	}
 	else
 	{
