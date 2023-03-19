@@ -7,6 +7,8 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "GameBase/MGameInstance.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
@@ -14,6 +16,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
+
 
 // Constructor
 // ===================================================
@@ -333,33 +336,32 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	
-    // Look for the touch location
-    FVector HitLocation = FVector::ZeroVector;
-    FHitResult Hit;
-
-	GetHitResultUnderCursor(ECC_EngineTraceChannel1, true, Hit);
-	HitLocation = Hit.Location;
+    // Rotate the character by mouse
+    FHitResult Hit;	
+	bool successHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, true, Hit); // ECC_GameTraceChannel1 is Cursor; Only Character's CursorHitPlance would block this channel
+	if (successHit)
 	{
-		FVector Start = HitLocation; // set the start point of the line
-		FVector End = HitLocation + -FVector::UpVector*200; // set the end point of the line
-		FColor Color = FColor::Red; // set the color of the line to red
-		float Duration = 2.0f; // set the duration of the line to 2 seconds
-		float Thickness = 5.0f; // set the thickness of the line to 5 units
-		DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
-	}
-	
-    
-	// Direct the Pawn towards that location
-	APawn* const MyPawn = GetPawn();
-	AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if(MyPawn && MyGameState && CanMove)
-	{
-		if (MyGameState->IsGameStart)
+		FVector HitLocation = Hit.Location;
+		//// Draw Debug Line
+		//{
+		//	FVector Start = HitLocation;
+		//	FVector End = HitLocation + -FVector::UpVector*200;
+		//	FColor Color = FColor::Red;
+		//	float Duration = 2.0f;
+		//	float Thickness = 5.0f;
+		//	DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
+		//}	
+		APawn* const MyPawn = GetPawn();
+		AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyPawn && MyGameState && CanMove)
 		{
-			FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
-			FRotator WorldRotator = WorldDirection.Rotation();
-			//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
-			SetControlRotation(WorldRotator);
+			if (MyGameState->IsGameStart)
+			{
+				FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
+				FRotator WorldRotator = WorldDirection.Rotation();
+				//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
+				SetControlRotation(WorldRotator);
+			}
 		}
 	}
 }
