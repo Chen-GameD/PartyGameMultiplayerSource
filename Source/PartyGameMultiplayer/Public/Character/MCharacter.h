@@ -10,6 +10,9 @@
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
+#include "../Matchmaking/EOSGameInstance.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "MCharacter.generated.h"
 
 //#define IS_LISTEN_SERVER
@@ -300,6 +303,12 @@ public:
 	// [isSingleMelee, isSingleShooting, isDualMelee, isDualShooting, isDualHeavy, isLeftHeld, isRightHeld, isAttack, isShock]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TArray<FName> CharacterMatParamNameArray;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		UMaterialParameterCollection* characaterMaterialParameterCollection;
 
 	// Scores Kill Death Array Format:
 	// [Scores, Kill, Death]

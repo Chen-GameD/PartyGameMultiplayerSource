@@ -65,6 +65,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsSessionsListAvailable = false;
 
+	// Customization
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLinearColor colorPicked;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int characterIndex;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TSubclassOf<UUserWidget> WB_MainMenuClass;
 

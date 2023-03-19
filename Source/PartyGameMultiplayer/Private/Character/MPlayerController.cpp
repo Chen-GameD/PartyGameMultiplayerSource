@@ -34,6 +34,23 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	//Replicate Action
 }
 
+// void AMPlayerController::NetMulticast_LoginInit_Implementation()
+// {
+// 	if (GetNetMode() == NM_ListenServer)
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("ListenServer"));
+// 	}
+// 	else if (GetNetMode() == NM_Client)
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("Client"));
+// 	}
+// 	if (IsLocalPlayerController())
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("UpdateUI"));
+// 		UI_UpdateLobbyMenu();
+// 	}
+// }
+
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
