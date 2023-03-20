@@ -23,8 +23,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AController* GetPreHoldingController();
 
+	UFUNCTION()
+	void UpdateScoreCanGet(int N_Score);
+	UFUNCTION()
+	int GetScoreCanGet();
 
+	UFUNCTION()
+	void UpdateConfigIndex(int N_Index);
+	UFUNCTION()
+	int GetConfigIndex();
 	
 protected:
 	AController* PreHoldingController;
+	UPROPERTY()
+	int ConfigIndex = -1;
+	UPROPERTY()
+	int ScoreCanGet = 0;
 };

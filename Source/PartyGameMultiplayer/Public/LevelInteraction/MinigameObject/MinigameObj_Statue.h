@@ -44,4 +44,6 @@ protected:
 	TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
 	UPROPERTY()
 	int CurrentSocketIndex;
+	UPROPERTY()
+	bool IsCompleteBuild = false;
 };
