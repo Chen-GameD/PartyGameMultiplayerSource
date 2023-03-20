@@ -129,7 +129,7 @@ void AWeaponBomb::SpawnProjectile(float AttackTargetDistance)
 		{
 			float SpeedRatio = AttackTargetDistance / 450.0f;
 			SpeedRatio = FMath::Max(SpeedRatio, 0.3f);
-			SpeedRatio = FMath::Min(SpeedRatio, 2.7f);
+			SpeedRatio = FMath::Min(SpeedRatio, 2.5f);
 			pProjectile->NetMulticast_ChangeSpeed(SpeedRatio);
 		}
 	}
