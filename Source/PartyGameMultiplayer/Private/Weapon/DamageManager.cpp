@@ -3,6 +3,9 @@
 #include "Weapon/DamageManager.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/BaseProjectile.h"
@@ -12,6 +15,7 @@
 #include "Weapon/WeaponDataHelper.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "Character/MCharacter.h"
+#include "Character/MPlayerController.h"
 #include "LevelInteraction/MinigameMainObjective.h"
 
 
@@ -121,17 +125,32 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 
 	float OldBuffPoints = BuffPoints;
 	BuffPoints += buffPointsToAdd;
-	// When the BuffPoints increases to an integer(1, 2, 3, 4 ...), Add the buff time
+
+	// When the BuffPoints increases to an integer(1, 2, 3, 4 ...), the buff will be activated(companied with adding buff time or sth)
 	if (0.99f <= FMath::FloorToInt(BuffPoints) - FMath::FloorToInt(OldBuffPoints))
-	{		
-		// time to add. Now we only have the paramter: "Burning_TimeToAdd"
-		FString ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+	{				
+		if (AttackBuff == EnumAttackBuff::Burning)
 		{
-			float buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			BuffRemainedTime += buffTimeToAdd;
-			BuffAccumulatedTime += buffTimeToAdd;
-		}
+			// time to add. Now we only have the paramter: "Burning_TimeToAdd"
+			FString ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			{
+				float buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+			}
+			// Set Character's IsBurned to true
+			DamagedCharacter->IsBurned = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsBurned();
+		}	
+		else if (AttackBuff == EnumAttackBuff::Paralysis)
+		{
+			// Set Character's IsParalyzed to true
+			DamagedCharacter->IsParalyzed = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsParalyzed();
+		}		
 	}
 	return true;
 }
@@ -170,7 +189,9 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 			FString ParName = "Paralysis_DragSpeed";
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 				DragSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
+
+			//DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
+			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, 0.1f*DragSpeed*DeltaTime);
 		}
 	}
 	return true;

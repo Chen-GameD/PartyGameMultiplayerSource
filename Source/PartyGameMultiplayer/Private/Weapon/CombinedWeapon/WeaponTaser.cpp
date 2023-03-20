@@ -225,8 +225,8 @@ void AWeaponTaser::AttackStop()
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(Elem.Key))
 		{
-			if(pMCharacter == Server_ActorBeingHit && pMCharacter->CheckBuffMap(EnumAttackBuff::Paralysis))
-				pMCharacter->BuffMap[EnumAttackBuff::Paralysis][0] -= 1.0f;
+			if(pMCharacter == Server_ActorBeingHit)
+				ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pMCharacter, -1.0f);
 		}
 	}
 	AttackObjectMap.Empty();
@@ -299,8 +299,8 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					return;
 				}
 				// Apply paralysis buff
-				if (!Server_ActorBeingHit && pCharacterBeingHit->CheckBuffMap(EnumAttackBuff::Paralysis))
-					pCharacterBeingHit->BuffMap[EnumAttackBuff::Paralysis][0] += 1.0f;
+				if (!Server_ActorBeingHit)
+					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
 			}
 
 			bHitTarget = true;

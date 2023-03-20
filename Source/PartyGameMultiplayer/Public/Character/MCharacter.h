@@ -156,6 +156,13 @@ public:
 
 	UFUNCTION()
 	void ResetCharacterStatus();
+
+	UFUNCTION()
+		void OnRep_IsBurned();
+	UFUNCTION()
+		void OnRep_IsParalyzed();
+	UFUNCTION(Client, Reliable)
+		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
 	
 protected:
 
@@ -169,7 +176,7 @@ protected:
 	void OnHealthUpdate();
 
 	UFUNCTION()
-	void OnRep_IsAllowDash();
+		void OnRep_IsAllowDash();
 
 	// Movement
 	// ==========================
@@ -319,6 +326,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectGetHit;
 	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBurn;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
@@ -348,6 +358,12 @@ public:
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsBurned)
+	bool IsBurned;
+	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
+		bool IsParalyzed;
+	
 
 	// UPROPERTY(EditAnywhere, Category="PlayerFollowWidget Tick Timer")
 	// float PlayerFollowWidget_ShowTime = 5.0;
@@ -386,7 +402,7 @@ protected:
 	FTimerHandle DashingTimer;
 
 	// buff
-	bool CanMove; // only used on the Server, only for paralysis rn
+	bool Server_CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")

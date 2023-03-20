@@ -109,6 +109,11 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectGetHit->SetupAttachment(RootComponent);
 	EffectGetHit->bAutoActivate = false;
 
+	IsBurned = false;
+	EffectBurn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBurn"));
+	EffectBurn->SetupAttachment(RootComponent);
+	EffectBurn->bAutoActivate = false;
+
 	EffectRun = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectRun"));
 	EffectRun->SetupAttachment(RootComponent);
 	EffectRun->bAutoActivate = false;
@@ -125,7 +130,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
 
-	CanMove = true;
+	Server_CanMove = true;
 }
 
 void AMCharacter::Restart()
@@ -208,6 +213,10 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, LeftWeapon);
 	DOREPLIFETIME(AMCharacter, RightWeapon);
 	DOREPLIFETIME(AMCharacter, CombineWeapon);
+
+	//Replicate vfx status
+	DOREPLIFETIME(AMCharacter, IsBurned);
+	DOREPLIFETIME(AMCharacter, IsParalyzed);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -966,6 +975,7 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
+		BuffMap.Empty();
 	}
 }
 
@@ -1073,6 +1083,7 @@ void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
 	playerController->SetCanMove(i_CanMove);
+	Server_CanMove = i_CanMove;
 }
 
 bool AMCharacter::CheckBuffMap(EnumAttackBuff AttackBuff)
@@ -1152,6 +1163,78 @@ void AMCharacter::OnRep_IsAllowDash()
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
+		}
+	}
+}
+
+void AMCharacter::OnRep_IsBurned()
+{
+	if (IsBurned)
+	{
+		// Activate VFX
+		if (EffectBurn && !EffectBurn->IsActive())
+			EffectBurn->Activate();
+
+		// Toggle on Character's Burning buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+			{
+				pMInGameHUD->InGame_ToggleFireBuffWidget(true);
+			}				
+		}
+	}
+	else
+	{
+		// Deactivate VFX
+		if (EffectBurn && EffectBurn->IsActive())
+			EffectBurn->Deactivate();
+
+		// Toggle off Character's Burning buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
+		}
+	}	
+}
+
+void AMCharacter::OnRep_IsParalyzed()
+{
+	if (IsParalyzed)
+	{
+		// Activate VFX
+		//if (EffectBurn && !EffectBurn->IsActive())
+		//	EffectBurn->Activate();
+
+		// Toggle on Character's Paralysis buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+			{
+				pMInGameHUD->InGame_ToggleShockBuffWidget(true);
+			}
+		}
+	}
+	else
+	{
+		// Deactivate VFX
+		//if (EffectBurn && EffectBurn->IsActive())
+		//	EffectBurn->Deactivate();
+
+		// Toggle off Character's Paralysis buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
 		}
 	}
 }
@@ -1434,6 +1517,18 @@ void AMCharacter::BeginPlay()
 		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
+
+		// Toggle off Character's buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+			{
+				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
+				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
+			}	
+		}
 	}	
 }
 
@@ -1561,6 +1656,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
+			else
+			{
+				// Set IsBurned to false
+				IsBurned = false;
+				if (GetNetMode() == NM_ListenServer)
+					OnRep_IsBurned();
+			}
 		}
 		/* Paralysis */
 		buffType = EnumAttackBuff::Paralysis;
@@ -1569,21 +1671,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 			float& BuffPoints = BuffMap[buffType][0];
 			if (1.0f <= BuffPoints)
 			{
-				if (CanMove)
+				if (Server_CanMove)
 				{
 					Server_SetCanMove(false);
 					SetElectricShockAnimState(true);
-					CanMove = false;
 				}
 			}
 			else
 			{
-				if (!CanMove)
+				if (!Server_CanMove)
 				{
 					Server_SetCanMove(true);
 					SetElectricShockAnimState(false);
-					CanMove = true;
 				}
+				// Set IsParalyzed to false
+				IsParalyzed = false;
+				if (GetNetMode() == NM_ListenServer)
+					OnRep_IsParalyzed();
 			}
 		}
 		/* Knockback */
@@ -1623,3 +1727,9 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 // 		}
 // 	}
 // }
+
+
+void AMCharacter::Client_MoveCharacter_Implementation(FVector MoveDirection, float SpeedRatio)
+{
+	AddMovementInput(MoveDirection, SpeedRatio);
+}
