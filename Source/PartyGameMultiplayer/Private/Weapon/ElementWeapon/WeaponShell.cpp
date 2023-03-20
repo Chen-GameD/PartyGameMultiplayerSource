@@ -3,6 +3,8 @@
 
 #include "Weapon/ElementWeapon/WeaponShell.h"
 
+#include "GameFramework/Character.h"
+
 AWeaponShell::AWeaponShell()
 {
 	IsCombineWeapon = false;
@@ -13,4 +15,16 @@ AWeaponShell::AWeaponShell()
 	//{
 	//	WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	//}
+}
+
+void AWeaponShell::GetPickedUp(ACharacter* pCharacter)
+{
+	Super::GetPickedUp(pCharacter);
+
+	PreHoldingController = pCharacter->GetController();
+}
+
+AController* AWeaponShell::GetPreHoldingController()
+{
+	return PreHoldingController;
 }

@@ -17,4 +17,14 @@ class PARTYGAMEMULTIPLAYER_API AWeaponShell : public ABaseWeapon
 /* MEMBER METHODS */
 public:
 	AWeaponShell();
+
+	virtual void GetPickedUp(ACharacter* pCharacter) override;
+
+	UFUNCTION(BlueprintCallable)
+	AController* GetPreHoldingController();
+
+
+	
+protected:
+	AController* PreHoldingController;
 };
