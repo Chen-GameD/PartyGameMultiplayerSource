@@ -17,9 +17,6 @@ struct FMinigameRuleStruct
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
-	int GameTime;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
 	int ScoreCanGet;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
@@ -29,11 +26,23 @@ public:
 	TSubclassOf<AMinigameMainObjective> MinigameObject;
 };
 
+USTRUCT(BlueprintType)
+struct FLevelMinigameRuleTable
+{
+	GENERATED_BODY()
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	int GameTime;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	TArray<FMinigameRuleStruct> MinigameConfigTable;
+};
+
 UCLASS(BlueprintType)
 class PARTYGAMEMULTIPLAYER_API UMinigameBaseDataAsset : public UDataAsset
 {
 	GENERATED_BODY()
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
-	TArray<FMinigameRuleStruct> MinigameConfigTable;
+	TArray<FLevelMinigameRuleTable> LevelMinigameConfigTable;
 };

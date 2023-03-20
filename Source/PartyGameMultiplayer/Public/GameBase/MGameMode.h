@@ -83,6 +83,9 @@ public:
 	UPROPERTY()
 	int CurrentPlayerNum = 0;
 
+	UPROPERTY(EditAnywhere)
+	int LevelIndex = 0;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TArray<APlayerStart*> Team_1_SpawnPoints;

@@ -3,6 +3,9 @@
 
 #include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 
+#include <string>
+
+#include "Character/MPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "Net/UnrealNetwork.h"
@@ -23,6 +26,7 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
+	CurrentSocketIndex = 0;
 }
 
 void AMinigameObj_Statue::BeginPlay()
@@ -52,6 +56,11 @@ void AMinigameObj_Statue::BeginPlay()
 	}
 }
 
+USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
+{
+	return SkeletalMesh;
+}
+
 void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (OtherActor)
@@ -60,28 +69,52 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 		if (OverlapShell)
 		{
 			this->CurrentHealth--;
+			CurrentSocketIndex++;
 			// Detect which player drop the shell
 			// TODO...as
-			
-			// Consider respawn the shell
-			// TODO...
-
 
 			// Spawn a shell mesh and attach to the socket
 			if (ShellMeshRef)
 			{
-				AStaticMeshActor* NewShellActor = GetWorld()->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), OtherActor->GetActorLocation(), OtherActor->GetActorRotation());
-				NewShellActor->SetMobility(EComponentMobility::Stationary);
-				UStaticMeshComponent* NewMeshComponent = NewShellActor->GetStaticMeshComponent();
-				if (NewMeshComponent)
+				AMinigameChild_Statue_Shell* NewShellActor = GetWorld()->SpawnActor<AMinigameChild_Statue_Shell>(ShellMeshRef, OtherActor->GetActorLocation(), OtherActor->GetActorRotation());
+				if (NewShellActor)
 				{
-					NewMeshComponent->SetStaticMesh(ShellMeshRef);
 					GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("Shell Spawn Success!"));
+					NewShellActor->TartgetStatue = this;
+					FString SocketNameString = "Shell" + FString::FromInt(CurrentSocketIndex);
+					NewShellActor->TargetSocketName = FName(*SocketNameString);
 				}
 			}
 			
 			// Destroy Shell
 			OtherActor->Destroy();
+
+			if (CurrentHealth <= 0)
+			{
+				if (GetNetMode() == NM_ListenServer)
+				{
+					OnRep_CurrentHealth();
+				}
+
+				// Add Score
+				if (OverlapShell->GetPreHoldingController())
+				{
+					AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
+					if (CurrentController)
+					{
+						AM_PlayerState* CurrentPS = CurrentController->GetPlayerState<AM_PlayerState>();
+						if (CurrentPS)
+						{
+							CurrentPS->addScore(ScoreCanGet);
+						}
+					}
+				}
+
+				// Consider respawn the shell
+				// Set timer and respawn this actor
+				FTimerHandle RespawnMinigameObjectTimerHandle;
+				GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, 5, false);
+			}
 		}
 	}
 }
@@ -89,4 +122,27 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	
+}
+
+void AMinigameObj_Statue::OnRep_CurrentHealth()
+{
+	Super::OnRep_CurrentHealth();
+
+	if (CurrentHealth <= 0)
+	{
+		// if (SkeletalMesh)
+		// {
+		// 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Client"));
+		// 	SkeletalMesh->DestroyComponent();
+		// }
+		// if (BlowUpEffect)
+		// {
+		// 	BlowUpEffect->Activate();
+		// }
+		// EnableBlowUpGeometryCacheComponent();
+
+		// Destroy VFX & Effect
+		// TODO
+		
+	}
 }
