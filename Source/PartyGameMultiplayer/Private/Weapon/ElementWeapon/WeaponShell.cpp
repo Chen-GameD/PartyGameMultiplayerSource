@@ -28,3 +28,23 @@ AController* AWeaponShell::GetPreHoldingController()
 {
 	return PreHoldingController;
 }
+
+void AWeaponShell::UpdateScoreCanGet(int N_Score)
+{
+	ScoreCanGet = N_Score;
+}
+
+int AWeaponShell::GetScoreCanGet()
+{
+	return ScoreCanGet;
+}
+
+void AWeaponShell::UpdateConfigIndex(int N_Index)
+{
+	ConfigIndex = N_Index;
+}
+
+int AWeaponShell::GetConfigIndex()
+{
+	return ConfigIndex;
+}

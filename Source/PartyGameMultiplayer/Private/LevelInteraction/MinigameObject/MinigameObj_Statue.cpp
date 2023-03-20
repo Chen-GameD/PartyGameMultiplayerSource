@@ -8,6 +8,7 @@
 #include "Character/MPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Engine/StaticMeshActor.h"
+#include "GameBase/MGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
 
@@ -63,15 +64,28 @@ USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
 
 void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor)
+	if (OtherActor && !IsCompleteBuild)
 	{
 		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);
 		if (OverlapShell)
 		{
 			this->CurrentHealth--;
 			CurrentSocketIndex++;
+			
 			// Detect which player drop the shell
-			// TODO...as
+			// Add Score
+			if (OverlapShell->GetPreHoldingController())
+			{
+				AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
+				if (CurrentController)
+				{
+					AM_PlayerState* CurrentPS = CurrentController->GetPlayerState<AM_PlayerState>();
+					if (CurrentPS)
+					{
+						CurrentPS->addScore(OverlapShell->GetScoreCanGet());
+					}
+				}
+			}
 
 			// Spawn a shell mesh and attach to the socket
 			if (ShellMeshRef)
@@ -86,17 +100,22 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 				}
 			}
 			
-			// Destroy Shell
-			OtherActor->Destroy();
+			// Respawn Sculpture
+			AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
+			if (MyGameMode)
+			{
+				MyGameMode->Server_RespawnShellObject(OverlapShell->GetConfigIndex());
+			}
 
 			if (CurrentHealth <= 0)
 			{
+				IsCompleteBuild = true;
 				if (GetNetMode() == NM_ListenServer)
 				{
 					OnRep_CurrentHealth();
 				}
 
-				// Add Score
+				// Add Sculpture Complete Score
 				if (OverlapShell->GetPreHoldingController())
 				{
 					AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
@@ -115,6 +134,9 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 				FTimerHandle RespawnMinigameObjectTimerHandle;
 				GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, 5, false);
 			}
+
+			// Destroy Shell
+			OtherActor->Destroy();
 		}
 	}
 }

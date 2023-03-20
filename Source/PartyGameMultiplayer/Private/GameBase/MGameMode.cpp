@@ -3,6 +3,8 @@
 
 #include "GameBase/MGameMode.h"
 
+#include <process.h>
+
 #include "EngineUtils.h"
 #include "M_PlayerState.h"
 #include "OnlineSubsystem.h"
@@ -12,8 +14,10 @@
 #include "Kismet/GameplayStatics.h"
 #include "Math/TransformCalculus3D.h"
 #include "Character/MCharacter.h"
+#include "LevelInteraction/MinigameObject/MinigameChild/MinigameChild_Statue_Shell.h"
 #include "Matchmaking/EOSGameInstance.h"
 #include "Weapon/JsonFactory.h"
+#include "Weapon/ElementWeapon/WeaponShell.h"
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
@@ -191,12 +195,23 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 {
 	if (MinigameDataAsset)
 	{
+		// Spawn the minigame object
 		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
-		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
+		FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
 		if(spawnActor && MinigameDataAsset)
 			spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+
+		// Special rules
+		switch (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameType)
+		{
+		case EMinigameTypeEnum::SculptureType:
+			InitMinigame_ShellObject();
+			break;
+		case EMinigameTypeEnum::DefaultType:
+		default:
+			break;
+		}
 		
 		// Update Minigame Hint
 		AMGameState* MyGameState = GetGameState<AMGameState>();
@@ -314,4 +329,48 @@ void AMGameMode::StartTheGame()
 void AMGameMode::TestRestartLevel()
 {
 	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+}
+
+void AMGameMode::InitMinigame_ShellObject()
+{
+	// Delete all MinigameChild_Statue_Shell actor
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMinigameChild_Statue_Shell::StaticClass(), FoundActors);
+	for(int i = 0; i < FoundActors.Num(); i++)
+	{
+		FoundActors[i]->Destroy();
+	}
+	
+	if (!IsGameInitialized)
+	{
+		// Start initialize
+		int SpawnShellNum = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation.Num();
+		for (int i = 0; i < SpawnShellNum; i++)
+		{
+			Server_RespawnShellObject(i);
+		}
+
+		IsGameInitialized = true;
+	}
+}
+
+void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformationIndex)
+{
+	FTransform spawnTransform;
+	if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Single)
+	{
+		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transform;
+	}
+	else if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Multiple)
+	{
+		int CurrentSpawnTransformIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transforms.Num() - 1);
+		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transforms[CurrentSpawnTransformIndex];
+	}
+
+	AWeaponShell* spawnActor = GetWorld()->SpawnActor<AWeaponShell>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_ActorClass, spawnTransform);
+	if(spawnActor)
+	{
+		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Int);
+		spawnActor->UpdateConfigIndex(AdditionalInformationIndex);
+	}
 }
