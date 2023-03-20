@@ -118,7 +118,7 @@ void AWeaponBomb::SpawnProjectile()
 	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
-		FRotator spawnRotation = pCharacter->GetActorRotation();
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() - 0.1 * pCharacter->GetActorRightVector()).Rotation();
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();

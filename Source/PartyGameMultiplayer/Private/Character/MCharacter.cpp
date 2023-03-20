@@ -25,6 +25,7 @@
 
 #include "EngineUtils.h"
 #include "Character/MPlayerController.h"
+#include "Character/CursorHitPlane.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
 #include "UI/MCharacterFollowWidget.h"
@@ -66,6 +67,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
 	CameraBoom->TargetArmLength = 800.0f; // The camera follows at this distance behind the character
+	Local_MinCameraArmLength = Local_CurCameraArmLength = CameraBoom->TargetArmLength;
+	Local_MaxCameraArmLength = 1100.0f;
 	CameraBoom->SetRelativeRotation(FRotator(60.f, 0.f, 0.f));
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 
@@ -121,9 +124,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectLand"));
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
-
-	CursorHitPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CursorHitPlane"));
-	CursorHitPlane->SetupAttachment(RootComponent);
 
 	CanMove = true;
 }
@@ -1404,11 +1404,20 @@ void AMCharacter::BeginPlay()
 		}
 	}
 
-	if (!IsLocallyControlled())
+	if (IsLocallyControlled())
+	{		
+		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
+		if (pCursorHitPlane)
+			pCursorHitPlane->pMCharacter = this;
+	}	
+	/*else
 	{
-		CursorHitPlane->SetCollisionProfileName(TEXT("NoCollision"));
-		CursorHitPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	}		
+		if (pCursorHitPlane)
+		{
+			pCursorHitPlane->CollisionPlane->SetCollisionProfileName(TEXT("NoCollision"));
+			pCursorHitPlane->CollisionPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}	
+	}*/
 }
 
 
@@ -1426,25 +1435,6 @@ void AMCharacter::Tick(float DeltaTime)
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		// Zoom
-		float ZoomOutSpeed = 100.0f;
-		float ZoomInSpeed = ZoomOutSpeed * 0.5f;
-		if (bShouldZoomOut)
-		{
-			if (CurFov < MaxFov)
-			{
-				CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
-				FollowCamera->SetFieldOfView(CurFov);
-			}
-		}
-		else
-		{
-			if (MinFov < CurFov)
-			{
-				CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
-				FollowCamera->SetFieldOfView(CurFov);
-			}
-		}
 		// Effect Land/Jump
 		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
@@ -1491,6 +1481,41 @@ void AMCharacter::Tick(float DeltaTime)
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
 			}			
+		}
+	}
+
+	if (IsLocallyControlled())
+	{
+		// Zoom
+		//float ZoomOutSpeed = 100.0f;
+		//float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+		float ZoomOutSpeed = 1400.0f;
+		float ZoomInSpeed = ZoomOutSpeed * 0.75f;
+		if (bShouldZoomOut)
+		{
+			//if (CurFov < MaxFov)
+			//{
+			//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+			//	FollowCamera->SetFieldOfView(CurFov);
+			//}
+			if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
+			{
+				Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
+				CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+			}
+		}
+		else
+		{
+			//if (MinFov < CurFov)
+			//{
+			//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+			//	FollowCamera->SetFieldOfView(CurFov);
+			//}
+			if (Local_MinCameraArmLength < Local_CurCameraArmLength)
+			{
+				Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
+				CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+			}
 		}
 	}
 }

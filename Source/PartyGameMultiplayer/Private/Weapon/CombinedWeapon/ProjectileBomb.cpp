@@ -26,10 +26,21 @@ AProjectileBomb::AProjectileBomb()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 1100.0f;
-	ProjectileMovementComponent->MaxSpeed = 1100.0f;
+	BombMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BombMesh"));
+	BombMesh->SetupAttachment(StaticMesh);
+
+	BombMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	if (DefaultMesh.Succeeded())
+	{
+		BombMesh->SetStaticMesh(DefaultMesh.Object);
+		BombMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		BombMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	}
+
+	ProjectileMovementComponent->InitialSpeed = 1000.0f;
+	ProjectileMovementComponent->MaxSpeed = 1000.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.2f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.3f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
@@ -46,6 +57,11 @@ void AProjectileBomb::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	FRotator NewRotation = BombMesh->GetRelativeRotation();
+	float DeltaRotation = DeltaTime * 400.0f;
+	NewRotation.Yaw += DeltaRotation;
+	BombMesh->SetRelativeRotation(NewRotation);
+
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -57,6 +73,21 @@ void AProjectileBomb::Tick(float DeltaTime)
 	}
 }
 
+
+void AProjectileBomb::OnRep_HasExploded()
+{
+	if (HasExploded)
+	{
+		ProjectileMovementComponent->StopMovementImmediately();
+		StaticMesh->SetSimulatePhysics(false);
+		StaticMesh->SetEnableGravity(false);
+		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		
+
+		if (AttackHitEffect_NSSystem)
+			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	}
+}
 
 
 void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,

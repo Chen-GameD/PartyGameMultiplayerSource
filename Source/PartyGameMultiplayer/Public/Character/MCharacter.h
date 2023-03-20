@@ -331,10 +331,14 @@ public:
 
 	float Server_MaxWalkSpeed;
 	float Client_LowSpeedWalkAccumulateTime;
+
+	bool bShouldZoomOut;
 	float CurFov;
 	float MinFov;
-	float MaxFov;
-	bool bShouldZoomOut;
+	float MaxFov;	
+	float Local_CurCameraArmLength;
+	float Local_MinCameraArmLength;
+	float Local_MaxCameraArmLength;
 
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
@@ -397,7 +401,7 @@ protected:
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;
 
 	UPROPERTY(EditAnywhere)
-	class UStaticMeshComponent* CursorHitPlane;
+		TSubclassOf<class ACursorHitPlane> CursorHitPlaneSubClass;
 
 	UFUNCTION()
 	void SetTextureInUI();
