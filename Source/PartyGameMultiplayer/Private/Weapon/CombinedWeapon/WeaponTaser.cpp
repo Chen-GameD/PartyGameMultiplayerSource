@@ -169,7 +169,7 @@ void AWeaponTaser::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLif
 
 
 
-void AWeaponTaser::AttackStart()
+void AWeaponTaser::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner() || IsForkOut)
 		return;

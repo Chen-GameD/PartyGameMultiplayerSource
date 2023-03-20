@@ -235,7 +235,7 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 	//PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	//PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMCharacter::Attack);
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AMCharacter::Client_Attack);
 	PlayerInputComponent->BindAction<FIsMeleeRelease>("Attack", IE_Released, this, &AMCharacter::StopAttack, false);
 
 	PlayerInputComponent->BindAction<FPickUpDelegate>("PickUpLeft", IE_Pressed, this, &AMCharacter::PickUp, true);
@@ -268,7 +268,32 @@ void AMCharacter::SetTextureInUI()
 	}
 }
 
-void AMCharacter::Attack_Implementation()
+void AMCharacter::Client_Attack()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_1"));
+	float TargetDistance = 0.0f;
+	if (auto pPlayerController = Cast<APlayerController>(GetController()))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_2"));
+		FHitResult Hit;
+		bool successHit = pPlayerController->GetHitResultUnderCursor(ECC_GameTraceChannel1, false, Hit);
+		if (successHit)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_3"));
+			auto pMCharacter = Cast<AMCharacter>(GetInstigator());
+			if (pMCharacter)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_4"));
+				TargetDistance = FVector::Distance(Hit.Location, GetActorLocation());
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("distance: %f"), TargetDistance));
+			}
+		}
+	}
+
+	Attack(TargetDistance);
+}
+
+void AMCharacter::Attack_Implementation(float AttackTargetDistance)
 {
 	if ((LeftWeapon || RightWeapon || CombineWeapon) && !IsDead)
 	{
@@ -281,17 +306,17 @@ void AMCharacter::Attack_Implementation()
 
 		if (CombineWeapon)
 		{
-			CombineWeapon->AttackStart();
+			CombineWeapon->AttackStart(AttackTargetDistance);
 		}
 		else
 		{
 			if (LeftWeapon)
 			{
-				LeftWeapon->AttackStart();
+				LeftWeapon->AttackStart(AttackTargetDistance);
 			}
 			if (RightWeapon)
 			{
-				RightWeapon->AttackStart();
+				RightWeapon->AttackStart(AttackTargetDistance);
 			}
 		}
 

@@ -17,7 +17,7 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void AttackStart() override;
+	virtual void AttackStart(float AttackTargetDistance) override;
 	virtual void AttackStop() override;
 
 protected:

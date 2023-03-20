@@ -29,7 +29,7 @@ public:
 	// should only be called on server
 	virtual void GetThrewAway();
 	// should only be called on server
-	virtual void AttackStart();
+	virtual void AttackStart(float AttackTargetDistance);
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
@@ -50,7 +50,7 @@ protected:
 	// should be only on client
 	virtual void GenerateAttackHitEffect();
 	// should only be called on server
-	virtual void SpawnProjectile();
+	virtual void SpawnProjectile(float AttackTargetDistance);
 
 	/* RepNotify Functions */
 	UFUNCTION()
@@ -76,7 +76,7 @@ protected:
 	UFUNCTION(Category = "Weapon")
 		virtual void OnDisplayCaseOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
+
 private:
 
 

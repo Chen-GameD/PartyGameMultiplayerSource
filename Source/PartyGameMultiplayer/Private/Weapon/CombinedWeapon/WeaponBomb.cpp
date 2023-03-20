@@ -70,7 +70,7 @@ void AWeaponBomb::Tick(float DeltaTime)
 }
 
 
-void AWeaponBomb::AttackStart()
+void AWeaponBomb::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner())
 		return;
@@ -89,7 +89,7 @@ void AWeaponBomb::AttackStart()
 	if (0.0f < CD_MaxEnergy && CD_MinEnergyToAttak <= CD_LeftEnergy)
 	{
 		CD_LeftEnergy -= CD_MinEnergyToAttak;
-		SpawnProjectile();
+		SpawnProjectile(AttackTargetDistance);
 	}
 }
 
@@ -112,7 +112,7 @@ void AWeaponBomb::AttackStart()
 //}
 
 
-void AWeaponBomb::SpawnProjectile()
+void AWeaponBomb::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
@@ -124,7 +124,14 @@ void AWeaponBomb::SpawnProjectile()
 		spawnParameters.Instigator = GetInstigator();
 		spawnParameters.Owner = this;
 
-		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		ABaseProjectile* pProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		if (pProjectile)
+		{
+			float SpeedRatio = AttackTargetDistance / 450.0f;
+			SpeedRatio = FMath::Max(SpeedRatio, 0.3f);
+			SpeedRatio = FMath::Min(SpeedRatio, 2.7f);
+			pProjectile->NetMulticast_ChangeSpeed(SpeedRatio);
+		}
 	}
 }
 

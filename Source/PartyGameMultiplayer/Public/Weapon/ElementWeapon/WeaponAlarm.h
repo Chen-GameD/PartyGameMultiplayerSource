@@ -20,7 +20,7 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	// should only be called on server
-	virtual void SpawnProjectile() override;
+	virtual void SpawnProjectile(float AttackTargetDistance) override;
 
 protected:
 	virtual void OnRep_bAttackOn() override;

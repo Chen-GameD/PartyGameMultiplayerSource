@@ -42,21 +42,27 @@ AWeaponCannon::AWeaponCannon()
 }
 
 
-void AWeaponCannon::SpawnProjectile()
+void AWeaponCannon::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
 		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + 
-						FMath::RandRange(1.1f, 1.3f) * pCharacter->GetActorUpVector() + 
-						FMath::RandRange(-0.2f, 0.2f) * pCharacter->GetActorRightVector()).Rotation();  // character up with random bias
+						FMath::RandRange(1.25f, 1.3f) * pCharacter->GetActorUpVector() + 
+						FMath::RandRange(-0.1f, 0.1f) * pCharacter->GetActorRightVector()).Rotation();  // character up with random bias
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();
 		spawnParameters.Owner = this;
 
-		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
-		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		ABaseProjectile* pProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		if (pProjectile)
+		{
+			float SpeedRatio = AttackTargetDistance / 550.0f;
+			SpeedRatio = FMath::Max(SpeedRatio, 0.3f);
+			SpeedRatio = FMath::Min(SpeedRatio, 1.6f);
+			pProjectile->NetMulticast_ChangeSpeed(SpeedRatio);
+		}
 	}
 }

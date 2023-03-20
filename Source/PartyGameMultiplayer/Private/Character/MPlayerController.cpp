@@ -338,7 +338,7 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 	
     // Rotate the character by mouse
     FHitResult Hit;	
-	bool successHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, true, Hit); // ECC_GameTraceChannel1 is Cursor; Only Character's CursorHitPlance would block this channel
+	bool successHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, false, Hit); // ECC_GameTraceChannel1 is Cursor; Only Character's CursorHitPlance would block this channel
 	if (successHit)
 	{
 		FVector HitLocation = Hit.Location;
@@ -364,5 +364,9 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 			}
 		}
 	}
+	//else if(GetNetMode() != NM_ListenServer)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, TEXT("GetHitResult Failed in AMPlayerController::PlayerTick!"));
+	//}
 }
 #pragma endregion Constructor

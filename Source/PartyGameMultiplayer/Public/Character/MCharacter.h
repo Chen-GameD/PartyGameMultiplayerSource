@@ -200,8 +200,9 @@ protected:
 	// Action
 	// ==========================
 	/* Called for Attack input */
+	void Client_Attack();
 	UFUNCTION(Server, Reliable)
-	void Attack();
+	void Attack(float AttackTargetDistance=0.0f);
 	DECLARE_DELEGATE_OneParam(FIsMeleeRelease, bool);
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);

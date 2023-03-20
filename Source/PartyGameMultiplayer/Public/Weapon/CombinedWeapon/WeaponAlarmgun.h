@@ -17,7 +17,7 @@ public:
 	AWeaponAlarmgun();
 
 	// should only be called on server
-	virtual void SpawnProjectile() override;
+	virtual void SpawnProjectile(float AttackTargetDistance) override;
 
 protected:
 private:

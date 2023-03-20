@@ -234,7 +234,7 @@ void ABaseWeapon::GetThrewAway()
 }
 
 
-void ABaseWeapon::AttackStart()
+void ABaseWeapon::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner())
 		return;	
@@ -272,7 +272,7 @@ void ABaseWeapon::AttackStart()
 	}
 	else
 	{
-		SpawnProjectile();
+		SpawnProjectile(AttackTargetDistance);
 	}
 }
 
@@ -536,7 +536,7 @@ AController* ABaseWeapon::GetHoldingController() const
 }
 
 
-void ABaseWeapon::SpawnProjectile()
+void ABaseWeapon::SpawnProjectile(float AttackTargetDistance)
 {
 	//auto pCharacter = GetOwner();
 	//if (pCharacter && SpecificProjectileClass)
@@ -552,3 +552,5 @@ void ABaseWeapon::SpawnProjectile()
 	//	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	//}
 }
+
+

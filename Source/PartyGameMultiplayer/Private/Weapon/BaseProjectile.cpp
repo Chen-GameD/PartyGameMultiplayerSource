@@ -40,11 +40,6 @@ ABaseProjectile::ABaseProjectile()
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
 
-	/*ProjectileMovementComponent->InitialSpeed = 1500.0f;
-	ProjectileMovementComponent->MaxSpeed = 1500.0f;
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
-
 	AttackOnEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_NSComponent"));
 	AttackOnEffect_NSComponent->SetupAttachment(StaticMesh);
 
@@ -99,6 +94,12 @@ void ABaseProjectile::Tick(float DeltaTime)
 	}
 }
 
+
+void ABaseProjectile::NetMulticast_ChangeSpeed_Implementation(float SpeedRatio)
+{
+	ProjectileMovementComponent->MaxSpeed *= SpeedRatio;
+	ProjectileMovementComponent->Velocity *= SpeedRatio;
+}
 
 
 void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
