@@ -284,7 +284,8 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			Cast<AMinigameMainObjective>(OtherActor))
 		{
 			// if it is AMCharacter
-			if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
+			auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor);
+			if (pCharacterBeingHit)
 			{
 				// Check if it hits teammates
 				auto MyController = HoldingController;
@@ -304,7 +305,10 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 
 			bHitTarget = true;
 			Server_ActorBeingHit = OtherActor;
-			Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
+			if(pCharacterBeingHit)
+				Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
+			else
+				Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
 			Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
 			Server_TaserForkRotationYaw_WhenHit = TaserForkMesh->GetRelativeRotation().Yaw;
 
