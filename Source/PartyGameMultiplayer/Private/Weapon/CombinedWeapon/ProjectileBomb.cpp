@@ -58,9 +58,15 @@ void AProjectileBomb::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FRotator NewRotation = BombMesh->GetRelativeRotation();
-	float DeltaRotation = DeltaTime * 400.0f;
+	float DeltaRotation = DeltaTime * 900.0f;
 	NewRotation.Yaw += DeltaRotation;
 	BombMesh->SetRelativeRotation(NewRotation);
+	if (HasExploded)
+	{
+		FVector NewLocation = BombMesh->GetComponentLocation();
+		NewLocation.Z -= DeltaTime * 75.0f;
+		BombMesh->SetWorldLocation(NewLocation);
+	}		
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -78,11 +84,10 @@ void AProjectileBomb::OnRep_HasExploded()
 {
 	if (HasExploded)
 	{
-		ProjectileMovementComponent->StopMovementImmediately();
+		ProjectileMovementComponent->StopMovementImmediately();  // will stop the original movement, but will still move the object(like a free fall)
+		ProjectileMovementComponent->SetUpdatedComponent(nullptr);
 		StaticMesh->SetSimulatePhysics(false);
-		StaticMesh->SetEnableGravity(false);
 		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		
 
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
@@ -104,9 +109,7 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	Origin = this->GetActorLocation();
 	HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
-	{
 		OnRep_HasExploded();
-	}
 	HasAppliedNeedleRainDamage = false;
 
 	// Direct Hit Damage
