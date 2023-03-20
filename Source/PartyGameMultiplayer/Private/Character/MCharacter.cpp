@@ -66,7 +66,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->SetUsingAbsoluteRotation(true); // Don't want arm to rotate when character does
-	CameraBoom->TargetArmLength = 800.0f; // The camera follows at this distance behind the character
+	CameraBoom->TargetArmLength = 850.0f; // The camera follows at this distance behind the character
 	Local_MinCameraArmLength = Local_CurCameraArmLength = CameraBoom->TargetArmLength;
 	Local_MaxCameraArmLength = 1100.0f;
 	CameraBoom->SetRelativeRotation(FRotator(60.f, 0.f, 0.f));
@@ -682,7 +682,7 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 
 void AMCharacter::Zoom(bool bZoomOut)
 {
-	bShouldZoomOut = bZoomOut;
+	//bShouldZoomOut = bZoomOut;
 }
 
 void AMCharacter::Dash()
@@ -1410,14 +1410,6 @@ void AMCharacter::BeginPlay()
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
 	}	
-	/*else
-	{
-		if (pCursorHitPlane)
-		{
-			pCursorHitPlane->CollisionPlane->SetCollisionProfileName(TEXT("NoCollision"));
-			pCursorHitPlane->CollisionPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		}	
-	}*/
 }
 
 
@@ -1484,40 +1476,40 @@ void AMCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	if (IsLocallyControlled())
-	{
-		// Zoom
-		//float ZoomOutSpeed = 100.0f;
-		//float ZoomInSpeed = ZoomOutSpeed * 0.5f;
-		float ZoomOutSpeed = 1400.0f;
-		float ZoomInSpeed = ZoomOutSpeed * 0.75f;
-		if (bShouldZoomOut)
-		{
-			//if (CurFov < MaxFov)
-			//{
-			//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
-			//	FollowCamera->SetFieldOfView(CurFov);
-			//}
-			if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
-			{
-				Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
-				CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-			}
-		}
-		else
-		{
-			//if (MinFov < CurFov)
-			//{
-			//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
-			//	FollowCamera->SetFieldOfView(CurFov);
-			//}
-			if (Local_MinCameraArmLength < Local_CurCameraArmLength)
-			{
-				Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
-				CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-			}
-		}
-	}
+	//if (IsLocallyControlled())
+	//{
+	//	// Zoom
+	//	//float ZoomOutSpeed = 100.0f;
+	//	//float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+	//	float ZoomOutSpeed = 1400.0f;
+	//	float ZoomInSpeed = ZoomOutSpeed * 0.75f;
+	//	if (bShouldZoomOut)
+	//	{
+	//		//if (CurFov < MaxFov)
+	//		//{
+	//		//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+	//		//	FollowCamera->SetFieldOfView(CurFov);
+	//		//}
+	//		if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
+	//		{
+	//			Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
+	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+	//		}
+	//	}
+	//	else
+	//	{
+	//		//if (MinFov < CurFov)
+	//		//{
+	//		//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+	//		//	FollowCamera->SetFieldOfView(CurFov);
+	//		//}
+	//		if (Local_MinCameraArmLength < Local_CurCameraArmLength)
+	//		{
+	//			Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
+	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+	//		}
+	//	}
+	//}
 }
 #pragma endregion Engine life cycle function
 
