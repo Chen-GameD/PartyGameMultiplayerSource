@@ -88,8 +88,7 @@ void AWeaponAlarm::SpawnProjectile(float AttackTargetDistance)
 		if (pProjectile)
 		{
 			float SpeedRatio = AttackTargetDistance / 400.0f;
-			SpeedRatio = FMath::Max(SpeedRatio, 0.3f);
-			SpeedRatio = FMath::Min(SpeedRatio, 2.2f);
+			SpeedRatio = FMath::Clamp(SpeedRatio, 0.3f, 2.2f);
 			pProjectile->NetMulticast_ChangeSpeed(SpeedRatio);
 		}			
 	}

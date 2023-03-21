@@ -13,6 +13,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
+#include "WaterBodyActor.h"
 
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"

@@ -21,7 +21,8 @@
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "WaterBodyActor.h"
-#include <Character/animUtils.h>
+#include "LevelInteraction/SaltcureArea.h"
+#include "Character/animUtils.h"
 
 #include "EngineUtils.h"
 #include "Character/MPlayerController.h"
@@ -102,8 +103,13 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
 
-	Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+	Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	Client_LowSpeedWalkAccumulateTime = 0;
+
+	IsHealing = false;
+	EffectHeal = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHeal"));
+	EffectHeal->SetupAttachment(RootComponent);
+	EffectHeal->bAutoActivate = false;
 
 	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
 	EffectGetHit->SetupAttachment(RootComponent);
@@ -215,6 +221,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, CombineWeapon);
 
 	//Replicate vfx status
+	DOREPLIFETIME(AMCharacter, IsHealing);
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
 
@@ -421,7 +428,7 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 		ParName = "OneShell";
 	else if (2 == CntShellHeld)
 		ParName = "TwoShells";
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Purple, ParName);
 	float MaxWalkSpeedRatio = 1.0f;
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
 		MaxWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
@@ -577,6 +584,19 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	// Adjust the walking speed according to the holding weapon
 	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+	// Add Shellheal buff if holding any shells
+	int CntShellHeld = 0;
+	if (!CombineWeapon)
+	{
+		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if(0 < CntShellHeld)
+			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
+		else
+			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
+	}
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -847,18 +867,18 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	if (EffectGetHit && !EffectGetHit->IsActive())
-	{
-		EffectGetHit->Activate();
-		// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
-		// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-		float Delay = 0.1f;
-		FTimerHandle timerHandle;
-		GetWorldTimerManager().SetTimer(timerHandle, [this]
-			{
-				EffectGetHit->Deactivate();
-			}, Delay, false);
-	}
+	//if (EffectGetHit && !EffectGetHit->IsActive())
+	//{
+	//	EffectGetHit->Activate();
+	//	// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
+	//	// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
+	//	float Delay = 0.1f;
+	//	FTimerHandle timerHandle;
+	//	GetWorldTimerManager().SetTimer(timerHandle, [this]
+	//		{
+	//			EffectGetHit->Deactivate();
+	//		}, Delay, false);
+	//}
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -1167,6 +1187,22 @@ void AMCharacter::OnRep_IsAllowDash()
 	}
 }
 
+void AMCharacter::OnRep_IsHealing()
+{
+	if (IsHealing)
+	{
+		// Activate VFX
+		if (EffectHeal && !EffectHeal->IsActive())
+			EffectHeal->Activate();
+	}
+	else
+	{
+		// Deactivate VFX
+		if (EffectHeal && EffectHeal->IsActive())
+			EffectHeal->Deactivate();
+	}
+}
+
 void AMCharacter::OnRep_IsBurned()
 {
 	if (IsBurned)
@@ -1399,22 +1435,25 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (Cast<AWaterBody>(OtherActor))
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor overlaps with the waterbody"));
-		// clear burning buff
-		if (CheckBuffMap(EnumAttackBuff::Burning))
+		if (Cast<ASaltcureArea>(OtherActor))
 		{
-			BuffMap[EnumAttackBuff::Burning][1] = 0;  // set BuffRemainedTime
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor enters the SaltcureArea"));
+			// clear burning buff
+			if (CheckBuffMap(EnumAttackBuff::Burning))
+			{
+				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+			}
+			// apply saltcure buff
+			if (CheckBuffMap(EnumAttackBuff::Saltcure))
+			{
+				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, 1.0f);
+			}
+			NetMulticast_AdjustMaxWalkSpeed(0.75f);
 		}
-		// apply saltcure buff
-		if (CheckBuffMap(EnumAttackBuff::Saltcure))
-		{
-			BuffMap[EnumAttackBuff::Saltcure][0] = 1.0f;
-		}
-		NetMulticast_AdjustMaxWalkSpeed(0.5f);
 	}
-
 
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
 		return;
@@ -1453,15 +1492,18 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (Cast<AWaterBody>(OtherActor))
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor stops overlapping with the waterbody"));
-		// cancel saltcure buff
-		if (CheckBuffMap(EnumAttackBuff::Saltcure))
+		if (Cast<ASaltcureArea>(OtherActor))
 		{
-			BuffMap[EnumAttackBuff::Saltcure][0] = 0;
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor stops overlapping with the waterbody"));
+			// cancel saltcure buff
+			if (CheckBuffMap(EnumAttackBuff::Saltcure))
+			{
+				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, -1.0f);
+			}
+			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 		}
-		NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 	}
 
 	if (!(OtherComp->GetName() == "Box_DisplayCase"))
@@ -1527,7 +1569,7 @@ void AMCharacter::BeginPlay()
 			{
 				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
 				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
-			}	
+			}
 		}
 	}	
 }
@@ -1553,7 +1595,7 @@ void AMCharacter::Tick(float DeltaTime)
 		if (oldIsOnGround != IsOnGround)
 		{
 			// call land effect when landing hard
-			if (IsOnGround && 30.0f < Server_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
+			if (IsOnGround && 30.0f < Client_MaxHeightDuringLastTimeOffGround - GetActorLocation().Z)
 			{
 				if (EffectLand && EffectLand->GetAsset())
 					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectLand->GetAsset(), EffectLand->GetComponentLocation());
@@ -1566,9 +1608,9 @@ void AMCharacter::Tick(float DeltaTime)
 			}
 		}		
 		if (!IsOnGround)
-			Server_MaxHeightDuringLastTimeOffGround = FMath::Max(Server_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
+			Client_MaxHeightDuringLastTimeOffGround = FMath::Max(Client_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
 		else
-			Server_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
+			Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 
 		// EffectRun
 		if (OriginalMaxWalkSpeed * 0.15f < GetCharacterMovement()->Velocity.Size())
@@ -1588,7 +1630,7 @@ void AMCharacter::Tick(float DeltaTime)
 		else
 		{
 			Client_LowSpeedWalkAccumulateTime += DeltaTime;
-			if (0.5f < Client_LowSpeedWalkAccumulateTime)
+			if (0.1f < Client_LowSpeedWalkAccumulateTime)
 			{
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
@@ -1658,10 +1700,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 			}
 			else
 			{
-				// Set IsBurned to false
-				IsBurned = false;
-				if (GetNetMode() == NM_ListenServer)
-					OnRep_IsBurned();
+				if (IsBurned)
+				{
+					// Set IsBurned to false
+					IsBurned = false;
+					if (GetNetMode() == NM_ListenServer)
+						OnRep_IsBurned();
+				}				
 			}
 		}
 		/* Paralysis */
@@ -1684,10 +1729,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					Server_SetCanMove(true);
 					SetElectricShockAnimState(false);
 				}
-				// Set IsParalyzed to false
-				IsParalyzed = false;
-				if (GetNetMode() == NM_ListenServer)
-					OnRep_IsParalyzed();
+				if (IsParalyzed)
+				{
+					// Set IsParalyzed to false
+					IsParalyzed = false;
+					if (GetNetMode() == NM_ListenServer)
+						OnRep_IsParalyzed();
+				}				
 			}
 		}
 		/* Knockback */
@@ -1702,11 +1750,49 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 			float& BuffPoints = BuffMap[buffType][0];
 			if (1.0f <= BuffPoints)
 			{
-				float SaltcureBuffDamagePerSecond = 5.0f;
+				float Saltcure_RecoverSpeed = 2.0f;
 				//FString ParName = "BurningDamagePerSecond";
 				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetCurrentHealth(CurrentHealth - DeltaTime * SaltcureBuffDamagePerSecond);
+				SetCurrentHealth(CurrentHealth + DeltaTime * Saltcure_RecoverSpeed);
+			}
+			else
+			{
+				if (IsHealing)
+				{
+					if (!(CheckBuffMap(EnumAttackBuff::Shellheal) && 1.0f <= BuffMap[EnumAttackBuff::Shellheal][0]))
+					{
+						IsHealing = false;
+						if (GetNetMode() == NM_ListenServer)
+							OnRep_IsHealing();
+					}					
+				}
+			}
+		}
+		/* Shellheal */
+		buffType = EnumAttackBuff::Shellheal;
+		if (CheckBuffMap(buffType))
+		{
+			float& BuffPoints = BuffMap[buffType][0];
+			if (1.0f <= BuffPoints)
+			{
+				float Shellheal_RecoverSpeed = 2.0f;
+				//FString ParName = "BurningDamagePerSecond";
+				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				SetCurrentHealth(CurrentHealth + DeltaTime * Shellheal_RecoverSpeed);
+			}
+			else
+			{
+				if (IsHealing)
+				{
+					if (!(CheckBuffMap(EnumAttackBuff::Saltcure) && 1.0f <= BuffMap[EnumAttackBuff::Saltcure][0]))
+					{
+						IsHealing = false;
+						if (GetNetMode() == NM_ListenServer)
+							OnRep_IsHealing();
+					}
+				}
 			}
 		}
 	}

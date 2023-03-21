@@ -32,8 +32,8 @@ public:
 	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage);
 	
 	// Burning, Saltcure
-	static bool AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* Controller, class AMCharacter* DamagedCharacter, float buffPointsToAdd);
+	static bool AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd);
 	// Knockback, Paralysis
-	static bool ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* Controller, class AMCharacter* DamagedCharacter, float DeltaTime);
+	static bool ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime);
 
 };

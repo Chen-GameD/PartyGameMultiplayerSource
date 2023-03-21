@@ -158,6 +158,8 @@ public:
 	void ResetCharacterStatus();
 
 	UFUNCTION()
+		void OnRep_IsHealing();
+	UFUNCTION()
 		void OnRep_IsBurned();
 	UFUNCTION()
 		void OnRep_IsParalyzed();
@@ -324,6 +326,8 @@ public:
 	TArray<int> SKDArray = { 0, 0, 0 };
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectHeal;
+	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectGetHit;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectBurn;
@@ -359,8 +363,10 @@ public:
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsHealing)
+		bool IsHealing;	
 	UPROPERTY(ReplicatedUsing = OnRep_IsBurned)
-	bool IsBurned;
+		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
 	
@@ -386,7 +392,7 @@ protected:
 
 	// Action
 	bool IsOnGround;
-	float Server_MaxHeightDuringLastTimeOffGround;
+	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
 	UPROPERTY(EditAnywhere, Category = "Server_Dash")

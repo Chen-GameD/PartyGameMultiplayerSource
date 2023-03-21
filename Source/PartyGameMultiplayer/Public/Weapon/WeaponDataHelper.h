@@ -32,13 +32,14 @@ enum EnumAttackType
 	SpawnProjectile
 };
 
+// It is better named EnumBuff
 enum EnumAttackBuff
 {
 	Burning,
 	Knockback,
-	//Blowing,
 	Paralysis,
-	Saltcure
+	Saltcure,
+	Shellheal,
 };
 
 
