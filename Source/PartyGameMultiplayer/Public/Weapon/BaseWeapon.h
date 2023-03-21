@@ -109,6 +109,7 @@ public:
 	float CD_RecoverSpeed;
 	bool CD_CanRecover;
 	float TimePassed_SinceAttackStop;
+	float TimePassed_SinceGetThrewAway;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
@@ -173,6 +174,9 @@ protected:
 	// Movement component that may be necessary
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", Replicated)
 		class UMovementComponent* MovementComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* HaloEffect_NSComponent;
 
 	// Particle System that may be necessary(for instance, wind/fire released by the weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")

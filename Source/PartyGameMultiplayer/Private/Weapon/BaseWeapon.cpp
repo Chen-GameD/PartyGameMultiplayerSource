@@ -54,6 +54,14 @@ ABaseWeapon::ABaseWeapon()
 
 	AttackOnEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect"));
 	AttackOnEffect->SetupAttachment(WeaponMesh);
+	AttackOnEffect->bAutoActivate = false;
+
+	HaloEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("HaloEffect"));
+	HaloEffect_NSComponent->SetupAttachment(WeaponMesh);
+	HaloEffect_NSComponent->bAutoActivate = true;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultHaloEffect(TEXT("/Game/ArtAssets/Niagara/NS_WeaponHalo.NS_WeaponHalo"));
+	if (DefaultHaloEffect.Succeeded())
+		HaloEffect_NSComponent->SetAsset(DefaultHaloEffect.Object);
 
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
@@ -377,6 +385,17 @@ void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 	NewWorldRotation.Yaw += DeltaRotation;
 	WeaponMesh->SetWorldLocation(NewWorldLocation);
 	WeaponMesh->SetWorldRotation(NewWorldRotation);
+	
+	TimePassed_SinceGetThrewAway += DeltaTime;
+	if (HaloEffect_NSComponent && !HaloEffect_NSComponent->IsActive())
+	{
+		if (3.0f < TimePassed_SinceGetThrewAway)
+		{
+			HaloEffect_NSComponent->Activate();
+			HaloEffect_NSComponent->SetVisibility(true);
+			HaloEffect_NSComponent->SetWorldRotation(FRotator::ZeroRotator);
+		}
+	}		
 }
 
 
@@ -445,9 +464,18 @@ void ABaseWeapon::OnRep_bAttackOverlap()
 
 void ABaseWeapon::OnRep_IsPickedUp()
 {
-	if (AttackOnEffect)
-		AttackOnEffect->Deactivate();
-
+	if (IsPickedUp)
+	{
+		if (HaloEffect_NSComponent && HaloEffect_NSComponent->IsActive())
+		{
+			HaloEffect_NSComponent->Deactivate();
+			HaloEffect_NSComponent->SetVisibility(false);
+		}
+	}
+	else
+	{		
+		TimePassed_SinceGetThrewAway = 0;
+	}
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	WeaponMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 }
