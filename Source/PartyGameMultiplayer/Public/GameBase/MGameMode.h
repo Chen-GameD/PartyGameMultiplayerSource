@@ -85,7 +85,7 @@ public:
 	UPROPERTY()
 	int CurrentPlayerNum = 0;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int LevelIndex = 1;
 
 protected:
