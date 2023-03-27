@@ -23,7 +23,10 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 
 	bool bIsLoggedIn = false;
 
+
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool isLoading = false;
 
 	virtual void Init() override;
 
