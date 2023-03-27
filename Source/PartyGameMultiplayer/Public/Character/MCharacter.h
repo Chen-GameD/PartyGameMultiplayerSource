@@ -10,6 +10,9 @@
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "../M_PlayerState.h"
+#include "../Matchmaking/EOSGameInstance.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Materials/MaterialParameterCollection.h"
 #include "MCharacter.generated.h"
 
 //#define IS_LISTEN_SERVER
@@ -75,9 +78,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	// customized TakeDamge Function
-	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
-
 	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
@@ -142,7 +142,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
 	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 
 	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
@@ -157,6 +156,15 @@ public:
 
 	UFUNCTION()
 	void ResetCharacterStatus();
+
+	UFUNCTION()
+		void OnRep_IsHealing();
+	UFUNCTION()
+		void OnRep_IsBurned();
+	UFUNCTION()
+		void OnRep_IsParalyzed();
+	UFUNCTION(Client, Reliable)
+		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
 	
 protected:
 
@@ -169,11 +177,8 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void CallJumpLandEffect();
-
 	UFUNCTION()
-	void OnRep_IsAllowDash();
+		void OnRep_IsAllowDash();
 
 	// Movement
 	// ==========================
@@ -204,11 +209,15 @@ protected:
 	// Action
 	// ==========================
 	/* Called for Attack input */
+	void Client_Attack();
 	UFUNCTION(Server, Reliable)
-	void Attack();
+	void Attack(float AttackTargetDistance=0.0f);
 	DECLARE_DELEGATE_OneParam(FIsMeleeRelease, bool);
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
+
+	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
+	void Zoom(bool bZoomOut);
 
 	/* Called for Server_Dash input */
 	UFUNCTION()
@@ -218,6 +227,11 @@ protected:
 	void RefreshDash();
 	void SetDash();
 	void TurnOffDashEffect();
+
+	float Server_GetMaxWalkSpeedRatioByWeapons();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -300,10 +314,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TArray<FName> CharacterMatParamNameArray;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		UMaterialParameterCollection* characaterMaterialParameterCollection;
+
 	// Scores Kill Death Array Format:
 	// [Scores, Kill, Death]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectHeal;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectGetHit;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBurn;
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
@@ -317,13 +344,32 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
 
+	float Server_MaxWalkSpeed;
+	float Client_LowSpeedWalkAccumulateTime;
+
+	bool bShouldZoomOut;
+	float CurFov;
+	float MinFov;
+	float MaxFov;	
+	float Local_CurCameraArmLength;
+	float Local_MinCameraArmLength;
+	float Local_MaxCameraArmLength;
+
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
-	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
+	// When the BuffPoints >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsHealing)
+		bool IsHealing;	
+	UPROPERTY(ReplicatedUsing = OnRep_IsBurned)
+		bool IsBurned;
+	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
+		bool IsParalyzed;
+	
 
 	// UPROPERTY(EditAnywhere, Category="PlayerFollowWidget Tick Timer")
 	// float PlayerFollowWidget_ShowTime = 5.0;
@@ -345,8 +391,8 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(Replicated)
 	bool IsOnGround;
+	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
 	UPROPERTY(EditAnywhere, Category = "Server_Dash")
@@ -362,10 +408,9 @@ protected:
 	FTimerHandle DashingTimer;
 
 	// buff
-	bool CanMove; // only used on the Server, only for paralysis rn
+	bool Server_CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
-	// to do
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon* LeftWeapon;
 	
@@ -377,6 +422,9 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;
+
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class ACursorHitPlane> CursorHitPlaneSubClass;
 
 	UFUNCTION()
 	void SetTextureInUI();

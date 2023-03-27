@@ -7,6 +7,8 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "GameBase/MGameInstance.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
@@ -14,6 +16,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
+
 
 // Constructor
 // ===================================================
@@ -30,6 +33,23 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	//Replicate Action
 }
+
+// void AMPlayerController::NetMulticast_LoginInit_Implementation()
+// {
+// 	if (GetNetMode() == NM_ListenServer)
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("ListenServer"));
+// 	}
+// 	else if (GetNetMode() == NM_Client)
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("Client"));
+// 	}
+// 	if (IsLocalPlayerController())
+// 	{
+// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("UpdateUI"));
+// 		UI_UpdateLobbyMenu();
+// 	}
+// }
 
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
@@ -316,25 +336,37 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	
-    // Look for the touch location
-    FVector HitLocation = FVector::ZeroVector;
-    FHitResult Hit;
-
-	GetHitResultUnderCursor(ECC_Visibility, true, Hit);
-	HitLocation = Hit.Location;
-    
-	// Direct the Pawn towards that location
-	APawn* const MyPawn = GetPawn();
-	AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-	if(MyPawn && MyGameState && CanMove)
+    // Rotate the character by mouse
+    FHitResult Hit;	
+	bool successHit = GetHitResultUnderCursor(ECC_GameTraceChannel1, false, Hit); // ECC_GameTraceChannel1 is Cursor; Only Character's CursorHitPlance would block this channel
+	if (successHit)
 	{
-		if (MyGameState->IsGameStart)
+		FVector HitLocation = Hit.Location;
+		//// Draw Debug Line
+		//{
+		//	FVector Start = HitLocation;
+		//	FVector End = HitLocation + -FVector::UpVector*200;
+		//	FColor Color = FColor::Red;
+		//	float Duration = 2.0f;
+		//	float Thickness = 5.0f;
+		//	DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
+		//}	
+		APawn* const MyPawn = GetPawn();
+		AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyPawn && MyGameState && CanMove)
 		{
-			FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
-			FRotator WorldRotator = WorldDirection.Rotation();
-			//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
-			SetControlRotation(WorldRotator);
+			if (MyGameState->IsGameStart)
+			{
+				FVector WorldDirection = (HitLocation - MyPawn->GetActorLocation()).GetSafeNormal();
+				FRotator WorldRotator = WorldDirection.Rotation();
+				//MyPawn->AddMovementInput(WorldDirection, 1.f, false);
+				SetControlRotation(WorldRotator);
+			}
 		}
 	}
+	//else if(GetNetMode() != NM_ListenServer)
+	//{
+	//	GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, TEXT("GetHitResult Failed in AMPlayerController::PlayerTick!"));
+	//}
 }
 #pragma endregion Constructor

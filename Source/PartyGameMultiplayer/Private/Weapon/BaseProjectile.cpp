@@ -18,6 +18,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
+#include "WaterBodyActor.h"
 
 
 ABaseProjectile::ABaseProjectile()
@@ -39,11 +40,6 @@ ABaseProjectile::ABaseProjectile()
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
-
-	/*ProjectileMovementComponent->InitialSpeed = 1500.0f;
-	ProjectileMovementComponent->MaxSpeed = 1500.0f;
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
 
 	AttackOnEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_NSComponent"));
 	AttackOnEffect_NSComponent->SetupAttachment(StaticMesh);
@@ -99,6 +95,12 @@ void ABaseProjectile::Tick(float DeltaTime)
 	}
 }
 
+
+void ABaseProjectile::NetMulticast_ChangeSpeed_Implementation(float SpeedRatio)
+{
+	ProjectileMovementComponent->MaxSpeed *= SpeedRatio;
+	ProjectileMovementComponent->Velocity *= SpeedRatio;
+}
 
 
 void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
@@ -175,8 +177,7 @@ void ABaseProjectile::OnRep_HasExploded()
 		{
 			AttackOnEffect_NSComponent->Deactivate();  // Not working somehow
 			AttackOnEffect_NSComponent->SetVisibility(false);
-		}
-			
+		}			
 
 		StaticMesh->SetVisibility(false);
 		ProjectileMovementComponent->StopMovementImmediately();		
@@ -216,9 +217,12 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	{
 		OnRep_HasExploded();
 	}
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, OtherActor->GetName());
 
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+	// Apply knockback buff
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
 
 	// Range Damage		
 	if (0 < TotalDamage)

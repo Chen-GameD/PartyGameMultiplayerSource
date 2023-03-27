@@ -202,7 +202,7 @@ void APartyGameMultiplayerCharacter::HandleAttack_Implementation()
 		if (!bAttackOn)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Player starts the Attack!"));
-			CurWeapon->AttackStart();
+			CurWeapon->AttackStart(0.0f);
 		}
 		else
 		{

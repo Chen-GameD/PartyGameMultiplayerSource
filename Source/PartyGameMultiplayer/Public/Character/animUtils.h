@@ -75,7 +75,7 @@ namespace AnimUtils {
 			i_AnimState[indexToSet] = true;
 		}
 		else {
-			if (i_LeftWeapon && i_RightWeapon) {
+			if (i_LeftWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell && i_RightWeapon && i_RightWeapon->WeaponType != EnumWeaponType::Shell) {
 				int doubleShootIndex = 3;
 				int doubleMeleeIndex = 2;
 
@@ -98,12 +98,12 @@ namespace AnimUtils {
 				}
 
 			}
-			else if (i_LeftWeapon) {
+			else if (i_LeftWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell) {
 				auto leftType = i_LeftWeapon->WeaponType;
 				int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
 				i_AnimState[leftIndexToSet] = true;
 			}
-			else if (i_RightWeapon) {
+			else if (i_RightWeapon && i_RightWeapon->WeaponType != EnumWeaponType::Shell) {
 				auto rightType = i_RightWeapon->WeaponType;
 				int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
 				i_AnimState[rightIndexToSet] = true;

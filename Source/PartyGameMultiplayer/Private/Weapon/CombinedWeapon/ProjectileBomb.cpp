@@ -26,10 +26,21 @@ AProjectileBomb::AProjectileBomb()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 800.0f;
-	ProjectileMovementComponent->MaxSpeed = 800.0f;
+	BombMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BombMesh"));
+	BombMesh->SetupAttachment(StaticMesh);
+
+	BombMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	if (DefaultMesh.Succeeded())
+	{
+		BombMesh->SetStaticMesh(DefaultMesh.Object);
+		BombMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		BombMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	}
+
+	ProjectileMovementComponent->InitialSpeed = 1000.0f;
+	ProjectileMovementComponent->MaxSpeed = 1000.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.65f;
+	ProjectileMovementComponent->ProjectileGravityScale = 0.3f;
 
 	//static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultAttackHitEffect(TEXT("/Game/ArtAssets/Niagara/NS_Soundwave.NS_Soundwave"));
 	//if (DefaultAttackHitEffect.Succeeded())
@@ -46,6 +57,17 @@ void AProjectileBomb::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	FRotator NewRotation = BombMesh->GetRelativeRotation();
+	float DeltaRotation = DeltaTime * 900.0f;
+	NewRotation.Yaw += DeltaRotation;
+	BombMesh->SetRelativeRotation(NewRotation);
+	if (HasExploded)
+	{
+		FVector NewLocation = BombMesh->GetComponentLocation();
+		NewLocation.Z -= DeltaTime * 75.0f;
+		BombMesh->SetWorldLocation(NewLocation);
+	}		
+
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -57,6 +79,20 @@ void AProjectileBomb::Tick(float DeltaTime)
 	}
 }
 
+
+void AProjectileBomb::OnRep_HasExploded()
+{
+	if (HasExploded)
+	{
+		ProjectileMovementComponent->StopMovementImmediately();  // will stop the original movement, but will still move the object(like a free fall)
+		ProjectileMovementComponent->SetUpdatedComponent(nullptr);
+		StaticMesh->SetSimulatePhysics(false);
+		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		if (AttackHitEffect_NSSystem)
+			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	}
+}
 
 
 void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
@@ -73,13 +109,13 @@ void AProjectileBomb::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	Origin = this->GetActorLocation();
 	HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
-	{
 		OnRep_HasExploded();
-	}
 	HasAppliedNeedleRainDamage = false;
 
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+	// Apply knockback buff
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
 
 	// Bomb's Range Damage will be delayed
 	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);

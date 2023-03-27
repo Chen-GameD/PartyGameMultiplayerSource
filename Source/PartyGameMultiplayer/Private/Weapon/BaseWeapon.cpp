@@ -35,11 +35,12 @@ ABaseWeapon::ABaseWeapon()
 	WeaponType = EnumWeaponType::None;
 	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
+	bAttackOn = false;
 	bAttackOverlap = false;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
-	DisplayCase->SetBoxExtent(FVector3d(100.0f, 100.0f, 100.0f));
+	DisplayCase->SetBoxExtent(FVector3d(90.0f, 90.0f, 90.0f));
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(DisplayCase);
@@ -53,6 +54,14 @@ ABaseWeapon::ABaseWeapon()
 
 	AttackOnEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnNiagaraEffect"));
 	AttackOnEffect->SetupAttachment(WeaponMesh);
+	AttackOnEffect->bAutoActivate = false;
+
+	HaloEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("HaloEffect"));
+	HaloEffect_NSComponent->SetupAttachment(WeaponMesh);
+	HaloEffect_NSComponent->bAutoActivate = true;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultHaloEffect(TEXT("/Game/ArtAssets/Niagara/NS_WeaponHalo.NS_WeaponHalo"));
+	if (DefaultHaloEffect.Succeeded())
+		HaloEffect_NSComponent->SetAsset(DefaultHaloEffect.Object);
 
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
@@ -134,8 +143,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
 					for (auto& Elem : AttackObjectMap)
-					{
-						Elem.Value += DeltaTime;
+					{						
 						if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
 						{
 							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key, DeltaTime);
@@ -217,7 +225,7 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 void ABaseWeapon::GetThrewAway()
 {
 	IsPickedUp = false;
-
+	HasBeenCombined = false;
 	HoldingController = nullptr;
 	SetInstigator(nullptr);
 	SetOwner(nullptr);
@@ -234,7 +242,7 @@ void ABaseWeapon::GetThrewAway()
 }
 
 
-void ABaseWeapon::AttackStart()
+void ABaseWeapon::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner())
 		return;	
@@ -272,7 +280,7 @@ void ABaseWeapon::AttackStart()
 	}
 	else
 	{
-		SpawnProjectile();
+		SpawnProjectile(AttackTargetDistance);
 	}
 }
 
@@ -366,17 +374,28 @@ void ABaseWeapon::Destroyed()
 
 void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 {
-	FVector NewLocation = WeaponMesh->GetComponentLocation();
-	FRotator NewRotation = WeaponMesh->GetComponentRotation();
+	FVector NewWorldLocation = WeaponMesh->GetComponentLocation();
+	FRotator NewWorldRotation = WeaponMesh->GetComponentRotation();
 	float RunningTime = GetGameTimeSinceCreation();
 	float DeltaHeight = (FMath::Sin(RunningTime + DeltaTime) - FMath::Sin(RunningTime));
 	// Scale our height by a factor of 20
-	NewLocation.Z += DeltaHeight * 20.0f;   
+	NewWorldLocation.Z += DeltaHeight * 20.0f;
 	// Rotate by 20 degrees per second
 	float DeltaRotation = DeltaTime * 60.0f;    
-	NewRotation.Yaw += DeltaRotation;
-	WeaponMesh->SetWorldLocation(NewLocation);
-	WeaponMesh->SetWorldRotation(NewRotation);
+	NewWorldRotation.Yaw += DeltaRotation;
+	WeaponMesh->SetWorldLocation(NewWorldLocation);
+	WeaponMesh->SetWorldRotation(NewWorldRotation);
+	
+	TimePassed_SinceGetThrewAway += DeltaTime;
+	if (HaloEffect_NSComponent && !HaloEffect_NSComponent->IsActive())
+	{
+		if (3.0f < TimePassed_SinceGetThrewAway)
+		{
+			HaloEffect_NSComponent->Activate();
+			HaloEffect_NSComponent->SetVisibility(true);
+			HaloEffect_NSComponent->SetWorldRotation(FRotator::ZeroRotator);
+		}
+	}		
 }
 
 
@@ -389,6 +408,7 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 	}
 	else
 	{
@@ -444,9 +464,18 @@ void ABaseWeapon::OnRep_bAttackOverlap()
 
 void ABaseWeapon::OnRep_IsPickedUp()
 {
-	if (AttackOnEffect)
-		AttackOnEffect->Deactivate();
-
+	if (IsPickedUp)
+	{
+		if (HaloEffect_NSComponent && HaloEffect_NSComponent->IsActive())
+		{
+			HaloEffect_NSComponent->Deactivate();
+			HaloEffect_NSComponent->SetVisibility(false);
+		}
+	}
+	else
+	{		
+		TimePassed_SinceGetThrewAway = 0;
+	}
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	WeaponMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 }
@@ -463,7 +492,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 {
 	if (IsPickedUp && GetOwner())
 	{
-		if( (Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor) )
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
@@ -476,12 +505,12 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				OnRep_bAttackOverlap();
 			}
 
-			if ( (AttackType == EnumAttackType::OneHit || WeaponType == EnumWeaponType::Bomb)
-				&& ApplyDamageCounter == 0 && HoldingController)
+			if (AttackType != EnumAttackType::Constant && ApplyDamageCounter == 0 && HoldingController)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
 				ApplyDamageCounter++;
-			}	
+			}				
 		}
 	}
 }
@@ -492,7 +521,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 {
 	if (IsPickedUp && GetOwner())
 	{
-		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
+		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor))
 		{
 			if (AttackObjectMap.Contains(OtherActor))
@@ -535,7 +564,7 @@ AController* ABaseWeapon::GetHoldingController() const
 }
 
 
-void ABaseWeapon::SpawnProjectile()
+void ABaseWeapon::SpawnProjectile(float AttackTargetDistance)
 {
 	//auto pCharacter = GetOwner();
 	//if (pCharacter && SpecificProjectileClass)
@@ -551,3 +580,5 @@ void ABaseWeapon::SpawnProjectile()
 	//	ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	//}
 }
+
+

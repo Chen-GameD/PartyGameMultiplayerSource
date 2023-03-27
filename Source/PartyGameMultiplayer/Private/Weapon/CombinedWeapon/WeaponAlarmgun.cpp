@@ -44,7 +44,7 @@ AWeaponAlarmgun::AWeaponAlarmgun()
 }
 
 
-void AWeaponAlarmgun::SpawnProjectile()
+void AWeaponAlarmgun::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)

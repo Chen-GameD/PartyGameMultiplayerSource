@@ -21,7 +21,8 @@ enum EnumWeaponType
 	Taser,
 	Alarmgun,
 	Bomb,
-	Cannon
+	Cannon,
+	Shell
 };
 
 enum EnumAttackType
@@ -31,12 +32,14 @@ enum EnumAttackType
 	SpawnProjectile
 };
 
+// It is better named EnumBuff
 enum EnumAttackBuff
 {
 	Burning,
 	Knockback,
-	//Blowing,
-	Paralysis
+	Paralysis,
+	Saltcure,
+	Shellheal,
 };
 
 
@@ -49,12 +52,10 @@ public:
 	AWeaponDataHelper();
 
 public:
-	//static float interval_ApplyDamage; // preset value for all constant damage
-
 	static UDamageManagerDataAsset* DamageManagerDataAsset;
+	static float interval_ConstantWeaponApplyKnockback;
 
 	static TMap<EnumWeaponType, FString> WeaponEnumToString_Map;
 	static TMap<EnumWeaponType, EnumAttackType> WeaponEnumToAttackTypeEnum_Map;
 	static TMap<EnumAttackBuff, FString> AttackBuffEnumToString_Map;
-
 };

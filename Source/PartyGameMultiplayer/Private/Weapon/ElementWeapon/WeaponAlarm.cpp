@@ -3,6 +3,7 @@
 
 #include "Weapon/ElementWeapon/WeaponAlarm.h"
 #include "Weapon/ElementWeapon/ProjectileAlarm.h"
+#include "Character/MCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "NiagaraComponent.h"
@@ -71,19 +72,24 @@ void AWeaponAlarm::OnRep_bAttackOn()
 }
 
 
-void AWeaponAlarm::SpawnProjectile()
+void AWeaponAlarm::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
-		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + 0.66 * pCharacter->GetActorUpVector()).Rotation();  // character up
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() + 0.3 * pCharacter->GetActorUpVector()).Rotation();  // character up
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();
 		spawnParameters.Owner = this;
 
-		//ABaseProjectile* spawnedProjectile = NewObject<ABaseProjectile>(this, SpecificProjectileClass);
-		GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		auto pProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
+		if (pProjectile)
+		{
+			float SpeedRatio = AttackTargetDistance / 400.0f;
+			SpeedRatio = FMath::Clamp(SpeedRatio, 0.3f, 2.2f);
+			pProjectile->NetMulticast_ChangeSpeed(SpeedRatio);
+		}			
 	}
 }

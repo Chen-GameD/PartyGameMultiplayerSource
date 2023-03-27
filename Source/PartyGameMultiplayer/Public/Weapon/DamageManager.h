@@ -31,7 +31,9 @@ public:
 	//static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageRadius, float BaseDamage);
 	static bool TryApplyRadialDamage(AActor* DamageCauser, AController* Controller, FVector Origin, float DamageInnerRadius, float DamageOuterRadius, float BaseDamage);
 	
-	// Will be called each time the character takes damage. In other words, AMCharacter::TakeDamage will call this function.
-	static bool ApplyBuff(EnumWeaponType WeaponType, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter, float DeltaTime);
+	// Burning, Saltcure
+	static bool AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd);
+	// Knockback, Paralysis
+	static bool ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime);
 
 };

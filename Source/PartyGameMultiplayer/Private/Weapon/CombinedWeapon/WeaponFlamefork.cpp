@@ -42,7 +42,7 @@ AWeaponFlamefork::AWeaponFlamefork()
 }
 
 
-void AWeaponFlamefork::AttackStart()
+void AWeaponFlamefork::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner())
 		return;
@@ -56,11 +56,11 @@ void AWeaponFlamefork::AttackStart()
 	ApplyDamageCounter = 0;
 
 	SetActorEnableCollision(bAttackOn);
-	SpawnProjectile();
+	SpawnProjectile(AttackTargetDistance);
 }
 
 
-void AWeaponFlamefork::SpawnProjectile()
+void AWeaponFlamefork::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)

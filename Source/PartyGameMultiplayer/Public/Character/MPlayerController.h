@@ -24,6 +24,9 @@ public:
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// UFUNCTION(NetMulticast, Reliable)
+	// void NetMulticast_LoginInit();
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void UI_UpdateLobbyMenu();
 

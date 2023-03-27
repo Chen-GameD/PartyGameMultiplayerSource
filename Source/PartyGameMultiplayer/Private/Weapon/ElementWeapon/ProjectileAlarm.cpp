@@ -22,8 +22,8 @@ AProjectileAlarm::AProjectileAlarm()
 		StaticMesh->SetRelativeScale3D(FVector(0.75f, 0.75f, 0.75f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 600.0f;
-	ProjectileMovementComponent->MaxSpeed = 600.0f;
+	ProjectileMovementComponent->InitialSpeed = 750.0f;
+	ProjectileMovementComponent->MaxSpeed = 750.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
 	ProjectileMovementComponent->ProjectileGravityScale = 1.0f;
 

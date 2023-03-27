@@ -50,6 +50,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RespawnMinigameObject();
 
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+	void Server_RespawnShellObject(int AdditionalInformationIndex);
+
 	UFUNCTION()
 	void CheckGameStart();
 
@@ -63,9 +66,8 @@ public:
 	void TestRestartLevel();
 
 protected:
-
-
-private:
+	UFUNCTION()
+	void InitMinigame_ShellObject();
 
 	
 // Members
@@ -83,6 +85,9 @@ public:
 	UPROPERTY()
 	int CurrentPlayerNum = 0;
 
+	UPROPERTY(EditAnywhere)
+	int LevelIndex = 1;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TArray<APlayerStart*> Team_1_SpawnPoints;
@@ -98,8 +103,8 @@ protected:
 	
 	FTimerHandle StartGameCountDownTimerHandle;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	FTransform MinigameObjectSpawnTransform;
+	// UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	// FTransform MinigameObjectSpawnTransform;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AMinigameMainObjective> MinigameObjectClass;
@@ -111,5 +116,5 @@ protected:
 	int CurrentMinigameIndex;
 
 private:
-	
+	bool IsGameInitialized = false;
 };

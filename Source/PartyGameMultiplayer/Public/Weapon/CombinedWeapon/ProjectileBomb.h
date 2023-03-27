@@ -18,8 +18,12 @@ public:
 	virtual void Tick(float DeltaTime) override;
 protected:
 	virtual void OnProjectileOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
-		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
+	virtual void OnRep_HasExploded() override;
 
 protected:
+	UPROPERTY(EditAnywhere, Category = "Components")
+		class UStaticMeshComponent* BombMesh;
+
 	bool HasAppliedNeedleRainDamage;
 };
