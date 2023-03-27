@@ -63,7 +63,10 @@ public:
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString LevelText;
+	int DebugLevelSelect = -1;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FString> LevelText;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsSessionsListAvailable = false;
