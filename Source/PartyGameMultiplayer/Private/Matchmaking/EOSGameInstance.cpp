@@ -243,7 +243,7 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 	}
 	if(bWasSuccessful)
 	{
-		GetWorld()->ServerTravel(LevelText+"?listen", true);
+		GetWorld()->ServerTravel(LevelText[FMath::RandRange(0, LevelText.Num()-1)] +"?listen", true);
 	}
 	isLoading = false;
 }
