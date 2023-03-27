@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	Login("", "", "accountportal");
+	//Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
@@ -37,17 +37,20 @@ void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
 
 FString UEOSGameInstance::GetPlayerUsername()
 {
-	if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+	if(GetIsLoggedIn())
 	{
-		if(IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface())
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
-			if(IdentityPtr->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+			if(IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface())
 			{
-				return IdentityPtr->GetPlayerNickname(0);
+				if(IdentityPtr->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+				{
+					return IdentityPtr->GetPlayerNickname(0);
+				}
 			}
 		}
 	}
-	return FString("default-name");
+	return PlayerName;
 }
 
 void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections)
