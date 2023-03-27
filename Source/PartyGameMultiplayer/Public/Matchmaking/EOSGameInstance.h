@@ -63,6 +63,9 @@ public:
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int DebugLevelSelect = -1;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FString> LevelText;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
