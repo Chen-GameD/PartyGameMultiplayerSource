@@ -331,7 +331,7 @@ public:
 		class UNiagaraComponent* EffectHeal;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectGetHit;
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectBurn;
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
