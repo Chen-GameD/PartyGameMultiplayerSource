@@ -208,13 +208,19 @@ void AMPlayerController::StartTheGame()
 		// TODO
 	}
 
-	// Update All Pawn's FollowWidget status
-	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
+	if (MyPlayerState)
 	{
-		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
-		if (MyPawn)
+		// Update All Pawn's FollowWidget status
+		for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
 		{
-			MyPawn->SetFollowWidgetVisibility(true);
+			AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
+			AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
+			if (MyPawn && CurrentPawnPlayerState)
+			{
+				MyPawn->SetFollowWidgetVisibility(true);
+				MyPawn->SetFollowWidgetHealthBarIsEnemy(MyPlayerState->TeamIndex != CurrentPawnPlayerState->TeamIndex);
+			}
 		}
 	}
 }

@@ -284,35 +284,6 @@ void AMGameMode::NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady
 void AMGameMode::StartTheGame()
 {
 	AMGameState* MyGameState = GetGameState<AMGameState>();
-
-	// Double check if the skin information set correctly.
-	// Later probably will use some other way to do this.
-	// Like do the Sync after everyone joined the session and then show the game level ( Add an interval level for this )
-	// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-	// {
-	// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-	// 	
-	// 	if (controller)
-	// 	{
-	// 		controller->NetMulticast_SynMesh();
-	// 	}
-	// }
-
-	// In Here, system already created a pawn for all clients and server.
-	// It's safe to update the player init information like skin and player name.
-	// AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
-	// if (MyPawn)
-	// {
-	// 	MyPawn->NetMulticast_InitNewPlayerInformation();
-	// }
-	// for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
-	// {
-	// 	AMCharacter* CurrentPawn = *PawnItr;
-	// 	if (CurrentPawn)
-	// 	{
-	// 		CurrentPawn->NetMulticast_InitNewPlayerInformation();
-	// 	}
-	// }
 	
 	if (MyGameState)
 	{

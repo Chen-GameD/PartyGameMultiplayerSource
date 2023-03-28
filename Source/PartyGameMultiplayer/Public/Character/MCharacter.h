@@ -81,7 +81,7 @@ public:
 	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
-	/**	Update HealthBar UI for character */
+	/**	Update HealthBar_Enemy UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetHealthBarUI();
 
@@ -107,13 +107,15 @@ public:
 	void Client_Respawn();
 	
 	UFUNCTION()
-	void SetFollowWidgetVisibility(bool isVisible);
+	void SetFollowWidgetVisibility(bool IsVisible);
+	UFUNCTION()
+	void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
 
 	// UFUNCTION()
 	// void SetFollowWidgetStatusAndInformation();
 
-	UFUNCTION()
-	void SetLocallyControlledGameUI(bool isVisible);
+	// UFUNCTION()
+	// void SetLocallyControlledGameUI(bool isVisible);
 
 	UFUNCTION()
 	void SetPlayerNameUIInformation();

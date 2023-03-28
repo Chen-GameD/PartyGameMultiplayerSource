@@ -88,7 +88,13 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
 	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
-	UTexture2D* textureUI;
+	UTexture2D* HoldingTextureUI_E;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* HoldingTextureUI_Q;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* PickUpTextureUI_E;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* PickUpTextureUI_Q;
 	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;

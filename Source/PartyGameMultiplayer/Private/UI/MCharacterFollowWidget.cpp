@@ -11,14 +11,16 @@ void UMCharacterFollowWidget::InitIsLocalControlledCharacterWidget(bool IsLocalC
 {
 	if (IsLocalControlled)
 	{
-		HealthBar->SetVisibility(ESlateVisibility::Hidden);
+		HealthBar_Enemy->SetVisibility(ESlateVisibility::Hidden);
+		HealthBar_Teammate->SetVisibility(ESlateVisibility::Hidden);
 		PlayerName->SetVisibility(ESlateVisibility::Hidden);
 		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
 		WeaponTipCanvas->SetVisibility(ESlateVisibility::Visible);
 	}
 	else
 	{
-		HealthBar->SetVisibility(ESlateVisibility::Visible);
+		HealthBar_Enemy->SetVisibility(ESlateVisibility::Visible);
+		HealthBar_Teammate->SetVisibility(ESlateVisibility::Visible);
 		PlayerName->SetVisibility(ESlateVisibility::Visible);
 		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Hidden);
 		WeaponTipCanvas->SetVisibility(ESlateVisibility::Hidden);
@@ -27,9 +29,10 @@ void UMCharacterFollowWidget::InitIsLocalControlledCharacterWidget(bool IsLocalC
 
 void UMCharacterFollowWidget::SetHealthToProgressBar(float percentage)
 {
-	if(IsValid(HealthBar))
+	if(IsValid(HealthBar_Enemy) && IsValid(HealthBar_Teammate))
 	{
-		HealthBar->SetPercent(percentage);
+		HealthBar_Enemy->SetPercent(percentage);
+		HealthBar_Teammate->SetPercent(percentage);
 	}
 }
 
@@ -38,9 +41,16 @@ void UMCharacterFollowWidget::SetPlayerName(FString i_PlayerName)
 	PlayerName->SetText(FText::FromString(i_PlayerName));
 }
 
+void UMCharacterFollowWidget::SetIsEnemyHealthBar(bool IsEnemy)
+{
+	HealthBar_Teammate->SetVisibility(IsEnemy ? ESlateVisibility::Hidden : ESlateVisibility::Visible);
+	HealthBar_Enemy->SetVisibility(IsEnemy ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
 void UMCharacterFollowWidget::SetHealthBarRenderOpacity(float percentage)
 {
-	HealthBar->SetRenderOpacity(percentage);
+	HealthBar_Enemy->SetRenderOpacity(percentage);
+	HealthBar_Teammate->SetRenderOpacity(percentage);
 }
 
 void UMCharacterFollowWidget::SetPlayerNameRenderOpacity(float percentage)
@@ -55,8 +65,6 @@ void UMCharacterFollowWidget::ShowTip()
 	{
 		Tip_Left->SetVisibility(ESlateVisibility::Visible);
 		Tip_Right->SetVisibility(ESlateVisibility::Visible);
-		//Tip_Left_Text->SetVisibility(ESlateVisibility::Visible);
-		//Tip_Right_Text->SetVisibility(ESlateVisibility::Visible);
 		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Visible);
 		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Visible);
 	}
@@ -68,8 +76,6 @@ void UMCharacterFollowWidget::HideTip()
 	{
 		Tip_Left->SetVisibility(ESlateVisibility::Hidden);
 		Tip_Right->SetVisibility(ESlateVisibility::Hidden);
-		//Tip_Left_Text->SetVisibility(ESlateVisibility::Hidden);
-		//Tip_Right_Text->SetVisibility(ESlateVisibility::Hidden);
 		Tip_Left_Weapon->SetVisibility(ESlateVisibility::Hidden);
 		Tip_Right_Weapon->SetVisibility(ESlateVisibility::Hidden);
 	}

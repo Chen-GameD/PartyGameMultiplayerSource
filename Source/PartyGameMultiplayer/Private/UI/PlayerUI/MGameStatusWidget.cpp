@@ -43,6 +43,7 @@ void UMGameStatusWidget::UpdateGameTimer(int i_GameTime)
 	}
 
 	GameTimer->SetText(FText::FromString(SMin + ":" + SSec));
+	ShowTimerAnimation();
 }
 
 void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info)

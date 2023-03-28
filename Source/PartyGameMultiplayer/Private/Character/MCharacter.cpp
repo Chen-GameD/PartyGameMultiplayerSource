@@ -80,7 +80,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CurFov = MinFov = 90.0f;
 	MaxFov = 108.0f;
 
-	//Create HealthBar UI Widget
+	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
@@ -277,9 +277,9 @@ void AMCharacter::SetTextureInUI()
 	{
 		if (InventoryMenuWidget)
 		{
-			InventoryMenuWidget->SetLeftItemUI(LeftWeapon == nullptr ? nullptr : LeftWeapon->textureUI);
-			InventoryMenuWidget->SetRightItemUI(RightWeapon == nullptr ? nullptr : RightWeapon->textureUI);
-			InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->textureUI);
+			InventoryMenuWidget->SetLeftItemUI(LeftWeapon == nullptr ? nullptr : LeftWeapon->HoldingTextureUI_Q);
+			InventoryMenuWidget->SetRightItemUI(RightWeapon == nullptr ? nullptr : RightWeapon->HoldingTextureUI_E);
+			InventoryMenuWidget->SetWeaponUI(CombineWeapon == nullptr ? nullptr : CombineWeapon->HoldingTextureUI_Q);
 		}
 	}
 }
@@ -514,7 +514,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			}
 
 			LeftWeapon = CurrentTouchedWeapon[0];
-			//SetTextureInUI(Left, LeftWeapon->textureUI);
+			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
 			temp += "_Left";
@@ -550,7 +550,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			}
 
 			RightWeapon = CurrentTouchedWeapon[0];
-			//SetTextureInUI(Right, RightWeapon->textureUI);
+			//SetTextureInUI(Right, RightWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
 			temp += "_Right";
@@ -999,12 +999,12 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 	}
 }
 
-void AMCharacter::SetFollowWidgetVisibility(bool isVisible)
+void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
 {
 	UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
 	if (CharacterFollowWidget)
 	{
-		if (isVisible)
+		if (IsVisible)
 		{
 			CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
 		}
@@ -1012,6 +1012,15 @@ void AMCharacter::SetFollowWidgetVisibility(bool isVisible)
 		{
 			CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
 		}
+	}
+}
+
+void AMCharacter::SetFollowWidgetHealthBarIsEnemy(bool IsEnemy)
+{
+	UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+	if (CharacterFollowWidget && !IsLocallyControlled())
+	{
+		CharacterFollowWidget->SetIsEnemyHealthBar(IsEnemy);
 	}
 }
 
@@ -1065,22 +1074,22 @@ void AMCharacter::InitFollowWidget()
 	}
 }
 
-void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
-{
-	if (isVisible)
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
-		CharacterFollowWidget->InitIsLocalControlledCharacterWidget(IsLocallyControlled());
-	}
-	else
-	{
-		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
-		CharacterFollowWidget->HideTip();
-		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
-	}
-}
+// void AMCharacter::SetLocallyControlledGameUI(bool isVisible)
+// {
+// 	if (isVisible)
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Visible);
+// 		CharacterFollowWidget->InitIsLocalControlledCharacterWidget(IsLocallyControlled(), false);
+// 	}
+// 	else
+// 	{
+// 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+// 		CharacterFollowWidget->HideTip();
+// 		CharacterFollowWidget->SetVisibility(ESlateVisibility::Hidden);
+// 	}
+// }
 
 void AMCharacter::SetOutlineEffect(bool isVisible)
 {
@@ -1388,16 +1397,16 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 					TSubclassOf<ABaseWeapon> combineWeaponRef;
 					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
 					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->textureUI);
+					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->PickUpTextureUI_Q);
 				}
 				else
 				{
-					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
 				}
 			}
 			else
 			{
-				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->textureUI);
+				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
 			}
 
 			// Right
@@ -1408,16 +1417,16 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 					TSubclassOf<ABaseWeapon> combineWeaponRef;
 					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
 					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->textureUI);
+					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->PickUpTextureUI_E);
 				}
 				else
 				{
-					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 				}
 			}
 			else
 			{
-				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->textureUI);
+				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 			}
 		}
 		else

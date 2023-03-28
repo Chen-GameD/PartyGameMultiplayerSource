@@ -30,6 +30,8 @@ public:
 	void HideTip();
 	UFUNCTION()
 	void SetPlayerName(FString i_PlayerName);
+	UFUNCTION()
+	void SetIsEnemyHealthBar(bool IsEnemy);
 
 	UFUNCTION()
 	void SetHealthBarRenderOpacity(float percentage);
@@ -51,7 +53,9 @@ public:
 	
 protected:
 	UPROPERTY(meta = (BindWidget))
-	UProgressBar* HealthBar;
+	UProgressBar* HealthBar_Enemy;
+	UPROPERTY(meta = (BindWidget))
+	UProgressBar* HealthBar_Teammate;
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* PlayerName;
 
