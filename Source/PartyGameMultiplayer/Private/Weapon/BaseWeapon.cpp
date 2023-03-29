@@ -526,18 +526,24 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, 
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (IsPickedUp && GetOwner())
+	//if (IsPickedUp && GetOwner())
+	//{
+	//	if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
+	//		Cast<AMinigameMainObjective>(OtherActor))
+	//	{
+	//		if (AttackObjectMap.Contains(OtherActor))
+	//		{
+	//			AttackObjectMap.Remove(OtherActor);
+	//		}
+	//		bAttackOverlap = false;
+	//	}
+	//}
+
+	if (AttackObjectMap.Contains(OtherActor))
 	{
-		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameMainObjective>(OtherActor))
-		{
-			if (AttackObjectMap.Contains(OtherActor))
-			{
-				AttackObjectMap.Remove(OtherActor);
-			}
-			bAttackOverlap = false;
-		}
+		AttackObjectMap.Remove(OtherActor);
 	}
+	bAttackOverlap = false;
 }
 
 

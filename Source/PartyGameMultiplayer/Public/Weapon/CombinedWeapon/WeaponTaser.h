@@ -68,8 +68,8 @@ protected:
 		bool IsForkOut;
 
 	// hit and attached
-	UPROPERTY(Replicated)
-		bool bHitTarget;
+	//UPROPERTY(Replicated)
+	//	bool bHitTarget;
 	bool bForkAttachedToWeapon; // used by both clients and server
 	AActor* Server_ActorBeingHit;
 	FVector Server_ActorBeingHit_To_TaserFork_WhenHit;
