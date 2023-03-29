@@ -69,6 +69,7 @@ ABaseWeapon::ABaseWeapon()
 	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
 	CD_CanRecover = true;
 	TimePassed_SinceAttackStop = 0.0f;
+	LastTime_DisplayCaseTransformBeenReplicated = 0;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
@@ -86,6 +87,10 @@ void ABaseWeapon::Tick(float DeltaTime)
 		// Not being picked up
 		if (!IsPickedUp)
 		{
+			if (DisplayCaseLocation != DisplayCase->GetComponentLocation()
+				|| DisplayCaseRotation != DisplayCase->GetComponentRotation()
+				|| DisplayCaseScale != DisplayCase->GetComponentScale())
+				LastTime_DisplayCaseTransformBeenReplicated = GetWorld()->TimeSeconds;
 			DisplayCaseLocation = DisplayCase->GetComponentLocation();
 			DisplayCaseRotation = DisplayCase->GetComponentRotation();
 			DisplayCaseScale = DisplayCase->GetComponentScale();
@@ -389,7 +394,7 @@ void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 	TimePassed_SinceGetThrewAway += DeltaTime;
 	if (HaloEffect_NSComponent && !HaloEffect_NSComponent->IsActive())
 	{
-		if (3.0f < TimePassed_SinceGetThrewAway)
+		if (0.2f < TimePassed_SinceGetThrewAway && 0.2f < GetWorld()->TimeSeconds - LastTime_DisplayCaseTransformBeenReplicated)
 		{
 			HaloEffect_NSComponent->Activate();
 			HaloEffect_NSComponent->SetVisibility(true);
@@ -437,6 +442,8 @@ void ABaseWeapon::OnRep_DisplayCaseTransform()
 		DisplayCase->SetWorldLocation(DisplayCaseLocation);
 		DisplayCase->SetWorldRotation(DisplayCaseRotation);
 		DisplayCase->SetWorldScale3D(DisplayCaseScale);
+
+		LastTime_DisplayCaseTransformBeenReplicated = GetWorld()->TimeSeconds;
 	}	
 }
 

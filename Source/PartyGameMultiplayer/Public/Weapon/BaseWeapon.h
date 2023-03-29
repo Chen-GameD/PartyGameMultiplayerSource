@@ -116,6 +116,7 @@ public:
 	bool CD_CanRecover;
 	float TimePassed_SinceAttackStop;
 	float TimePassed_SinceGetThrewAway;
+	float LastTime_DisplayCaseTransformBeenReplicated;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
