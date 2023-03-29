@@ -154,20 +154,23 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 	}
 
 	// When the Burning BuffPoints increases to the next integer(1, 2, 3, 4 ...), with add buff time and etc.
-	if (AttackBuff == EnumAttackBuff::Burning && 0.99f <= (FMath::FloorToInt(BuffPoints) - FMath::FloorToInt(OldBuffPoints)))
+	if (AttackBuff == EnumAttackBuff::Burning)
 	{
-		// Burning_TimeToAdd
-		FString ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+		if ( !DamagedCharacter->IsHealing && 0.99f <= (FMath::FloorToInt(BuffPoints) - FMath::FloorToInt(OldBuffPoints)))
 		{
-			float buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			BuffRemainedTime += buffTimeToAdd;
-			BuffAccumulatedTime += buffTimeToAdd;
-		}
-		// Set Character's IsBurned to true
-		DamagedCharacter->IsBurned = true;
-		if (DamagedCharacter->GetNetMode() == NM_ListenServer)
-			DamagedCharacter->OnRep_IsBurned();
+			// Burning_TimeToAdd
+			FString ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			{
+				float buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				BuffRemainedTime += buffTimeToAdd;
+				BuffAccumulatedTime += buffTimeToAdd;
+			}
+			// Set Character's IsBurned to true
+			DamagedCharacter->IsBurned = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsBurned();
+		}		
 	}
 	
 	return true;

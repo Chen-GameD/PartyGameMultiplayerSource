@@ -592,8 +592,17 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			CntShellHeld++;
 		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
 			CntShellHeld++;
-		if(0 < CntShellHeld)
+		if (0 < CntShellHeld)
+		{
+			// clear burning buff
+			if (CheckBuffMap(EnumAttackBuff::Burning))
+			{
+				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+			}
+			// apply shellheal buff
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
+		}			
 		else
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
 	}
