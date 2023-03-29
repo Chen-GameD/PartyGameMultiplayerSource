@@ -43,11 +43,12 @@ public:
 	EnumWeaponType WeaponType;
 	class AController* Controller;
 	float CurDeltaTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UProjectileMovementComponent* ProjectileMovementComponent;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		class UProjectileMovementComponent* ProjectileMovementComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* AttackHitEffect_NSComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")

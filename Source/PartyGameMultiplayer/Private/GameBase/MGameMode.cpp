@@ -250,7 +250,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 0.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else
