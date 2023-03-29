@@ -180,11 +180,12 @@ void AMInGameHUD::InGame_UpdateTimer(int CurrentTimer)
 	}
 }
 
-void AMInGameHUD::InGame_UpdateMinigameHint(FString i_Hint)
+void AMInGameHUD::InGame_UpdateMinigameHint(FString i_Hint, UTexture2D* i_HintImage)
 {
 	if (InGame_GameStatusWidget)
 	{
-		InGame_GameStatusWidget->UpdateMinigameInfo(i_Hint);
+		InGame_GameStatusWidget->UpdateMinigameInfo(i_Hint, i_HintImage);
+		
 	}
 }
 

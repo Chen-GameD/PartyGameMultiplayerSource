@@ -138,7 +138,7 @@ void AMGameState::OnRep_Team_2_ScoreUpdate()
 	}
 }
 
-void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& i_Hint)
+void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& i_Hint, UTexture2D* i_HintImage)
 {
 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
 	{
@@ -149,7 +149,7 @@ void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& 
 			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
 			if (MyHUD)
 			{
-				MyHUD->InGame_UpdateMinigameHint(i_Hint);
+				MyHUD->InGame_UpdateMinigameHint(i_Hint, i_HintImage);
 			}
 		}
 	}

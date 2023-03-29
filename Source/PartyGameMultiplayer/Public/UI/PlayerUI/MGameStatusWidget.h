@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "MGameStatusWidget.generated.h"
 
@@ -29,7 +30,7 @@ public:
 	void UpdateGameTimer(int i_GameTime);
 
 	UFUNCTION()
-	void UpdateMinigameInfo(FString i_Info);
+	void UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoImage);
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowMinigameInfoAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
@@ -49,5 +50,7 @@ protected:
 	// Minigame Information
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* MinigameInfo;
+	UPROPERTY(meta = (BindWidget))
+	UImage* MinigameInfoImage;
 	
 };

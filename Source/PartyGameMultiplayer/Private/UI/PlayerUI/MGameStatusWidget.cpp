@@ -46,9 +46,10 @@ void UMGameStatusWidget::UpdateGameTimer(int i_GameTime)
 	ShowTimerAnimation();
 }
 
-void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info)
+void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoImage)
 {
 	MinigameInfo->SetText(FText::FromString(i_Info));
+	MinigameInfoImage->SetBrushFromTexture(i_InfoImage);
 
 	ShowMinigameInfoAnimation();
 }

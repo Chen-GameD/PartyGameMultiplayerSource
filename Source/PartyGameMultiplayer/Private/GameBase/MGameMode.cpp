@@ -217,7 +217,7 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		AMGameState* MyGameState = GetGameState<AMGameState>();
 		if (MyGameState)
 		{
-			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint);
+			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHintImage);
 		}
 	}
 }

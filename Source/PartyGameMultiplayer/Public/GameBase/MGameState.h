@@ -54,5 +54,5 @@ public:
 
 	// Minigame Hint Section
 	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_UpdateMinigameHint(const FString& i_Hint);
+	void NetMulticast_UpdateMinigameHint(const FString& i_Hint, UTexture2D* i_HintImage);
 };
