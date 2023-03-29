@@ -69,7 +69,7 @@ public:
 	void InGame_UpdateTimer(int CurrentTimer);
 	// Show and update minigame hint ( with animation )
 	UFUNCTION()
-	void InGame_UpdateMinigameHint(FString i_Hint);
+	void InGame_UpdateMinigameHint(FString i_Hint, UTexture2D* i_HintImage);
 	// Initialize the game status UI content
 	UFUNCTION()
 	void InGame_InitGameStatusAndPlayerStatusWidgetContent();

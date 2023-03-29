@@ -59,6 +59,9 @@ public:
 	FString MinigameHint;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	UTexture2D* MinigameHintImage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
 	TSubclassOf<AMinigameMainObjective> MinigameObject;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Minigame Config")
