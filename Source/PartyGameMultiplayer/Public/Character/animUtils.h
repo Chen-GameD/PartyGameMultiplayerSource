@@ -69,13 +69,18 @@ namespace AnimUtils {
 		// Reset State
 		clearAnimStateWeaponType(i_AnimState);
 
-		if (i_CombineWeapon) {
+		if (i_CombineWeapon) 
+		{
 			auto combineWeaponType = i_CombineWeapon->WeaponType;
 			int indexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(combineWeaponType);
 			i_AnimState[indexToSet] = true;
 		}
-		else {
-			if (i_LeftWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell && i_RightWeapon && i_RightWeapon->WeaponType != EnumWeaponType::Shell) {
+		else 
+		{
+			// Holding 2 same weapons(no shells)
+			if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell && i_RightWeapon->WeaponType != EnumWeaponType::Shell)
+			{				
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 1"));
 				int doubleShootIndex = 3;
 				int doubleMeleeIndex = 2;
 
@@ -89,24 +94,53 @@ namespace AnimUtils {
 				//	1. Double Shooting
 				//	2. Double Melee
 				// If both single shooting which means Double Shooting
-				if (leftIndexToSet && rightIndexToSet) {
+				if (leftIndexToSet && rightIndexToSet) 
+				{
 					i_AnimState[doubleShootIndex] = true;
 				}
 				// Double Melee
-				else {
+				else 
+				{
 					i_AnimState[doubleMeleeIndex] = true;
-				}
-
+				}			
 			}
-			else if (i_LeftWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell) {
+			// holding left weapon (right is empty or shell)
+			else if (i_LeftWeapon && (!i_RightWeapon || i_RightWeapon->WeaponType == EnumWeaponType::Shell))
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 2"));
 				auto leftType = i_LeftWeapon->WeaponType;
 				int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
 				i_AnimState[leftIndexToSet] = true;
 			}
-			else if (i_RightWeapon && i_RightWeapon->WeaponType != EnumWeaponType::Shell) {
+			// holding right weapon (left is empty or shell)
+			else if (i_RightWeapon && (!i_LeftWeapon || i_LeftWeapon->WeaponType == EnumWeaponType::Shell))
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 3"));
 				auto rightType = i_RightWeapon->WeaponType;
 				int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
 				i_AnimState[rightIndexToSet] = true;
+			}
+			// holding 2 shells
+			else if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && i_RightWeapon->WeaponType == EnumWeaponType::Shell)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 4"));
+				int doubleShootIndex = 3;
+				int doubleMeleeIndex = 2;
+
+				i_AnimState[doubleShootIndex] = true;
+				//i_AnimState[doubleMeleeIndex] = true;
+			}
+			// holding left shell
+			else if (i_LeftWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && !i_RightWeapon)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 5"));
+				i_AnimState[1] = true;
+			}
+			// holding right shell
+			else if (i_LeftWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && !i_RightWeapon)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 6"));
+				i_AnimState[1] = true;
 			}
 		}
 	}
