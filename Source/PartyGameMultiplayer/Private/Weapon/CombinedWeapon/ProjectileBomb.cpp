@@ -85,7 +85,7 @@ void AProjectileBomb::OnRep_HasExploded()
 	if (HasExploded)
 	{
 		ProjectileMovementComponent->StopMovementImmediately();  // will stop the original movement, but will still move the object(like a free fall)
-		ProjectileMovementComponent->SetUpdatedComponent(nullptr);
+		ProjectileMovementComponent->SetUpdatedComponent(nullptr); // ProjectileMovementComponent will stop moving the object
 		StaticMesh->SetSimulatePhysics(false);
 		StaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
