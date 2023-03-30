@@ -22,5 +22,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* SpotLightMesh;
 
+	FVector SourceLocation;
 	AActor* TargetActor;
 };
