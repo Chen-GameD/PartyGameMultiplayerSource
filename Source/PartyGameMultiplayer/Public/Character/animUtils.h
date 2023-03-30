@@ -78,7 +78,8 @@ namespace AnimUtils {
 		else 
 		{
 			// Holding 2 same weapons(no shells)
-			if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell && i_RightWeapon->WeaponType != EnumWeaponType::Shell)
+			if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell 
+				&& i_RightWeapon->WeaponType != EnumWeaponType::Shell)
 			{				
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 1"));
 				int doubleShootIndex = 3;
@@ -111,6 +112,7 @@ namespace AnimUtils {
 				auto leftType = i_LeftWeapon->WeaponType;
 				int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
 				i_AnimState[leftIndexToSet] = true;
+				i_AnimState[6] = false;
 			}
 			// holding right weapon (left is empty or shell)
 			else if (i_RightWeapon && (!i_LeftWeapon || i_LeftWeapon->WeaponType == EnumWeaponType::Shell))
@@ -119,9 +121,11 @@ namespace AnimUtils {
 				auto rightType = i_RightWeapon->WeaponType;
 				int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
 				i_AnimState[rightIndexToSet] = true;
+				i_AnimState[5] = false;
 			}
 			// holding 2 shells
-			else if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && i_RightWeapon->WeaponType == EnumWeaponType::Shell)
+			else if (i_LeftWeapon && i_RightWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell 
+				&& i_RightWeapon->WeaponType == EnumWeaponType::Shell)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 4"));
 				int doubleShootIndex = 3;
@@ -135,12 +139,14 @@ namespace AnimUtils {
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 5"));
 				i_AnimState[1] = true;
+				i_AnimState[5] = true;
 			}
 			// holding right shell
 			else if (i_LeftWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && !i_RightWeapon)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 6"));
 				i_AnimState[1] = true;
+				i_AnimState[6] = true;
 			}
 		}
 	}
