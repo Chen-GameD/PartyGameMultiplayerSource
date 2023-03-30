@@ -78,7 +78,8 @@ private:
 		{EnumWeaponType::Taser, 1},
 		{EnumWeaponType::Alarmgun, 4},
 		{EnumWeaponType::Bomb, 0},
-		{EnumWeaponType::Cannon, 4}
+		{EnumWeaponType::Cannon, 4},
+		{EnumWeaponType::Shell, 1}
 	};
 
 private:

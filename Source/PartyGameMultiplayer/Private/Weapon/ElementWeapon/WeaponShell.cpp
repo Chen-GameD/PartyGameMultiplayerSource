@@ -17,6 +17,30 @@ AWeaponShell::AWeaponShell()
 	//}
 }
 
+void AWeaponShell::BeginPlay()
+{
+	Super::BeginPlay();
+
+	FVector spawnLocation = GetActorLocation();
+	FRotator spawnRotation = FRotator();
+	FActorSpawnParameters spawnParameters;
+	spawnParameters.Instigator = GetInstigator();
+	spawnParameters.Owner = this;
+	pShellSpotLight = GetWorld()->SpawnActor<AShellSpotLight>(SpecificShellSpotLightClass, spawnLocation, spawnRotation, spawnParameters);
+	if (pShellSpotLight)
+	{
+		//pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 1000.0f);
+		pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 380.0f);
+		pShellSpotLight->TargetActor = this;		
+	}
+}
+
+void AWeaponShell::Destroyed()
+{
+	if (pShellSpotLight)
+		pShellSpotLight->Destroy();
+}
+
 void AWeaponShell::GetPickedUp(ACharacter* pCharacter)
 {
 	Super::GetPickedUp(pCharacter);

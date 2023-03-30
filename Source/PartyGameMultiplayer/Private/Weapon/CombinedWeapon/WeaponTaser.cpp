@@ -67,7 +67,7 @@ AWeaponTaser::AWeaponTaser()
 	IsForkOut = false;
 
 	Server_ActorBeingHit = nullptr;
-	bHitTarget = false;
+	//bHitTarget = false;
 	bForkAttachedToWeapon = true;
 
 	Ratio_ScaleUpOnRelativeScale = 3.0f;
@@ -85,18 +85,12 @@ void AWeaponTaser::Tick(float DeltaTime)
 		if (bAttackOn)
 		{
 			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
-			if (!bHitTarget)
+			if (!Server_ActorBeingHit)
 			{
 				// stretch out to the limit
-				//FVector TaserFork_CurRelativeLocation = TaserForkMesh->GetRelativeLocation();
-				//if (TaserFork_OriginalRelativeLocation.X - MaxLen <= TaserFork_CurRelativeLocation.X)
-				//{
-				//	TaserForkMesh->SetRelativeLocation(TaserFork_CurRelativeLocation + DeltaTime * FVector3d(-StrechOutSpeed, 0, 0));
-				//}
 				FVector TaserFork_CurWorldLocation = TaserForkMesh->GetComponentLocation();
 				if (FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart) < MaxLen)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Diffs: %f, %f"), FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart), MaxLen));
 					TaserForkMesh->SetWorldLocation(TaserFork_CurWorldLocation + DeltaTime * TaserFork_WorldRotation_WhenAttackStart.Vector() * -StrechOutSpeed);
 				}
 				else
@@ -108,7 +102,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 				// change the transform of the TaserFork
 				if (Server_ActorBeingHit)
 				{
-					// location: keep the same offset
+					// Location: keep the same offset
 					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
 					// Rotation
 					FVector Server_ActorBeingHit_To_WeaponMesh_Now = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
@@ -163,7 +157,7 @@ void AWeaponTaser::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLif
 
 	DOREPLIFETIME(AWeaponTaser, ServerForkWorldLocation);
 	DOREPLIFETIME(AWeaponTaser, ServerForkWorldRotation);
-	DOREPLIFETIME(AWeaponTaser, bHitTarget);
+	//DOREPLIFETIME(AWeaponTaser, bHitTarget);
 	DOREPLIFETIME(AWeaponTaser, IsForkOut);
 }
 
@@ -173,7 +167,6 @@ void AWeaponTaser::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner() || IsForkOut)
 		return;
-
 	// If the weapon has cd
 	if (0 < CD_MaxEnergy)
 	{
@@ -190,7 +183,6 @@ void AWeaponTaser::AttackStart(float AttackTargetDistance)
 				return;
 		}
 	}
-
 	bAttackOn = true;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
@@ -221,16 +213,7 @@ void AWeaponTaser::AttackStop()
 		OnRep_bAttackOn();
 	}
 	ApplyDamageCounter = 0;
-	for (auto& Elem : AttackObjectMap)
-	{
-		if (auto pMCharacter = Cast<AMCharacter>(Elem.Key))
-		{
-			if(pMCharacter == Server_ActorBeingHit)
-				ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pMCharacter, -1.0f);
-		}
-	}
 	AttackObjectMap.Empty();
-	Server_ActorBeingHit = nullptr;
 
 	if (AttackType == EnumAttackType::Constant)
 		CD_CanRecover = false;
@@ -239,7 +222,6 @@ void AWeaponTaser::AttackStop()
 	SetActorEnableCollision(bAttackOn);
 	
 	SetTaserForkAttached(true);
-	bHitTarget = false;
 }
 
 void AWeaponTaser::BeginPlay()
@@ -275,67 +257,86 @@ void AWeaponTaser::OnRep_bAttackOn()
 void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (bHitTarget)
+	if (Server_ActorBeingHit || OtherActor == GetOwner())
 		return;
 
+	// if held by a character without any problem
 	if (IsPickedUp && GetOwner())
 	{
-		if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameMainObjective>(OtherActor))
+		// if hit characters / minigame objects
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameMainObjective>(OtherActor))
 		{
-			// if it is AMCharacter
-			auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor);
-			if (pCharacterBeingHit)
+			bool bTargetCanBeAttacked = true;
+			// Check if this character can be attacked
+			if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
 			{
-				// Check if it hits teammates
-				auto MyController = HoldingController;
-				if (!MyController)
-					return;
-				AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-				AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-				if (!MyPS || !TheOtherCharacterPS || MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				// if it hits the teammates
+				if(pCharacterBeingHit != GetOwner())
 				{
-					AttackStop();
-					return;
+					auto MyController = HoldingController;
+					if (!MyController)
+						return;
+					AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+					AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
+					if (!MyPS || !TheOtherCharacterPS)
+						return;
+					if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+					{
+						bTargetCanBeAttacked = false;
+					}
 				}
-				// Apply paralysis buff
-				if (!Server_ActorBeingHit)
-					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
+			}
+			// Check if this minigame can be attacked
+			else if(auto pMiniGameObjectBeingHit = Cast<AMinigameMainObjective>(OtherActor))
+			{
+	
 			}
 
-			bHitTarget = true;
-			Server_ActorBeingHit = OtherActor;
-			if(pCharacterBeingHit)
-				Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
+			if (!bTargetCanBeAttacked)
+			{
+				AttackStop();
+				return;
+			}
 			else
-				Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
-			Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
-			Server_TaserForkRotationYaw_WhenHit = TaserForkMesh->GetRelativeRotation().Yaw;
-
-			//ServerTaserForkWorldLocation_WhenFirstHitTarget = TaserForkMesh->GetComponentLocation();
-			//ServerTaserForkWorldRotation_WhenFirstHitTarget = TaserForkMesh->GetComponentRotation();
-
-			if (!AttackObjectMap.Contains(OtherActor))
-				AttackObjectMap.Add(OtherActor);
-			AttackObjectMap[OtherActor] = 0.0f;
-			bAttackOverlap = true;
-			// Listen server
-			if (GetNetMode() == NM_ListenServer)
 			{
-				OnRep_bAttackOverlap();
-			}
+				Server_ActorBeingHit = OtherActor;
+				if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
+				{
+					// Apply paralysis buff
+					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
+					Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
+				}
+				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameMainObjective>(OtherActor))
+				{
+					Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
+					Server_ActorBeingHit_To_TaserFork_WhenHit *= 0.5f;
+				}
+				Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
+				Server_TaserForkRotationYaw_WhenHit = TaserForkMesh->GetRelativeRotation().Yaw;
 
-			if (ApplyDamageCounter == 0 && HoldingController)
-			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-				ApplyDamageCounter++;
+				if (!AttackObjectMap.Contains(OtherActor))
+					AttackObjectMap.Add(OtherActor);
+				AttackObjectMap[OtherActor] = 0.0f;
+				bAttackOverlap = true;
+				// Listen server
+				if (GetNetMode() == NM_ListenServer)
+				{
+					OnRep_bAttackOverlap();
+				}
+
+				if (ApplyDamageCounter == 0 && HoldingController)
+				{
+					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ApplyDamageCounter++;
+				}
 			}
 		}
+		// if hits something other than characters and minigame objects
 		else
-		{
-			// if hit something other than the following(like building, rocks, etc), the attack should stop
-			if (!Cast<AMCharacter>(OtherActor) && !Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
+		{			
+			// if hits weapon/projectiles, penetrate, otherwise(building, rocks, etc) pass through
+			if (!Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
 				AttackStop();
 		}
 	}
@@ -348,18 +349,19 @@ we still keep the damaged actor in the AttackObjectMap in order to keep applying
 void AWeaponTaser::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	//if (IsPickedUp && GetOwner())
-	//{
-	//	if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
-	//		Cast<AMinigameMainObjective>(OtherActor))
-	//	{
-	//		if (AttackObjectMap.Contains(OtherActor))
-	//		{
-	//			AttackObjectMap.Remove(OtherActor);
-	//		}
-	//		bAttackOverlap = false;
-	//	}
-	//}
+	if (Server_ActorBeingHit == OtherActor)
+	{
+		Server_ActorBeingHit = nullptr;
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+			ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pMCharacter, -1.0f);
+	}
+
+	if (AttackObjectMap.Contains(OtherActor))
+	{
+		AttackObjectMap.Remove(OtherActor);
+	}
+	bAttackOverlap = false;
+
 }
 
 

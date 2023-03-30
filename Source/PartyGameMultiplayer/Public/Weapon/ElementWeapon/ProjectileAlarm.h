@@ -15,4 +15,11 @@ class PARTYGAMEMULTIPLAYER_API AProjectileAlarm : public ABaseProjectile
 	GENERATED_BODY()
 public:
 	AProjectileAlarm();	
+	virtual void Tick(float DeltaTime) override;
+protected:
+	virtual void OnRep_HasExploded() override;
+
+protected:
+	float Shake_TimeSinceChangeDirection;
+	bool Shake_Clockwise;
 };

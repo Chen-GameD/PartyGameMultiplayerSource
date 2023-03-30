@@ -286,20 +286,16 @@ void AMCharacter::SetTextureInUI()
 
 void AMCharacter::Client_Attack()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_1"));
 	float TargetDistance = 0.0f;
 	if (auto pPlayerController = Cast<APlayerController>(GetController()))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_2"));
 		FHitResult Hit;
 		bool successHit = pPlayerController->GetHitResultUnderCursor(ECC_GameTraceChannel1, false, Hit);
 		if (successHit)
 		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_3"));
 			auto pMCharacter = Cast<AMCharacter>(GetInstigator());
 			if (pMCharacter)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Client_Attack_4"));
 				TargetDistance = FVector::Distance(Hit.Location, GetActorLocation());
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("distance: %f"), TargetDistance));
 			}
@@ -313,8 +309,16 @@ void AMCharacter::Attack_Implementation(float AttackTargetDistance)
 {
 	if ((LeftWeapon || RightWeapon || CombineWeapon) && !IsDead)
 	{
-		// Can't Attack(No WeaponAttackStart, No attack animation) during Paralysis
+		// Can't Attack during Paralysis
 		if (CheckBuffMap(EnumAttackBuff::Paralysis) && 1.0f <= BuffMap[EnumAttackBuff::Paralysis][0])
+			return;
+		// Can't Attack when holding only shells
+		bool HasWeaponOtherThanShells = false;
+		if ( (LeftWeapon && LeftWeapon->WeaponType != EnumWeaponType::Shell) || 
+			(RightWeapon && RightWeapon->WeaponType != EnumWeaponType::Shell) ||
+			CombineWeapon )
+			HasWeaponOtherThanShells = true;
+		if (!HasWeaponOtherThanShells)
 			return;
 
 		FString AttackMessage = FString::Printf(TEXT("You Start Attack."));
@@ -592,8 +596,17 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			CntShellHeld++;
 		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
 			CntShellHeld++;
-		if(0 < CntShellHeld)
+		if (0 < CntShellHeld)
+		{
+			// clear burning buff
+			if (CheckBuffMap(EnumAttackBuff::Burning))
+			{
+				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+			}
+			// apply shellheal buff
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
+		}			
 		else
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
 	}
@@ -757,8 +770,6 @@ void AMCharacter::Server_Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-
-		
 
 		// Listen Server
 		if (GetNetMode() == NM_ListenServer)

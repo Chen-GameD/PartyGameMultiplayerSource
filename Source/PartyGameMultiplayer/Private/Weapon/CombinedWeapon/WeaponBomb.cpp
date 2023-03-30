@@ -89,7 +89,8 @@ void AWeaponBomb::AttackStart(float AttackTargetDistance)
 	if (0.0f < CD_MaxEnergy && CD_MinEnergyToAttak <= CD_LeftEnergy)
 	{
 		CD_LeftEnergy -= CD_MinEnergyToAttak;
-		SpawnProjectile(AttackTargetDistance);
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AttackTargetDistance] {SpawnProjectile(AttackTargetDistance); }, 0.1f, false);
 	}
 }
 
@@ -118,7 +119,7 @@ void AWeaponBomb::SpawnProjectile(float AttackTargetDistance)
 	if (pCharacter && SpecificProjectileClass)
 	{
 		FVector spawnLocation = SpawnProjectilePointMesh->GetComponentLocation();
-		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() - 0.1 * pCharacter->GetActorRightVector()).Rotation();
+		FRotator spawnRotation = (pCharacter->GetActorRotation().Vector() - 0.0 * pCharacter->GetActorRightVector()).Rotation();
 
 		FActorSpawnParameters spawnParameters;
 		spawnParameters.Instigator = GetInstigator();

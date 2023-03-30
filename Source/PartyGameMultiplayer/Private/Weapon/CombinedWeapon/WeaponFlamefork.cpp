@@ -56,7 +56,8 @@ void AWeaponFlamefork::AttackStart(float AttackTargetDistance)
 	ApplyDamageCounter = 0;
 
 	SetActorEnableCollision(bAttackOn);
-	SpawnProjectile(AttackTargetDistance);
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AttackTargetDistance] {SpawnProjectile(AttackTargetDistance);}, 0.2f, false);
 }
 
 
