@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Weapon/BaseWeapon.h"
+#include "LevelInteraction/ShellSpotLight.h"
 #include "WeaponShell.generated.h"
 
 /**
@@ -32,6 +33,9 @@ public:
 	void UpdateConfigIndex(int N_Index);
 	UFUNCTION()
 	int GetConfigIndex();
+
+protected:
+	virtual void BeginPlay() override;
 	
 protected:
 	AController* PreHoldingController;
@@ -39,4 +43,8 @@ protected:
 	int ConfigIndex = -1;
 	UPROPERTY()
 	int ScoreCanGet = 0;
+
+	class AShellSpotLight* pShellSpotLight;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class AShellSpotLight> SpecificShellSpotLightClass;
 };
