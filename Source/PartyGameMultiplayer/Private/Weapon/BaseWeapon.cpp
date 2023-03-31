@@ -74,6 +74,13 @@ ABaseWeapon::ABaseWeapon()
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
+
+	if (WeaponMesh)
+	{
+		WeaponMeshDefaultRelativeLocation = WeaponMesh->GetRelativeLocation();
+		WeaponMeshDefaultRelativeRotation = WeaponMesh->GetRelativeRotation();
+		WeaponMeshDefaultRelativeScale = WeaponMesh->GetRelativeScale3D();
+	}
 }
 
 
@@ -319,12 +326,6 @@ void ABaseWeapon::BeginPlay()
 	Super::BeginPlay();
 
 	GetWeaponName(); // to update weapon name
-
-	if (WeaponMesh)
-	{
-		WeaponMeshDefaultRelativeLocation = WeaponMesh->GetRelativeLocation();
-		WeaponMeshDefaultRelativeRotation = WeaponMesh->GetRelativeRotation();
-	}
 
 	// Assign some member variables(we want both the server and client have these values)
 	if (AWeaponDataHelper::DamageManagerDataAsset)

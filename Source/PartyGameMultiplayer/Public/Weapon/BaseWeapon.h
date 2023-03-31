@@ -141,6 +141,7 @@ protected:
 
 	FVector WeaponMeshDefaultRelativeLocation;
 	FRotator WeaponMeshDefaultRelativeRotation;
+	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
 	int ApplyDamageCounter;

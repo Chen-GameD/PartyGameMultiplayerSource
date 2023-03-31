@@ -22,7 +22,11 @@ private:
 	
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UStaticMeshComponent* CrabMesh;
+		class UStaticMeshComponent* RootMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class USkeletalMeshComponent* CrabMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* CollisionMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* BigWeaponMesh;
 protected:

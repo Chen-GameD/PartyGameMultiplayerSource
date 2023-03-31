@@ -12,6 +12,22 @@
 
 AMinigameObj_Enemy::AMinigameObj_Enemy()
 {
+	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));	
+	RootMesh->SetupAttachment(RootComponent);
+	RootMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+	CrabMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CrabMesh"));
+	CrabMesh->SetupAttachment(RootMesh);
+	CrabMesh->SetCollisionProfileName(TEXT("Custom"));
+
+	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CollisionMesh"));
+	CollisionMesh->SetupAttachment(CrabMesh);
+	CollisionMesh->SetCollisionProfileName(TEXT("Custom"));
+
+	BigWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BigWeaponMesh"));
+	BigWeaponMesh->SetupAttachment(CrabMesh);
+	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
 	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
 }
