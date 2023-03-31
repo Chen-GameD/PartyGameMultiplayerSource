@@ -55,11 +55,10 @@ void AProjectileAlarm::Tick(float DeltaTime)
 			Shake_TimeSinceChangeDirection = 0;
 			Shake_Clockwise = !Shake_Clockwise;
 		}
-	}	
-
-	FVector NewLocation = StaticMesh->GetComponentLocation();
-	NewLocation.Z -= DeltaTime * 25.0f;
-	StaticMesh->SetWorldLocation(NewLocation);
+		FVector NewLocation = StaticMesh->GetComponentLocation();
+		NewLocation.Z -= DeltaTime * 25.0f;
+		StaticMesh->SetWorldLocation(NewLocation);
+	}		
 }
 
 void AProjectileAlarm::OnRep_HasExploded()

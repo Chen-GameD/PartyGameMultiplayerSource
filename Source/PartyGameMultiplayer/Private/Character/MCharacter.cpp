@@ -521,6 +521,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
+			if (LeftWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			temp += "_Left";
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
@@ -558,6 +560,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
 			temp += "_Right";
+			if (RightWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
