@@ -72,8 +72,17 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		}
 
 		// Set timer and respawn this actor
-		FTimerHandle RespawnMinigameObjectTimerHandle;
-		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, 5, false);
+		//FTimerHandle RespawnMinigameObjectTimerHandle;
+		//GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, 5, false);
+
+		Destroy();
+
+		FVector spawnLocation = BigWeaponMesh->GetComponentLocation();
+		FRotator spawnRotation = BigWeaponMesh->GetComponentRotation();
+		FActorSpawnParameters spawnParameters;
+		spawnParameters.Instigator = nullptr;
+		spawnParameters.Owner = nullptr;
+		auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 
 	return 0.0f;
