@@ -24,6 +24,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	USkeletalMeshComponent* GetSkeletalMesh();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStatueFinishedEvent();
+
 protected:
 	// only is called on server
 	UFUNCTION(Category = "Weapon")

@@ -165,6 +165,6 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 
 		// Destroy VFX & Effect
 		// TODO
-		
+		OnStatueFinishedEvent();
 	}
 }
