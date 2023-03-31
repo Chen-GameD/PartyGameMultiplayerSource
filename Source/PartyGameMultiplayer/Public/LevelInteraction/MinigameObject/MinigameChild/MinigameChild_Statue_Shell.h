@@ -39,6 +39,6 @@ protected:
 
 private:
 	float TimeElapsed = 0;
-	float LerpDuration = 5;
+	float LerpDuration = 4;
 
 };
