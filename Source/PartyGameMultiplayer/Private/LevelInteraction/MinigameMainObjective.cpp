@@ -23,10 +23,8 @@
 
 AMinigameMainObjective::AMinigameMainObjective()
 {
-	MaxHealth = 1200.0f;
+	MaxHealth = 0.0f;
 	CurrentHealth = MaxHealth;
-
-	bReplicates = true;
 }
 
 
