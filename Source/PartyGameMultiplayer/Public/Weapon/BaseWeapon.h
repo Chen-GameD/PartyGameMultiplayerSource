@@ -95,6 +95,10 @@ public:
 	UTexture2D* PickUpTextureUI_E;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* PickUpTextureUI_Q;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Broadcast;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Message;
 	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;

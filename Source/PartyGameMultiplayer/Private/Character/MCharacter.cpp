@@ -1323,22 +1323,6 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		float damageApplied = CurrentHealth - DamageTaken;
 		SetCurrentHealth(damageApplied);
 
-		//EnumWeaponType WeaponType = EnumWeaponType::None;
-		//float DeltaTime_DamageCauser = 0;
-		//if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		//{
-		//	WeaponType = p->WeaponType;
-		//	DeltaTime_DamageCauser = p->CurDeltaTime;
-		//}
-		//if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		//{
-		//	WeaponType = p->WeaponType;
-		//	DeltaTime_DamageCauser = p->CurDeltaTime;
-		//}
-		//if (WeaponType == EnumWeaponType::None)
-		//	return false;
-		//ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
-
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
 			CombineWeapon->AttackStop();
@@ -1349,6 +1333,36 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			AttackerPS->addScore(5);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
+
+			// Broadcast function
+			// Broadcast
+			AMCharacter* AttackCharacter = Cast<AMCharacter>(EventInstigator->GetPawn());
+			UTexture2D* WeaponImage = nullptr;
+			// Get Weapon Image
+			if (AttackCharacter)
+			{
+				if (AttackCharacter->CombineWeapon)
+				{
+					WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
+				}
+				else if (AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
+				{
+					WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+				}
+				else if (AttackCharacter->LeftWeapon != nullptr && AttackCharacter->LeftWeapon->WeaponType != EnumWeaponType::Shell)
+				{
+					WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+				}
+				else if (AttackCharacter->RightWeapon != nullptr && AttackCharacter->RightWeapon->WeaponType != EnumWeaponType::Shell)
+				{
+					WeaponImage = AttackCharacter->RightWeapon->WeaponImage_Broadcast;
+				}
+			}
+			for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+			{
+				AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+				currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+			}
 		}
 
 		return damageApplied;
@@ -1715,7 +1729,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				FString ParName = "BurningDamagePerSecond";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				float OldHealth = CurrentHealth;
 				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
+				if (CurrentHealth <= 0 && OldHealth > 0)
+				{
+					// Broadcast
+					
+				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
 			else
