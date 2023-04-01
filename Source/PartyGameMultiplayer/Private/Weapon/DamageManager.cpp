@@ -16,7 +16,7 @@
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "Character/MCharacter.h"
 #include "Character/MPlayerController.h"
-#include "LevelInteraction/MinigameMainObjective.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 
 
 bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor, float DeltaTime)
@@ -32,7 +32,7 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	if (WeaponType == EnumWeaponType::None)
 		return false;
 
-	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
+	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameObj_Enemy>(DamagedActor))
 	{
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
