@@ -1324,8 +1324,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
 			return 0.0f;
 
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		//EnumWeaponType WeaponType = EnumWeaponType::None;
 		//float DeltaTime_DamageCauser = 0;
@@ -1355,7 +1354,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			MyPS->addDeath(1);
 		}
 
-		return damageApplied;
+		return DamageTaken;
 	}
 
 	return 0.0f;
@@ -1702,7 +1701,7 @@ void AMCharacter::Tick(float DeltaTime)
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
