@@ -361,6 +361,7 @@ public:
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
 	// When the BuffPoints >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+	class AController* Server_TheControllerApplyingLatestBurningBuff;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;

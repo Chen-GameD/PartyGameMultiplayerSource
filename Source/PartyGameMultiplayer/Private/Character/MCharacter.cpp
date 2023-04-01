@@ -136,6 +136,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
 
+	Server_TheControllerApplyingLatestBurningBuff = nullptr;
+
 	Server_CanMove = true;
 }
 
@@ -1718,7 +1720,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				FString ParName = "BurningDamagePerSecond";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
+				float TargetCurrentHealth = CurrentHealth - DeltaTime * BurningBuffDamagePerSecond;
+				SetCurrentHealth(TargetCurrentHealth);
+				if (TargetCurrentHealth <= 0.0f)
+				{
+					auto MyController = GetController();
+					if (Server_TheControllerApplyingLatestBurningBuff && MyController)
+					{
+						AM_PlayerState* AttackerPS = Server_TheControllerApplyingLatestBurningBuff->GetPlayerState<AM_PlayerState>();
+						AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+						// Add Scores
+						AttackerPS->addScore(5);
+						AttackerPS->addKill(1);
+						MyPS->addDeath(1);
+						// TODO: broadcast burning kill
+
+					}					
+				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
 			else

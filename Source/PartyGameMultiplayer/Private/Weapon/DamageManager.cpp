@@ -170,6 +170,8 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 			DamagedCharacter->IsBurned = true;
 			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
 				DamagedCharacter->OnRep_IsBurned();
+			// Set Server_TheControllerApplyingLatestBurningBuff 
+			DamagedCharacter->Server_TheControllerApplyingLatestBurningBuff = AttackerController;
 		}		
 	}
 	
