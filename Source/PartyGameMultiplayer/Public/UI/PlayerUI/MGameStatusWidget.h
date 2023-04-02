@@ -41,6 +41,8 @@ public:
 	UFUNCTION()
 	void UpdateAndShowBroadcastingInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
 	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateKillBoardInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
+	UFUNCTION(BlueprintImplementableEvent)
 	void BroadcastingAnimationEvent();
 	
 

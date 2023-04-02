@@ -9,10 +9,7 @@
 #include "UI/InventoryMenu.h"
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
-#include "../M_PlayerState.h"
 #include "../Matchmaking/EOSGameInstance.h"
-#include "Kismet/KismetMaterialLibrary.h"
-#include "Materials/MaterialParameterCollection.h"
 #include "MCharacter.generated.h"
 
 //#define IS_LISTEN_SERVER
@@ -275,6 +272,10 @@ protected:
 	UFUNCTION()
 	void CheckPlayerFollowWidgetTick();
 
+	// Broadcast function
+	UFUNCTION()
+	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
+
 
 // Members
 // ==============================================================
@@ -380,6 +381,10 @@ public:
 	// bool PlayerFollowWidget_NeedDisappear = false;
 	// UPROPERTY()
 	// float PlayerFollowWidget_RenderOpacity = 1;
+
+	// Fire Image
+	UPROPERTY(EditDefaultsOnly, Category = "FireBuff")
+	UTexture2D* FireImage;
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/

@@ -67,4 +67,5 @@ void UMGameStatusWidget::UpdateAndShowBroadcastingInformation(int KillerTeamInde
 	IsNeedShowBroadcast = true;
 	BroadcastCanvas->SetVisibility(ESlateVisibility::Visible);
 	BroadcastingAnimationEvent();
+	UpdateKillBoardInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 }
