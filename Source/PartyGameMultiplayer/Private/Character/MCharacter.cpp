@@ -1843,7 +1843,7 @@ void AMCharacter::BroadcastToAllController(AController* AttackController, bool I
 		{
 			WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
 		}
-		else if (AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
+		else if (AttackCharacter->LeftWeapon && AttackCharacter->RightWeapon && AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
 		{
 			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
 		}
