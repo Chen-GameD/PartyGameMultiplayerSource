@@ -23,10 +23,8 @@
 
 AMinigameMainObjective::AMinigameMainObjective()
 {
-	MaxHealth = 1200.0f;
+	MaxHealth = 0.0f;
 	CurrentHealth = MaxHealth;
-
-	bReplicates = true;
 }
 
 
@@ -55,7 +53,7 @@ void AMinigameMainObjective::StartToRespawnActor()
 	{
 		MyGameMode->Server_RespawnMinigameObject();
 	}
-	AMinigameMainObjective::Destroy(true, true);
+	Destroy(true, true);
 }
 
 void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)

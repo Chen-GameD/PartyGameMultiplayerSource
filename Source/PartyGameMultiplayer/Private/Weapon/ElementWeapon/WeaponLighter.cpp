@@ -45,7 +45,7 @@ AWeaponLighter::AWeaponLighter()
 void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (IsPickedUp && GetOwner())
+	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor))
@@ -60,7 +60,7 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 				OnRep_bAttackOverlap();
 			}
 
-			if (AttackType != EnumAttackType::Constant && ApplyDamageCounter == 0 && HoldingController)
+			if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
 			{
 				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);

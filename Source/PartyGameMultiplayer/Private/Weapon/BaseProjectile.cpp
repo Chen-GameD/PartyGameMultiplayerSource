@@ -150,6 +150,12 @@ void ABaseProjectile::BeginPlay()
 	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
+	if (auto pWeapon = Cast<ABaseWeapon>(GetOwner()))
+	{
+		// Only used for big alarm currently
+		if(pWeapon->IsBigWeapon)
+			DamageRadius *= 2.0f;
+	}
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;

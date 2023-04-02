@@ -136,6 +136,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
 
+	Server_TheControllerApplyingLatestBurningBuff = nullptr;
+
 	Server_CanMove = true;
 }
 
@@ -521,6 +523,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
+			if (LeftWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			temp += "_Left";
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
@@ -558,6 +562,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
 			temp += "_Right";
+			if (RightWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
@@ -1320,8 +1326,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
 			return 0.0f;
 
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
+		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
@@ -1365,7 +1370,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			}
 		}
 
-		return damageApplied;
+		return DamageTaken;
 	}
 
 	return 0.0f;
@@ -1712,7 +1717,7 @@ void AMCharacter::Tick(float DeltaTime)
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
@@ -1729,12 +1734,22 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				FString ParName = "BurningDamagePerSecond";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				float OldHealth = CurrentHealth;
-				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
-				if (CurrentHealth <= 0 && OldHealth > 0)
+				float TargetCurrentHealth = CurrentHealth - DeltaTime * BurningBuffDamagePerSecond;
+				SetCurrentHealth(TargetCurrentHealth);
+				if (TargetCurrentHealth <= 0.0f)
 				{
-					// Broadcast
-					
+					auto MyController = GetController();
+					if (Server_TheControllerApplyingLatestBurningBuff && MyController)
+					{
+						AM_PlayerState* AttackerPS = Server_TheControllerApplyingLatestBurningBuff->GetPlayerState<AM_PlayerState>();
+						AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+						// Add Scores
+						AttackerPS->addScore(5);
+						AttackerPS->addKill(1);
+						MyPS->addDeath(1);
+						// TODO: broadcast burning kill
+						
+					}					
 				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}

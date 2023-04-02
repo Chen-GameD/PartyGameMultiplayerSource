@@ -84,6 +84,8 @@ private:
 public:
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsBigWeapon;
 	bool IsCombineWeapon;  // if it is a combine type weapon or not
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
 	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
@@ -140,6 +142,10 @@ protected:
 		FRotator DisplayCaseRotation;
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseScale;
+
+	FVector WeaponMeshDefaultRelativeLocation;
+	FRotator WeaponMeshDefaultRelativeRotation;
+	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
 	int ApplyDamageCounter;

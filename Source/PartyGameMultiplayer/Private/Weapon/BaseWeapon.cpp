@@ -32,6 +32,7 @@ ABaseWeapon::ABaseWeapon()
 
 	IsPickedUp = false;
 	HasBeenCombined = false;
+	IsBigWeapon = false;
 	WeaponType = EnumWeaponType::None;
 	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
@@ -73,6 +74,13 @@ ABaseWeapon::ABaseWeapon()
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
+
+	if (WeaponMesh)
+	{
+		WeaponMeshDefaultRelativeLocation = WeaponMesh->GetRelativeLocation();
+		WeaponMeshDefaultRelativeRotation = WeaponMesh->GetRelativeRotation();
+		WeaponMeshDefaultRelativeScale = WeaponMesh->GetRelativeScale3D();
+	}
 }
 
 
@@ -162,7 +170,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		if (!IsPickedUp)
+		if (!IsPickedUp && !IsBigWeapon)
 		{
 			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
 		}
@@ -478,13 +486,15 @@ void ABaseWeapon::OnRep_IsPickedUp()
 			HaloEffect_NSComponent->Deactivate();
 			HaloEffect_NSComponent->SetVisibility(false);
 		}
+		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
+		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
 	}
 	else
 	{		
-		TimePassed_SinceGetThrewAway = 0;
-	}
-	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	WeaponMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+		TimePassed_SinceGetThrewAway = 0;	
+		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
+		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
+	}	
 }
 
 
@@ -497,7 +507,7 @@ void ABaseWeapon::OnRep_IsPickedUp()
 void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, 
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (IsPickedUp && GetOwner())
+	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
 			Cast<AMinigameMainObjective>(OtherActor) )
@@ -512,11 +522,14 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				OnRep_bAttackOverlap();
 			}
 
-			if (AttackType != EnumAttackType::Constant && ApplyDamageCounter == 0 && HoldingController)
+			if (AttackType != EnumAttackType::Constant)
 			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-				ApplyDamageCounter++;
+				if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
+				{
+					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ApplyDamageCounter++;
+				}				
 			}				
 		}
 	}
