@@ -13,18 +13,18 @@ class PARTYGAMEMULTIPLAYER_API AMinigameChild_Statue_Shell : public AActor
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AMinigameChild_Statue_Shell();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallShellInsertSfx();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+
 
 public:
 	UPROPERTY(Replicated)
@@ -40,5 +40,5 @@ protected:
 private:
 	float TimeElapsed = 0;
 	float LerpDuration = 4;
-
+	bool bFinishInsert;
 };

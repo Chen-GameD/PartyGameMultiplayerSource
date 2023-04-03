@@ -146,8 +146,6 @@ void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp,
 
 void AMinigameObj_Statue::OnRep_CurrentHealth()
 {
-	Super::OnRep_CurrentHealth();
-
 	if (CurrentHealth <= 0)
 	{
 		// if (SkeletalMesh)
@@ -164,5 +162,8 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 		// Destroy VFX & Effect
 		// TODO
 		OnStatueFinishedEvent();
+
+		// Sfx
+		CallDeathSfx();
 	}
 }
