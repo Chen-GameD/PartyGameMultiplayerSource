@@ -482,7 +482,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (LeftWeapon)
 			{
 				LeftWeapon->NetMulticast_CallThrewAwaySfx();
-				// Drop off left weapon
+				// Drop off combine weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
@@ -496,7 +496,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (RightWeapon)
 			{
 				RightWeapon->NetMulticast_CallThrewAwaySfx();
-				// Drop off right weapon
+				// Drop off combine weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
@@ -537,10 +537,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
-			// Pick up left big weapon and drop right weapon
+			// Pick up left big weapon and drop right weapon and/or combine weapon
 			if (LeftWeapon->IsBigWeapon)
 			{
 				DropOffWeapon(false);
+				// Drop off combine weapon
+				if (CombineWeapon)
+				{
+					CombineWeapon->Destroy();
+					CombineWeapon = nullptr;
+				}
 				LeftWeapon->NetMulticast_CallPickedUpSfx();
 			}
 			// Pick up left regular weapon
@@ -597,10 +603,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
-			// Pick up right big weapon and drop left weapon
+			// Pick up right big weapon and drop left weapon and/or combine weapon
 			if (RightWeapon->IsBigWeapon)
 			{
 				DropOffWeapon(true);
+				// Drop off combine weapon
+				if (CombineWeapon)
+				{
+					CombineWeapon->Destroy();
+					CombineWeapon = nullptr;
+				}
 				RightWeapon->NetMulticast_CallPickedUpSfx();
 			}
 			// Pick up right regular weapon
@@ -1475,45 +1487,53 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 		{
 			CharacterFollowWidget->ShowTip();
 			// Update Weapon UI
-			// Left
-			if (RightWeapon)
+			if (CurrentTouchWeapon->IsBigWeapon)
 			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
+				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
+			}
+			else
+			{
+				// Left
+				if (RightWeapon && !(RightWeapon->IsBigWeapon))
 				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->PickUpTextureUI_Q);
+					if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+					{
+						TSubclassOf<ABaseWeapon> combineWeaponRef;
+						combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
+						ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+						CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->PickUpTextureUI_Q);
+					}
+					else
+					{
+						CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
+					}
 				}
 				else
 				{
 					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
 				}
-			}
-			else
-			{
-				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
-			}
 
-			// Right
-			if (LeftWeapon)
-			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+				// Right
+				if (LeftWeapon && !(LeftWeapon->IsBigWeapon))
 				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->PickUpTextureUI_E);
+					if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+					{
+						TSubclassOf<ABaseWeapon> combineWeaponRef;
+						combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
+						ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+						CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->PickUpTextureUI_E);
+					}
+					else
+					{
+						CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
+					}
 				}
 				else
 				{
 					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 				}
-			}
-			else
-			{
-				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
-			}
+			}			
 		}
 		else
 		{
