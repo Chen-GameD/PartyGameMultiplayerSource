@@ -47,6 +47,7 @@ public:
 	void UpdateScoreCanGet(int n_Score);
 
 public:
+
 	// Effects
 	// =============================
 	float CallGetHitSfxVfx_MinInterval;

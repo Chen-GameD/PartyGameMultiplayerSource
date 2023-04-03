@@ -36,6 +36,12 @@ protected:
 	
 	virtual void OnRep_CurrentHealth() override;
 
+public:
+	// UI
+	// =============================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* FollowWidget;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
 	UStaticMeshComponent* RootMesh;

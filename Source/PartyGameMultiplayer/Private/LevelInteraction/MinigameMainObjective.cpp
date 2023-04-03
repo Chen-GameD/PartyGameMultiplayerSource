@@ -45,6 +45,7 @@ void AMinigameMainObjective::BeginPlay()
 
 void AMinigameMainObjective::OnRep_CurrentHealth()
 {
+	// Sfx
 	if (CurrentHealth <= 0)
 		CallDeathSfx();
 

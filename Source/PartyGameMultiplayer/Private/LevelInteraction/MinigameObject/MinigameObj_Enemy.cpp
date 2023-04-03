@@ -14,7 +14,7 @@
 #include "Weapon/ElementWeapon/WeaponBlower.h"
 #include "Weapon/ElementWeapon/WeaponAlarm.h"
 #include "Weapon/WeaponDataHelper.h"
-#include "UI/EnemyCrabFollowWidget.h"
+#include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_Enemy::AMinigameObj_Enemy()
 {
@@ -39,7 +39,36 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 
 	MaxHealth = 1200.0f;
 	CurrentHealth = MaxHealth;
+
+	RisingSpeed = 100.0f;
+	RisingTargetHeight = 100.0f;
 }
+
+
+void AMinigameObj_Enemy::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (IsRisingFromSand && GetActorLocation().Z < RisingTargetHeight)
+	{
+		FVector TargetLocation = GetActorLocation() + FVector::UpVector * RisingSpeed * DeltaTime;
+		if (RisingTargetHeight <= TargetLocation.Z)
+		{
+			TargetLocation.Z = RisingTargetHeight;			
+			FollowWidget->SetVisibility(true);
+			IsRisingFromSand = false;
+
+			// Server
+			if (GetLocalRole() == ROLE_Authority)
+			{
+				Server_SpawnBigWeaponLocation = BigWeaponMesh->GetComponentLocation() + FVector(0, -110.0f, 0);
+				Server_SpawnBigWeaponRotation = BigWeaponMesh->GetComponentRotation();
+			}
+		}
+		SetActorLocation(TargetLocation);
+	}
+}
+
 
 float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
@@ -97,7 +126,6 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	CurrentHealth = FMath::Max(CurrentHealth, 0);
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_CurrentHealth();
-	NetMulticast_SetUI(CurrentHealth / MaxHealth);
 	if (CurrentHealth <= 0)
 	{
 		/*if (SkeletalMesh)
@@ -120,19 +148,14 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 void AMinigameObj_Enemy::Server_WhenDead()
 {
 	// Drop the Big Weapon
-	FVector spawnLocation = BigWeaponMesh->GetComponentLocation() + FVector(0, -110.0f, 0);
-	FRotator spawnRotation = BigWeaponMesh->GetComponentRotation();
+	FVector spawnLocation = Server_SpawnBigWeaponLocation;
+	FRotator spawnRotation = Server_SpawnBigWeaponRotation;
 	FActorSpawnParameters spawnParameters;
 	spawnParameters.Instigator = nullptr;
 	spawnParameters.Owner = nullptr;
 	auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
 
-	// NetMultiCast: Hide the Crab
-	NetMulticast_HideCurrentCrab();
-
-	// NetMultiCast: generate vfx & sfx
-
-	// Server or NetMultiCast: genrate a new little crab and walk into the ocean.
+	// Server or NetMultiCast/OnRep_CurrentHealth: genrate a new little crab and walk into the ocean.
 
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;
@@ -142,6 +165,12 @@ void AMinigameObj_Enemy::Server_WhenDead()
 void AMinigameObj_Enemy::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(1);
+	FollowWidget->SetVisibility(false);
+
+	IsRisingFromSand = true; 
 }
 
 void AMinigameObj_Enemy::OnRep_CurrentHealth()
@@ -150,18 +179,16 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 
 	if (CurrentHealth <= 0)
 	{
+		// HideCurrentCrab
+		SetActorEnableCollision(false);
+		SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+		FollowWidget->SetVisibility(false);
+
+		// TODO: generate vfx& sfx
+		
 	}
-}
 
-void AMinigameObj_Enemy::NetMulticast_HideCurrentCrab_Implementation()
-{
-	SetActorEnableCollision(false);
-	SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-	FollowWidget->SetVisibility(false);
-}
-
-void AMinigameObj_Enemy::NetMulticast_SetUI_Implementation(float CurrentHealthPercentage)
-{
-	UEnemyCrabFollowWidget* pEnemyCrabFollowWidget = Cast<UEnemyCrabFollowWidget>(FollowWidget->GetUserWidgetObject());
-	pEnemyCrabFollowWidget->SetHealthByPercentage(CurrentHealthPercentage);
+	// Set UI: Health Bar
+	if(UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
 }

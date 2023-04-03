@@ -11,6 +11,8 @@
 #include "GameBase/MGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
+#include "Components/WidgetComponent.h"
+#include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_Statue::AMinigameObj_Statue()
 {
@@ -24,6 +26,9 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	ShellOverlapComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ShellOverlapSphere"));
 	ShellOverlapComponent->SetupAttachment(RootMesh);
 	ShellOverlapComponent->SetSphereRadius(300, true);
+
+	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
+	FollowWidget->SetupAttachment(RootMesh);
 	
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
@@ -56,6 +61,10 @@ void AMinigameObj_Statue::BeginPlay()
 		// because the server would correct client's position during collsion happening on the server, causing shaking in client's end.
 		//SetActorEnableCollision(false);
 	}
+
+	// UI
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(0);
 }
 
 USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
@@ -149,17 +158,6 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 {
 	if (CurrentHealth <= 0)
 	{
-		// if (SkeletalMesh)
-		// {
-		// 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Client"));
-		// 	SkeletalMesh->DestroyComponent();
-		// }
-		// if (BlowUpEffect)
-		// {
-		// 	BlowUpEffect->Activate();
-		// }
-		// EnableBlowUpGeometryCacheComponent();
-
 		// Destroy VFX & Effect
 		// TODO
 		OnStatueFinishedEvent();
@@ -167,4 +165,7 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 		// Sfx
 		CallDeathSfx();
 	}
+
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
 }
