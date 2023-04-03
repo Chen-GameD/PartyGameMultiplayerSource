@@ -50,10 +50,17 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 
 	// Adjust the damage according to the minigame damage ratio
 	EnumWeaponType WeaponType = EnumWeaponType::None;
+	bool IsBigWeapon = false;
 	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (WeaponType == EnumWeaponType::None)
 		return 0.0f;
 
@@ -79,6 +86,8 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	}
 
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (IsBigWeapon)
+		WeaponName = "Big" + WeaponName;
 	if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
 		DamageTaken *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
 	else

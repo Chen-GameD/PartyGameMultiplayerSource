@@ -25,10 +25,17 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		return false;
 
 	EnumWeaponType WeaponType = EnumWeaponType::None;
+	bool IsBigWeapon = false;
 	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (WeaponType == EnumWeaponType::None)
 		return false;
 
@@ -36,6 +43,8 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 	{
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+		if (IsBigWeapon)
+			WeaponName = "Big" + WeaponName;
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
 		if (0 < DeltaTime)

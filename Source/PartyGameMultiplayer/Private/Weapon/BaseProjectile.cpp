@@ -126,6 +126,7 @@ void ABaseProjectile::BeginPlay()
 			return;
 		}
 		WeaponType = pWeapon->WeaponType;
+		IsBigWeapon = pWeapon->IsBigWeapon;
 		Controller = pWeapon->GetHoldingController();
 		if (!Controller)
 		{
@@ -144,6 +145,8 @@ void ABaseProjectile::BeginPlay()
 	/* Assign member variables by map */
 	FString ParName = "";
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (IsBigWeapon)
+		WeaponName = "Big" + WeaponName;
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
@@ -156,12 +159,6 @@ void ABaseProjectile::BeginPlay()
 	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
-	if (auto pWeapon = Cast<ABaseWeapon>(GetOwner()))
-	{
-		// Only used for big alarm currently
-		if(pWeapon->IsBigWeapon)
-			DamageRadius *= 2.0f;
-	}
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
