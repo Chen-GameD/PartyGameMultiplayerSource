@@ -133,7 +133,13 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
+		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
+	// Client
+	else
+	{
+		SetActorEnableCollision(false);
+	}
 
 	/* Assign member variables by map */
 	FString ParName = "";
@@ -159,12 +165,6 @@ void ABaseProjectile::BeginPlay()
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
-	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
