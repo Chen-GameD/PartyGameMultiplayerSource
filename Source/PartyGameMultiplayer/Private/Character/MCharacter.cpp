@@ -481,6 +481,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (LeftWeapon)
 			{
+				LeftWeapon->NetMulticast_CallThrewAwaySfx();
 				// Drop off left weapon
 				if (CombineWeapon)
 				{
@@ -488,20 +489,20 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
-
 			}
 		}
 		else
 		{
 			if (RightWeapon)
 			{
+				RightWeapon->NetMulticast_CallThrewAwaySfx();
 				// Drop off right weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
 					CombineWeapon = nullptr;
 				}
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft);				
 			}
 		}
 	}
@@ -536,17 +537,34 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
-			// Check if need combine
-			if (RightWeapon)
+			// Pick up left big weapon and drop right weapon
+			if (LeftWeapon->IsBigWeapon)
 			{
-				// Set isRightHeld Anim State
-				this->AnimState[6] = true;
-				OnCombineWeapon(isLeft);
+				DropOffWeapon(false);
+				LeftWeapon->NetMulticast_CallPickedUpSfx();
 			}
-			// no combining, pick up this weapon alone
+			// Pick up left regular weapon
 			else
 			{
-				LeftWeapon->NetMulticast_CallPickedUpSfx();
+				// Check if need combine
+				if (RightWeapon)
+				{
+					if (RightWeapon->IsBigWeapon)
+					{
+						DropOffWeapon(false);
+					}
+					else
+					{
+						// Set isRightHeld Anim State
+						this->AnimState[6] = true;
+						OnCombineWeapon(isLeft);
+					}					
+				}
+				// no combining, pick up this weapon alone
+				else
+				{
+					LeftWeapon->NetMulticast_CallPickedUpSfx();
+				}
 			}
 
 			// Update Weapon Type Anim State
@@ -579,18 +597,35 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
-			// Check if need combine
-			if (LeftWeapon)
+			// Pick up right big weapon and drop left weapon
+			if (RightWeapon->IsBigWeapon)
 			{
-				// Set isLeftHeld Anim State
-				this->AnimState[5] = true;
-				OnCombineWeapon(isLeft);
-			}
-			// no combining, pick up this weapon alone
-			else
-			{
+				DropOffWeapon(true);
 				RightWeapon->NetMulticast_CallPickedUpSfx();
 			}
+			// Pick up right regular weapon
+			else
+			{
+				// Check if need combine
+				if (LeftWeapon)
+				{
+					if (LeftWeapon->IsBigWeapon)
+					{
+						DropOffWeapon(true);
+					}
+					else
+					{
+						// Set isLeftHeld Anim State
+						this->AnimState[5] = true;
+						OnCombineWeapon(isLeft);
+					}					
+				}
+				// no combining, pick up this weapon alone
+				else
+				{
+					RightWeapon->NetMulticast_CallPickedUpSfx();
+				}
+			}			
 
 			// Update Weapon Type Anim State
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
