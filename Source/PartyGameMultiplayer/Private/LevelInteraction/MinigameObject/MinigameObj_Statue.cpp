@@ -52,8 +52,9 @@ void AMinigameObj_Statue::BeginPlay()
 	// Client
 	else
 	{
-		// Disable some high-cost behaviors
-		SetActorEnableCollision(false);
+		// Cannot disable the collision(to improve performance), 
+		// because the server would correct client's position during collsion happening on the server, causing shaking in client's end.
+		//SetActorEnableCollision(false);
 	}
 }
 
