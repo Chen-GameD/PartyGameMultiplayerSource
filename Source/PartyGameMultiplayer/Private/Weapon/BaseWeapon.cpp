@@ -459,33 +459,37 @@ void ABaseWeapon::OnRep_bAttackOn()
 {
 	if (bAttackOn)
 	{		
+		// Vfx
 		if(AttackOnEffect)
 			AttackOnEffect->Activate();
+		// Sfx
+		CallAttackStartSfx();
 	}
 	else
 	{
+		// Vfx
 		if (AttackOnEffect)
 			AttackOnEffect->Deactivate();
+		// Sfx
+		CallAttackStopSfx();
 	}
 }
 
 void ABaseWeapon::OnRep_bAttackOverlap()
 {
-	/*if (bAttackOverlap)
-	{
-		GenerateAttackHitEffect();		
-	}*/
 }
 
 void ABaseWeapon::OnRep_IsPickedUp()
 {
 	if (IsPickedUp)
 	{
+		// Vfx
 		if (HaloEffect_NSComponent && HaloEffect_NSComponent->IsActive())
 		{
 			HaloEffect_NSComponent->Deactivate();
 			HaloEffect_NSComponent->SetVisibility(false);
 		}
+
 		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
 		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
 	}
@@ -608,3 +612,14 @@ void ABaseWeapon::SpawnProjectile(float AttackTargetDistance)
 }
 
 
+#pragma region Effects
+void ABaseWeapon::NetMulticast_CallPickedUpSfx_Implementation()
+{
+	CallPickedUpSfx();
+}
+
+void ABaseWeapon::NetMulticast_CallThrewAwaySfx_Implementation()
+{
+	CallThrewAwaySfx();
+}
+#pragma endregion Effects

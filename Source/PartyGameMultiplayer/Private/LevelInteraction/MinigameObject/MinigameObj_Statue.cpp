@@ -69,7 +69,9 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);
 		if (OverlapShell)
 		{
-			this->CurrentHealth--;
+			CurrentHealth--;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_CurrentHealth();
 			CurrentSocketIndex++;
 			
 			// Detect which player drop the shell
@@ -110,10 +112,6 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 			if (CurrentHealth <= 0)
 			{
 				IsCompleteBuild = true;
-				if (GetNetMode() == NM_ListenServer)
-				{
-					OnRep_CurrentHealth();
-				}
 
 				// Add Sculpture Complete Score
 				if (OverlapShell->GetPreHoldingController())

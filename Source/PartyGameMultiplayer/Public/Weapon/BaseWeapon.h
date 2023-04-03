@@ -38,8 +38,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AController* GetHoldingController() const;
 
-	//// only on server, generate stuff like damage, buff and so on
-	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
+	// Effects
+	// ====================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStopSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallPickedUpSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallPickedUpSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallThrewAwaySfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallThrewAwaySfx();
 
 protected:
 	virtual void BeginPlay() override;

@@ -41,6 +41,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
+
 protected:
 private:
 	

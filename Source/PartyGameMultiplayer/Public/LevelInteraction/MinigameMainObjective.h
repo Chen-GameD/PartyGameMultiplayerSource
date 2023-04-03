@@ -18,6 +18,13 @@ public:
 	AMinigameMainObjective();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	// Effects
+	// =============================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallGetHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDeathSfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -39,6 +46,11 @@ public:
 	UFUNCTION()
 	void UpdateScoreCanGet(int n_Score);
 
+public:
+	// Effects
+	// =============================
+	float CallGetHitSfxVfx_MinInterval;
+	float LastTime_CallGetHitSfxVfx;
 protected:
 	UPROPERTY(EditAnywhere, Category = "Health")
 	float MaxHealth;

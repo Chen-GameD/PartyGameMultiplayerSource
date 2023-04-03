@@ -144,7 +144,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
+	void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
 
 	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
 
@@ -167,7 +167,27 @@ public:
 		void OnRep_IsParalyzed();
 	UFUNCTION(Client, Reliable)
 		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
-	
+
+	// Effects
+	// =============================
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallGetHitVfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallGetHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallGetHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDashSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDeathSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallBurningBuffStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallBurningBuffStopSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallParalysisBuffStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallParalysisBuffStopSfx();
 protected:
 
 	// Health
@@ -244,7 +264,7 @@ protected:
 	void DropOffWeapon(bool isLeft);
 
 	UFUNCTION()
-	void OnCombineWeapon();
+	void OnCombineWeapon(bool bJustPickedLeft);
 
 	// Test
 	// ======================
@@ -373,6 +393,10 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
 	
+	// Effects
+	// =============================
+	float Server_CallGetHitSfxVfx_MinInterval;
+	float Server_LastTime_CallGetHitSfxVfx;
 
 	// UPROPERTY(EditAnywhere, Category="PlayerFollowWidget Tick Timer")
 	// float PlayerFollowWidget_ShowTime = 5.0;
