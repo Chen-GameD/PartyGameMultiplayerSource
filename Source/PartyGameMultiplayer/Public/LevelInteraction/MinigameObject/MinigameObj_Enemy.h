@@ -14,16 +14,12 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Enemy : public AMinigameMainObjectiv
 
 public:
 	AMinigameObj_Enemy();
+	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void Server_WhenDead();
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnRep_CurrentHealth() override;
-
-	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_HideCurrentCrab();
-	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_SetUI(float CurrentHealthPercentage);
 private:
 	
 public:
@@ -39,8 +35,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
 
+	// UI
+	// =============================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
+
+	FVector Server_SpawnBigWeaponLocation;
+	FRotator Server_SpawnBigWeaponRotation;
+
+	bool IsRisingFromSand;
+	float RisingTargetHeight;
+	float RisingSpeed;
+
 protected:
 private:
 	

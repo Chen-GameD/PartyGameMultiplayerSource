@@ -41,6 +41,7 @@ private:
 // MEMBER VARIABLES
 public:
 	EnumWeaponType WeaponType;
+	bool IsBigWeapon;
 	class AController* Controller;
 	float CurDeltaTime;
 

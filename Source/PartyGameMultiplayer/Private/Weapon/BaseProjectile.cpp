@@ -19,6 +19,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "WaterBodyActor.h"
+#include "Net/UnrealNetwork.h"
 
 
 ABaseProjectile::ABaseProjectile()
@@ -126,6 +127,7 @@ void ABaseProjectile::BeginPlay()
 			return;
 		}
 		WeaponType = pWeapon->WeaponType;
+		IsBigWeapon = pWeapon->IsBigWeapon;
 		Controller = pWeapon->GetHoldingController();
 		if (!Controller)
 		{
@@ -133,11 +135,19 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
+		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
+	// Client
+	else
+	{
+		SetActorEnableCollision(false);
+	}
 
 	/* Assign member variables by map */
 	FString ParName = "";
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (IsBigWeapon)
+		WeaponName = "Big" + WeaponName;
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
@@ -150,21 +160,9 @@ void ABaseProjectile::BeginPlay()
 	ParName = WeaponName + "_DamageRadius";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
 		DamageRadius = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[ParName];
-	if (auto pWeapon = Cast<ABaseWeapon>(GetOwner()))
-	{
-		// Only used for big alarm currently
-		if(pWeapon->IsBigWeapon)
-			DamageRadius *= 2.0f;
-	}
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
-	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)

@@ -76,10 +76,3 @@ void AWeaponFlamefork::SpawnProjectile(float AttackTargetDistance)
 		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }
-
-//void AWeaponFlamefork::OnRep_bAttackOn()
-//{
-//	Super::OnRep_bAttackOn();
-//
-//	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-//}

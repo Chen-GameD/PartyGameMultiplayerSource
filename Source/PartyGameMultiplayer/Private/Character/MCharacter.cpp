@@ -141,6 +141,9 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Server_TheControllerApplyingLatestBurningBuff = nullptr;
 
 	Server_CanMove = true;
+
+	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
+	Server_LastTime_CallGetHitSfxVfx = -1.0f;
 }
 
 void AMCharacter::Restart()
@@ -541,7 +544,12 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			{
 				// Set isRightHeld Anim State
 				this->AnimState[6] = true;
-				OnCombineWeapon();
+				OnCombineWeapon(isLeft);
+			}
+			// no combining, pick up this weapon alone
+			else
+			{
+				LeftWeapon->NetMulticast_CallPickedUpSfx();
 			}
 
 			// Update Weapon Type Anim State
@@ -579,7 +587,12 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			{
 				// Set isLeftHeld Anim State
 				this->AnimState[5] = true;
-				OnCombineWeapon();
+				OnCombineWeapon(isLeft);
+			}
+			// no combining, pick up this weapon alone
+			else
+			{
+				RightWeapon->NetMulticast_CallPickedUpSfx();
 			}
 
 			// Update Weapon Type Anim State
@@ -689,7 +702,7 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 	}
 }
 
-void AMCharacter::OnCombineWeapon()
+void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 {
 	if (IsDead)
 		return;
@@ -704,16 +717,24 @@ void AMCharacter::OnCombineWeapon()
 		}
 
 		TSubclassOf<ABaseWeapon> combineWeaponRef;
+		// can combine
 		if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
 		{
 			combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
 			isHoldingCombineWeapon = true;
 		}
+		// cannot combine
 		else
 		{
+			// 2 identical weapons or at least one of them is a shell
 			LeftWeapon->SetActorHiddenInGame(false);
-			RightWeapon->SetActorHiddenInGame(false);
+			RightWeapon->SetActorHiddenInGame(false);			
 			isHoldingCombineWeapon = false;
+			// Sfx
+			if(bJustPickedLeft)
+				LeftWeapon->NetMulticast_CallPickedUpSfx();
+			else
+				RightWeapon->NetMulticast_CallPickedUpSfx();
 			return;
 		}
 
@@ -726,6 +747,7 @@ void AMCharacter::OnCombineWeapon()
 			CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
 			CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
+		CombineWeapon->NetMulticast_CallPickedUpSfx();
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 
 		//Hide left and right weapon
@@ -915,6 +937,9 @@ void AMCharacter::OnHealthUpdate()
 
 	if (IsDead)
 		return;
+
+	if (CurrentHealth <= 0)
+		CallDeathSfx();
 
 	//Client-specific functionality
 	if (IsLocallyControlled())
@@ -1207,12 +1232,15 @@ void AMCharacter::OnRep_IsAllowDash()
 {
 	if (!IsAllowDash)
 	{
+		// Vfx
 		if (EffectDash)
 		{
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
 		}
+		// Sfx
+		CallDashSfx();
 	}
 }
 
@@ -1236,9 +1264,12 @@ void AMCharacter::OnRep_IsBurned()
 {
 	if (IsBurned)
 	{
-		// Activate VFX
+		// Vfx
 		if (EffectBurn && !EffectBurn->IsActive())
 			EffectBurn->Activate();
+
+		// Sfx
+		CallBurningBuffStartSfx();
 
 		// Toggle on Character's Burning buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1253,9 +1284,12 @@ void AMCharacter::OnRep_IsBurned()
 	}
 	else
 	{
-		// Deactivate VFX
+		// Vfx
 		if (EffectBurn && EffectBurn->IsActive())
 			EffectBurn->Deactivate();
+
+		// Sfx
+		CallBurningBuffStopSfx();
 
 		// Toggle off Character's Burning buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1272,9 +1306,12 @@ void AMCharacter::OnRep_IsParalyzed()
 {
 	if (IsParalyzed)
 	{
-		// Activate VFX
+		// Vfx
 		//if (EffectBurn && !EffectBurn->IsActive())
 		//	EffectBurn->Activate();
+
+		// Sfx
+		CallParalysisBuffStartSfx();
 
 		// Toggle on Character's Paralysis buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1289,9 +1326,12 @@ void AMCharacter::OnRep_IsParalyzed()
 	}
 	else
 	{
-		// Deactivate VFX
+		// Vfx
 		//if (EffectBurn && EffectBurn->IsActive())
 		//	EffectBurn->Deactivate();
+
+		// Sfx
+		CallParalysisBuffStopSfx();
 
 		// Toggle off Character's Paralysis buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1316,6 +1356,9 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (DamageTaken <= 0)
+		return 0.0f;
+
 	if (!IsDead)
 	{
 		// Check if it is the attack from self or teammates
@@ -1329,6 +1372,14 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
 			return 0.0f;
 
+		// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
+		if (Server_LastTime_CallGetHitSfxVfx < 0 || Server_CallGetHitSfxVfx_MinInterval <= GetWorld()->TimeSeconds - Server_LastTime_CallGetHitSfxVfx)
+		{
+			NetMulticast_CallGetHitSfx();
+			NetMulticast_CallGetHitVfx();
+			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
+		}
+		
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1889,3 +1940,15 @@ void AMCharacter::Client_MoveCharacter_Implementation(FVector MoveDirection, flo
 {
 	AddMovementInput(MoveDirection, SpeedRatio);
 }
+
+#pragma region Effects
+void AMCharacter::NetMulticast_CallGetHitSfx_Implementation()
+{
+	CallGetHitSfx();
+}
+
+void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
+{
+	EffectGetHit->Activate();
+}
+#pragma endregion Effects

@@ -17,6 +17,7 @@ AMinigameChild_Statue_Shell::AMinigameChild_Statue_Shell()
 	ShellMeshComponent->SetupAttachment(RootComponent);
 	
 	bReplicates = true;
+	bFinishInsert = false;
 }
 
 void AMinigameChild_Statue_Shell::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -39,7 +40,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (TargetSocketName != "None" && TartgetStatue)
+	if (TargetSocketName != "None" && TartgetStatue && !bFinishInsert)
 	{
 		// Update shell position
 		// TODO
@@ -80,6 +81,8 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 				this->SetActorRotation(SocketTransform.GetRotation());
 				this->SetActorScale3D(SocketTransform.GetScale3D());
 			}
+			CallShellInsertSfx();
+			bFinishInsert = true;
 		}
 			
 	}
