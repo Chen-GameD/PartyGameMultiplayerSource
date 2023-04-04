@@ -55,10 +55,12 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 	if (IsRisingFromSand && GetActorLocation().Z < RisingTargetHeight)
 	{
 		FVector TargetLocation = GetActorLocation() + FVector::UpVector * RisingSpeed * DeltaTime;
+		// The End
 		if (RisingTargetHeight <= TargetLocation.Z)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
+			SetActorEnableCollision(true);
 			IsRisingFromSand = false;
 
 			// Server
@@ -171,6 +173,7 @@ void AMinigameObj_Enemy::BeginPlay()
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(1);
 	FollowWidget->SetVisibility(false);
+	SetActorEnableCollision(false);
 
 	IsRisingFromSand = true; 
 }
