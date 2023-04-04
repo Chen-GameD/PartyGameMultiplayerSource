@@ -18,6 +18,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
+#include "WaterBodyActor.h"
+#include "Net/UnrealNetwork.h"
 
 
 ABaseProjectile::ABaseProjectile()
@@ -39,11 +41,6 @@ ABaseProjectile::ABaseProjectile()
 
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
-
-	/*ProjectileMovementComponent->InitialSpeed = 1500.0f;
-	ProjectileMovementComponent->MaxSpeed = 1500.0f;
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.0f;*/
 
 	AttackOnEffect_NSComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("AttackOnEffect_NSComponent"));
 	AttackOnEffect_NSComponent->SetupAttachment(StaticMesh);
@@ -100,6 +97,12 @@ void ABaseProjectile::Tick(float DeltaTime)
 }
 
 
+void ABaseProjectile::NetMulticast_ChangeSpeed_Implementation(float SpeedRatio)
+{
+	ProjectileMovementComponent->MaxSpeed *= SpeedRatio;
+	ProjectileMovementComponent->Velocity *= SpeedRatio;
+}
+
 
 void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -124,6 +127,7 @@ void ABaseProjectile::BeginPlay()
 			return;
 		}
 		WeaponType = pWeapon->WeaponType;
+		IsBigWeapon = pWeapon->IsBigWeapon;
 		Controller = pWeapon->GetHoldingController();
 		if (!Controller)
 		{
@@ -131,11 +135,19 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
+		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
+	// Client
+	else
+	{
+		SetActorEnableCollision(false);
+	}
 
 	/* Assign member variables by map */
 	FString ParName = "";
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (IsBigWeapon)
+		WeaponName = "Big" + WeaponName;
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
@@ -151,12 +163,6 @@ void ABaseProjectile::BeginPlay()
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
-	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
@@ -215,9 +221,12 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	{
 		OnRep_HasExploded();
 	}
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, OtherActor->GetName());
 
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+	// Apply knockback buff
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
 
 	// Range Damage		
 	if (0 < TotalDamage)

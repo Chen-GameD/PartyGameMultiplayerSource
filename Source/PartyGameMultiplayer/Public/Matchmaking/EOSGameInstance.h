@@ -23,7 +23,10 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 
 	bool bIsLoggedIn = false;
 
+
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool isLoading = false;
 
 	virtual void Init() override;
 
@@ -60,10 +63,20 @@ public:
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString LevelText;
+	int DebugLevelSelect = -1;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FString> LevelText;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool IsSessionsListAvailable = false;
+
+	// Customization
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FLinearColor colorPicked;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int characterIndex;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TSubclassOf<UUserWidget> WB_MainMenuClass;

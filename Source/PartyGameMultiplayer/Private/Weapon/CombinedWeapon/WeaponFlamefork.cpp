@@ -42,7 +42,7 @@ AWeaponFlamefork::AWeaponFlamefork()
 }
 
 
-void AWeaponFlamefork::AttackStart()
+void AWeaponFlamefork::AttackStart(float AttackTargetDistance)
 {
 	if (bAttackOn || !GetOwner())
 		return;
@@ -56,11 +56,12 @@ void AWeaponFlamefork::AttackStart()
 	ApplyDamageCounter = 0;
 
 	SetActorEnableCollision(bAttackOn);
-	SpawnProjectile();
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, AttackTargetDistance] {SpawnProjectile(AttackTargetDistance);}, 0.2f, false);
 }
 
 
-void AWeaponFlamefork::SpawnProjectile()
+void AWeaponFlamefork::SpawnProjectile(float AttackTargetDistance)
 {
 	auto pCharacter = GetOwner();
 	if (pCharacter && SpecificProjectileClass)
@@ -75,10 +76,3 @@ void AWeaponFlamefork::SpawnProjectile()
 		ABaseProjectile* spawnedProjectile = GetWorld()->SpawnActor<ABaseProjectile>(SpecificProjectileClass, spawnLocation, spawnRotation, spawnParameters);
 	}
 }
-
-//void AWeaponFlamefork::OnRep_bAttackOn()
-//{
-//	Super::OnRep_bAttackOn();
-//
-//	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
-//}

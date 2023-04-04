@@ -14,11 +14,9 @@ class PARTYGAMEMULTIPLAYER_API AWeaponBlower : public ABaseWeapon
 // MEMBER METHODS
 public:
 	AWeaponBlower();
-
+	virtual void Tick(float DeltaTime) override;
+	virtual void AttackStart(float AttackTargetDistance) override;
 protected:
-	/*virtual void GenerateAttackHitEffect() override;
-	virtual void GenerateDamage(class AActor* DamagedActor) override;*/
-
 private:
 
 // MEMBER VARIABLES

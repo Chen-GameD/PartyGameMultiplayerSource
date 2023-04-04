@@ -23,40 +23,11 @@
 
 AMinigameMainObjective::AMinigameMainObjective()
 {
-	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));
-	RootMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
-	RootMesh->SetupAttachment(RootComponent);
-	/*static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Cube.Shape_Cube"));
-	if (DefaultMesh.Succeeded())
-	{
-		RootMesh->SetStaticMesh(DefaultMesh.Object);
-	}*/
-
-	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
-	SkeletalMesh->SetupAttachment(RootMesh);
-
-	//ArrayUStaticMeshComponent.Emplace(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh_1")));
-	//ArrayUStaticMeshComponent.Emplace(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh_2")));
-	//for (auto& Mesh : ArrayUStaticMeshComponent)
-	//{
-	//	Mesh->SetupAttachment(RootMesh);
-	//}
-
-	MaxHealth = 1200.0f;
+	MaxHealth = 0.0f;
 	CurrentHealth = MaxHealth;
 
-	//Create HealthBar UI Widget
-	HealthWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBar"));
-	HealthWidget->SetupAttachment(RootMesh);	
-
-	BlowUpEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BlowUpEffect"));
-	BlowUpEffect->SetupAttachment(RootMesh);
-	BlowUpEffect->bAutoActivate = false;
-
-	//BlowUpGeometryCacheComponent = CreateDefaultSubobject<UGeometryCache>(TEXT("BlowUpGeometryCacheComponent"));
-	//BlowUpGeometryCacheComponent->SetupAttachment(RootMesh);
-
-	bReplicates = true;
+	CallGetHitSfxVfx_MinInterval = 0.25f;
+	LastTime_CallGetHitSfxVfx = -1.0f;
 }
 
 
@@ -67,110 +38,22 @@ void AMinigameMainObjective::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME(AMinigameMainObjective, CurrentHealth);
 }
 
-// server-only
-float AMinigameMainObjective::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
-{
-	if (!EventInstigator || !DamageCauser)
-		return 0.0f;
-	if (CurrentHealth <= 0)
-		return 0.0f;
-
-	// Adjust the damage according to the minigame damage ratio
-	EnumWeaponType WeaponType = EnumWeaponType::None;
-	if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		WeaponType = p->WeaponType;
-	if (WeaponType == EnumWeaponType::None)
-		return 0.0f;
-	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
-	if (AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map.Contains(WeaponName))
-		DamageTaken *= AWeaponDataHelper::DamageManagerDataAsset->MiniGame_Damage_Map[WeaponName];
-	else
-		return 0.0f;
-
-	CurrentHealth -= DamageTaken;
-	if (CurrentHealth <= 0)
-	{
-		CurrentHealth = 0.0f;	
-		if (GetNetMode() == NM_ListenServer)
-		{
-			OnRep_CurrentHealth();
-		}
-		if (SkeletalMesh)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
-			SkeletalMesh->DestroyComponent();
-		}
-		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
-		{
-			killerPS->addScore(ScoreCanGet);
-		}
-
-		// Set timer and respawn this actor
-		FTimerHandle RespawnMinigameObjectTimerHandle;
-		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameMainObjective::StartToRespawnActor, 5, false);
-	}		
-
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
-	UDamageTypeToCharacter* DamageType = Cast<UDamageTypeToCharacter>(DamageEvent.DamageTypeClass->GetDefaultObject());
-
-	if (DamageType)
-	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Customized Damage Type is %s"), *(DamageType->TestString)));
-	}
-	
-	auto pCharacter = EventInstigator->GetCharacter();
-	// Get the info of the player who applies the damage
-	if (auto pDefaultUECharacter = dynamic_cast<APartyGameMultiplayerCharacter*>(pCharacter))
-	{
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, 
-		//	FString::Printf(TEXT("%f pts damage was applied by %s"), DamageTaken, *(pDefaultUECharacter->GetName()))
-		//	);
-	}
-	
-	return 0.0f;
-}
-
-
 void AMinigameMainObjective::BeginPlay()
 {
 	Super::BeginPlay();
-	if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
-	{
-		healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
-		healthBar->HideTip();
-	}
-	BlowUpEffect->Deactivate();
 }
 
-// client-only
 void AMinigameMainObjective::OnRep_CurrentHealth()
 {
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("AMinigameMainObjective's current health is %f"), CurrentHealth));
-
-	//if (UMCharacterFollowWidget* healthBar = Cast<UMCharacterFollowWidget>(HealthWidget->GetUserWidgetObject()))
-	//{
-	//	healthBar->SetHealthToProgressBar((MaxHealth - CurrentHealth) / MaxHealth);
-	//}
-
+	// Sfx
 	if (CurrentHealth <= 0)
+		CallDeathSfx();
+
+	// Call GetHit vfx & sfx (health can only be decreased)
+	if (LastTime_CallGetHitSfxVfx < 0 || CallGetHitSfxVfx_MinInterval <= GetWorld()->TimeSeconds - LastTime_CallGetHitSfxVfx)
 	{
-		if (SkeletalMesh)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Client"));
-			SkeletalMesh->DestroyComponent();
-		}
-		if (HealthWidget)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's HealthWidget on Client"));
-			HealthWidget->DestroyComponent();
-		}
-		if (BlowUpEffect)
-		{
-			BlowUpEffect->Activate();
-		}
-		EnableBlowUpGeometryCacheComponent();
+		CallGetHitSfx();
+		LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 	}
 }
 
@@ -181,7 +64,7 @@ void AMinigameMainObjective::StartToRespawnActor()
 	{
 		MyGameMode->Server_RespawnMinigameObject();
 	}
-	AMinigameMainObjective::Destroy(true, true);
+	Destroy(true, true);
 }
 
 void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)

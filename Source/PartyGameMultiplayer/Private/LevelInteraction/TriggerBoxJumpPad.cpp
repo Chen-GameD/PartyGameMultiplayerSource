@@ -1,11 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "LevelInteraction/TriggerBoxJumpPad.h"
-#include "GameFramework/Character.h"
+
+#include "NiagaraComponent.h"
 #include "DrawDebugHelpers.h"
+
+#include "GameFramework/Character.h"
+#include "Character/MCharacter.h"
+
 
 ATriggerBoxJumpPad::ATriggerBoxJumpPad()
 {
+    bReplicates = true;
+
     LaunchVelocity = FVector(0.0f, 0.0f, 1000.0f);
     bXYOverride = false;
     bZOverride = true;
@@ -35,18 +42,27 @@ void ATriggerBoxJumpPad::BeginPlay()
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapBegin(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
-    if (OtherActor && OtherActor != this && pCharacter) {
+    AMCharacter* pCharacter = Cast<AMCharacter>(OtherActor);
+    if (OtherActor && OtherActor != this && pCharacter) 
+    {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character enters the Jump Pad"));
         pCharacter->LaunchCharacter(LaunchVelocity, bXYOverride, bZOverride);
+        NetMulticast_WhenCharacterEnterTriggerBoxJumpPad();
     }
 }
 
 void ATriggerBoxJumpPad::OnJumpPadOverlapEnd(class AActor* OverlappedActor, class AActor* OtherActor)
 {
-    ACharacter* pCharacter = Cast<ACharacter>(OtherActor);
-    if (OtherActor && OtherActor != this && pCharacter) {
+    AMCharacter* pCharacter = Cast<AMCharacter>(OtherActor);
+
+    if (OtherActor && OtherActor != this && pCharacter) 
+    {
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Character exits the Jump Pad"));
-        //pCharacter->StopJumping();
     }
+}
+
+
+void ATriggerBoxJumpPad::NetMulticast_WhenCharacterEnterTriggerBoxJumpPad_Implementation()
+{
+    WhenCharacterEnterTriggerBoxJumpPad();
 }

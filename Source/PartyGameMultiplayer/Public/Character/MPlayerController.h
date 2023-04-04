@@ -24,6 +24,9 @@ public:
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// UFUNCTION(NetMulticast, Reliable)
+	// void NetMulticast_LoginInit();
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void UI_UpdateLobbyMenu();
 
@@ -32,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void UpdateReadyState(bool IsAllReady);
+
+	// UFUNCTION()
+	// void InitCharacterFollowWidgetStatusAndInformation();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
@@ -46,7 +52,7 @@ public:
 	//void UpdateLobbyMenu();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void JoinATeam(int i_TeamIndex = 1, const FString& i_PlayerName = "");
+	void JoinATeam(int i_TeamIndex = 1);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void GetReadyButtonClick();
@@ -56,13 +62,7 @@ public:
 
 	UFUNCTION()
 	void StartTheGame();
-
-	UFUNCTION(Client, Reliable, BlueprintCallable)
-	void Client_SetGameUIVisibility(bool isVisible);
-
-	UFUNCTION(Client, Reliable)
-	void Client_SynMeshWhenJoinSession();
-
+	
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();
 
@@ -73,6 +73,10 @@ public:
 	// InGame UI
 	UFUNCTION()
 	void UI_InGame_UpdateHealth(float percentage);
+	UFUNCTION()
+	void UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime);
+	UFUNCTION(Client, Reliable)
+	void UI_InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
 
 	// HUD getter
 	UFUNCTION(BlueprintCallable)

@@ -10,6 +10,8 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Components/PrimitiveComponent.h"
 
+#include "Weapon/DamageManager.h"
+
 AWeaponFlamethrower::AWeaponFlamethrower()
 {
 	IsCombineWeapon = true;
@@ -40,4 +42,78 @@ AWeaponFlamethrower::AWeaponFlamethrower()
 	{
 		AttackHitEffect = DefaultAttackHitEffect.Object;
 	}
+}
+
+
+void AWeaponFlamethrower::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (IsPickedUp)
+		{
+			if (!HasBeenCombined)
+			{
+				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
+				{
+					for (auto& Elem : AttackObjectMap)
+					{
+						// Apply knockback buff at a fixed frequency
+						Elem.Value += DeltaTime;
+						if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
+						{
+							ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
+							Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
+						}
+						// Add burning buff points
+						FString ParName = "Flamethrower_Burning_PointsToAdd_PerSec";
+						if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+						{
+							float buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+							ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(Elem.Key), buffPointsToAdd);
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void AWeaponFlamethrower::AttackStart(float AttackTargetDistance)
+{
+	if (bAttackOn || !GetOwner())
+		return;
+
+	// If the weapon has cd
+	if (0 < CD_MaxEnergy)
+	{
+		if (AttackType == EnumAttackType::Constant)
+		{
+			if (CD_LeftEnergy <= 0)
+				return;
+		}
+		else
+		{
+			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+				CD_LeftEnergy -= CD_MinEnergyToAttak;
+			else
+				return;
+		}
+	}
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_bAttackOn();
+	ApplyDamageCounter = 0;
+
+	float ApplyDamageAndKnockbackDelay = 0.05f;
+	FTimerHandle ApplyDamageAndKnockbackTimerHandle;
+	GetWorldTimerManager().SetTimer(ApplyDamageAndKnockbackTimerHandle, [this]
+		{
+			if(bAttackOn)
+				SetActorEnableCollision(true);
+		}, ApplyDamageAndKnockbackDelay, false);
 }

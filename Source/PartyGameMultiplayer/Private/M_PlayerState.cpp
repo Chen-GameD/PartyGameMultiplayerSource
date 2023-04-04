@@ -6,6 +6,8 @@
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameMode.h"
 #include "GameBase/MGameState.h"
+#include "Kismet/GameplayStatics.h"
+#include "Matchmaking/EOSGameInstance.h"
 
 void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 {
@@ -15,7 +17,7 @@ void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 
 	if (GetNetMode() == NM_ListenServer)
 	{
-		UpdateLobbyUIInformation();
+		OnRep_PlayerNameString();
 	}
 }
 
@@ -35,7 +37,7 @@ void AM_PlayerState::UpdatePlayerReadyState_Implementation()
 
 	if (GetNetMode() == NM_ListenServer)
 	{
-		UpdateLobbyUIInformation();
+		OnRep_UpdateReadyInformation();
 	}
 }
 
@@ -91,16 +93,63 @@ void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
 		}
 	}
 
-	//UpdateLobbyUIInformation();
+	//OnRep_PlayerNameString();
+	// if (GetNetMode() == NM_ListenServer)
+	// {
+	// 	OnRep_PlayerNameString();
+	// }
 	if (GetNetMode() == NM_ListenServer)
 	{
-		UpdateLobbyUIInformation();
+		OnRep_UpdateTeamIndex();
 	}
 }
 
-void AM_PlayerState::UpdateLobbyUIInformation()
+void AM_PlayerState::SetPlayerNameFromUsername_Implementation()
 {
-	//Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+	PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	UpdatePlayerName(PlayerNameString);
+}
+
+void AM_PlayerState::OnRep_PlayerNameString()
+{
+	if (GetNetMode() == NM_ListenServer)
+	{
+		FString Message = FString::Printf(TEXT("OnRep_PlayerNameString: ListenServer"));
+		GEngine->AddOnScreenDebugMessage(-1, 60.f, FColor::Yellow, Message);
+	}
+	else if (GetNetMode() == NM_Client)
+	{
+		FString Message = FString::Printf(TEXT("OnRep_PlayerNameString: Client"));
+		GEngine->AddOnScreenDebugMessage(-1, 60.f, FColor::Yellow, Message);
+	}
+	
+	AMCharacter* MyPawn = Cast<AMCharacter>(GetPawn());
+	if (MyPawn)
+	{
+		MyPawn->SetPlayerNameUIInformation();
+	}
+}
+
+void AM_PlayerState::OnRep_PlayerSkinInformation()
+{
+	AMCharacter* MyPawn = Cast<AMCharacter>(GetPawn());
+	if (MyPawn)
+	{
+		MyPawn->SetPlayerSkin();
+	}
+}
+
+void AM_PlayerState::OnRep_UpdateTeamIndex()
+{
+	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+	if (MyLocalPlayerController)
+	{
+		MyLocalPlayerController->UI_UpdateLobbyMenu();
+	}
+}
+
+void AM_PlayerState::OnRep_UpdateReadyInformation()
+{
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (MyLocalPlayerController)
 	{

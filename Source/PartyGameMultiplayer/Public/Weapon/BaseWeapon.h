@@ -29,7 +29,7 @@ public:
 	// should only be called on server
 	virtual void GetThrewAway();
 	// should only be called on server
-	virtual void AttackStart();
+	virtual void AttackStart(float AttackTargetDistance);
 	// should only be called on server
 	virtual void AttackStop();
 	//Get weapon name
@@ -38,8 +38,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AController* GetHoldingController() const;
 
-	//// only on server, generate stuff like damage, buff and so on
-	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
+	// Effects
+	// ====================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStopSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallPickedUpSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallPickedUpSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallThrewAwaySfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallThrewAwaySfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -50,7 +62,7 @@ protected:
 	// should be only on client
 	virtual void GenerateAttackHitEffect();
 	// should only be called on server
-	virtual void SpawnProjectile();
+	virtual void SpawnProjectile(float AttackTargetDistance);
 
 	/* RepNotify Functions */
 	UFUNCTION()
@@ -76,7 +88,7 @@ protected:
 	UFUNCTION(Category = "Weapon")
 		virtual void OnDisplayCaseOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
+
 private:
 
 
@@ -84,11 +96,23 @@ private:
 public:
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsBigWeapon;
 	bool IsCombineWeapon;  // if it is a combine type weapon or not
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
 	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
-	UTexture2D* textureUI;
+	UTexture2D* HoldingTextureUI_E;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* HoldingTextureUI_Q;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* PickUpTextureUI_E;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* PickUpTextureUI_Q;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Broadcast;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Message;
 	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
@@ -109,6 +133,8 @@ public:
 	float CD_RecoverSpeed;
 	bool CD_CanRecover;
 	float TimePassed_SinceAttackStop;
+	float TimePassed_SinceGetThrewAway;
+	float LastTime_DisplayCaseTransformBeenReplicated;
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
@@ -128,6 +154,10 @@ protected:
 		FRotator DisplayCaseRotation;
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseScale;
+
+	FVector WeaponMeshDefaultRelativeLocation;
+	FRotator WeaponMeshDefaultRelativeRotation;
+	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
 	int ApplyDamageCounter;
@@ -173,6 +203,9 @@ protected:
 	// Movement component that may be necessary
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", Replicated)
 		class UMovementComponent* MovementComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* HaloEffect_NSComponent;
 
 	// Particle System that may be necessary(for instance, wind/fire released by the weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")

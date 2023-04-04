@@ -21,6 +21,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_ChangeSpeed(float SpeedRatio);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
@@ -38,13 +41,15 @@ private:
 // MEMBER VARIABLES
 public:
 	EnumWeaponType WeaponType;
+	bool IsBigWeapon;
 	class AController* Controller;
 	float CurDeltaTime;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UProjectileMovementComponent* ProjectileMovementComponent;
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		class UProjectileMovementComponent* ProjectileMovementComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* AttackHitEffect_NSComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")

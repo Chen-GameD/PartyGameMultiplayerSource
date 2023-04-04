@@ -9,7 +9,7 @@
 #include "UI/InventoryMenu.h"
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/WeaponDataHelper.h"
-#include "../M_PlayerState.h"
+#include "../Matchmaking/EOSGameInstance.h"
 #include "MCharacter.generated.h"
 
 //#define IS_LISTEN_SERVER
@@ -42,9 +42,11 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 // ==============================================================
 public:
 	// Sets default values for this character's properties
-	AMCharacter();
+	AMCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void Restart() override;
+
+	virtual void OnRep_PlayerState() override;
 
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -73,13 +75,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-	// customized TakeDamge Function
-	float TakeDamageRe(float DamageTaken, EnumWeaponType WeaponType, AController* EventInstigator, ABaseWeapon* DamageCauser);
-
 	/*float AccumulateAttackedBuff(EnumAttackBuff BuffType, float BuffPointsReceived, FVector AttackedDir, 
 		AController* EventInstigator, ABaseWeapon* DamageCauser);*/
 
-	/**	Update HealthBar UI for character */
+	/**	Update HealthBar_Enemy UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void SetHealthBarUI();
 
@@ -89,6 +88,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsDead();
+
+	UFUNCTION(BlueprintCallable)
+	void SetIsDead(bool n_IsDead);
 
 	// Server force respawn after character die
 	UFUNCTION(Server, Reliable, BlueprintCallable)
@@ -100,21 +102,32 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_Respawn();
+	
+	UFUNCTION()
+	void SetFollowWidgetVisibility(bool IsVisible);
+	UFUNCTION()
+	void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
 
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_SetMesh(USkeletalMesh* i_changeMesh);
+	// UFUNCTION()
+	// void SetFollowWidgetStatusAndInformation();
+
+	// UFUNCTION()
+	// void SetLocallyControlledGameUI(bool isVisible);
 
 	UFUNCTION()
-	void SetGameUIVisibility(bool isVisible);
+	void SetPlayerNameUIInformation();
 
 	UFUNCTION()
-	void SetLocallyControlledGameUI(bool isVisible);
+	void SetPlayerSkin();
+
+	UFUNCTION()
+	void InitFollowWidget();
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);
 
-	UFUNCTION()
-	void SetThisCharacterMesh(int TeamIndex);
+	// UFUNCTION()
+	// void SetThisCharacterMesh(int TeamIndex);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetCanMove(bool i_CanMove);
@@ -128,9 +141,50 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetElectricShockAnimState(bool i_state);
 
-	virtual void ActByBuff_PerDamage(float DeltaTime); // This DeltaTime will be from DamageCauser
-	virtual void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
-	
+	void ActByBuff_PerTick(float DeltaTime);   // This DeltaTime will be from self
+
+	//virtual void FollowWidget_PerTick(float DeltaTime); // This DeltaTime will be from self
+
+	// Multicast die result
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_DieResult();
+
+	// Multicast respawn result
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_RespawnResult();
+
+	UFUNCTION()
+	void ResetCharacterStatus();
+
+	UFUNCTION()
+		void OnRep_IsHealing();
+	UFUNCTION()
+		void OnRep_IsBurned();
+	UFUNCTION()
+		void OnRep_IsParalyzed();
+	UFUNCTION(Client, Reliable)
+		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
+
+	// Effects
+	// =============================
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallGetHitVfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallGetHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallGetHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDashSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDeathSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallBurningBuffStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallBurningBuffStopSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallParalysisBuffStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallParalysisBuffStopSfx();
 protected:
 
 	// Health
@@ -142,15 +196,8 @@ protected:
 	/** Response to health being updated. Called on the server immediately after modification, and on clients in response to a RepNotify*/
 	void OnHealthUpdate();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void CallJumpLandEffect();
-
 	UFUNCTION()
-	void OnRep_IsAllowDash();
-
-	// Multicast die result
-	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_DieResult();
+		void OnRep_IsAllowDash();
 
 	// Movement
 	// ==========================
@@ -181,18 +228,29 @@ protected:
 	// Action
 	// ==========================
 	/* Called for Attack input */
+	void Client_Attack();
 	UFUNCTION(Server, Reliable)
-	void Attack();
+	void Attack(float AttackTargetDistance=0.0f);
 	DECLARE_DELEGATE_OneParam(FIsMeleeRelease, bool);
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
-	/* Called for Dash input */
-	UFUNCTION(Server, Reliable)
+	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
+	void Zoom(bool bZoomOut);
+
+	/* Called for Server_Dash input */
+	UFUNCTION()
 	void Dash();
+	UFUNCTION(Server, Reliable)
+	void Server_Dash();
 	void RefreshDash();
 	void SetDash();
 	void TurnOffDashEffect();
+
+	float Server_GetMaxWalkSpeedRatioByWeapons();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -203,7 +261,7 @@ protected:
 	void DropOffWeapon(bool isLeft);
 
 	UFUNCTION()
-	void OnCombineWeapon();
+	void OnCombineWeapon(bool bJustPickedLeft);
 
 	// Test
 	// ======================
@@ -228,6 +286,15 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+	// Keep Check PlayerFollowWidget is null or not every 0.5 sec;
+	// When it not null anymore, start to Init all the pawn related information
+	UFUNCTION()
+	void CheckPlayerFollowWidgetTick();
+
+	// Broadcast function
+	UFUNCTION()
+	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
 
 
 // Members
@@ -270,10 +337,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TArray<FName> CharacterMatParamNameArray;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		UMaterialParameterCollection* characaterMaterialParameterCollection;
+
 	// Scores Kill Death Array Format:
 	// [Scores, Kill, Death]
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectHeal;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectGetHit;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* EffectBurn;
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
@@ -287,14 +367,48 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<USkeletalMesh*> CharacterBPArray;
 
+	float Server_MaxWalkSpeed;
+	float Client_LowSpeedWalkAccumulateTime;
+
+	bool bShouldZoomOut;
+	float CurFov;
+	float MinFov;
+	float MaxFov;	
+	float Local_CurCameraArmLength;
+	float Local_MinCameraArmLength;
+	float Local_MaxCameraArmLength;
+
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
-	// The range of BuffPoints should be kept in [0,1], the buff will be activated when it is 1
+	// When the BuffPoints >= 1, the buff will be activated
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+	class AController* Server_TheControllerApplyingLatestBurningBuff;
 	FVector KnockbackDirection_SinceLastApplyBuff;
 	FVector TaserDragDirection_SinceLastApplyBuff;
 	bool BeingKnockbackBeforeThisTick;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsHealing)
+		bool IsHealing;	
+	UPROPERTY(ReplicatedUsing = OnRep_IsBurned)
+		bool IsBurned;
+	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
+		bool IsParalyzed;
+	
+	// Effects
+	// =============================
+	float Server_CallGetHitSfxVfx_MinInterval;
+	float Server_LastTime_CallGetHitSfxVfx;
+
+	// UPROPERTY(EditAnywhere, Category="PlayerFollowWidget Tick Timer")
+	// float PlayerFollowWidget_ShowTime = 5.0;
+	// UPROPERTY()
+	// bool PlayerFollowWidget_NeedDisappear = false;
+	// UPROPERTY()
+	// float PlayerFollowWidget_RenderOpacity = 1;
+
+	// Fire Image
+	UPROPERTY(EditDefaultsOnly, Category = "FireBuff")
+	UTexture2D* FireImage;
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
@@ -309,23 +423,23 @@ protected:
 	bool IsDead;
 
 	// Action
-	UPROPERTY(Replicated)
 	bool IsOnGround;
+	float OriginalMaxWalkSpeed;
+	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
 	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashDistance;
 	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashTime;
-	float OriginalMaxWalkSpeed;
-	float DashSpeed;
+	UPROPERTY(EditAnywhere, Category = "Dash")
+	float DashCoolDown;
 	FTimerHandle DashingTimer;
 
 	// buff
-	bool CanMove; // only used on the Server, only for paralysis rn
+	bool Server_CanMove; // only used on the Server, only for paralysis rn
 
 	// Weapon
-	// to do
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon* LeftWeapon;
 	
@@ -338,6 +452,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;
 
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class ACursorHitPlane> CursorHitPlaneSubClass;
+
 	UFUNCTION()
 	void SetTextureInUI();
 
@@ -347,4 +464,6 @@ protected:
 	//So it will sign to CurrentTouchedWeapon and get messed with other logic.
 	//So we add this bool to prevent that happen
 	bool IsPickingWeapon = false;
+
+	FTimerHandle InitPlayerInformationTimer;
 };

@@ -69,44 +69,94 @@ namespace AnimUtils {
 		// Reset State
 		clearAnimStateWeaponType(i_AnimState);
 
-		if (i_CombineWeapon) {
+		if (i_CombineWeapon) 
+		{
 			auto combineWeaponType = i_CombineWeapon->WeaponType;
 			int indexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(combineWeaponType);
 			i_AnimState[indexToSet] = true;
 		}
-		else {
-			if (i_LeftWeapon && i_RightWeapon) {
-				int doubleShootIndex = 3;
-				int doubleMeleeIndex = 2;
+		else 
+		{
+			bool LeftShellInTwoWeapons = false;
+			bool RightShellInTwoWeapons = false;
+			// Holding 2 weapons
+			if (i_LeftWeapon && i_RightWeapon)
+			{
+				// No shells(2 same weapons)
+				if (i_LeftWeapon->WeaponType != EnumWeaponType::Shell && i_RightWeapon->WeaponType != EnumWeaponType::Shell)
+				{
+					int doubleShootIndex = 3;
+					int doubleMeleeIndex = 2;
 
-				auto leftType = i_LeftWeapon->WeaponType;
-				auto rightType = i_RightWeapon->WeaponType;
+					auto leftType = i_LeftWeapon->WeaponType;
+					auto rightType = i_RightWeapon->WeaponType;
 
-				int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
-				int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
+					int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
+					int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
 
-				// Note: There will only be two cases since otherwise it will combine:
-				//	1. Double Shooting
-				//	2. Double Melee
-				// If both single shooting which means Double Shooting
-				if (leftIndexToSet && rightIndexToSet) {
-					i_AnimState[doubleShootIndex] = true;
+					// Note: There will only be two cases since otherwise it will combine:
+					//	1. Double Shooting
+					//	2. Double Melee
+					// If both single shooting which means Double Shooting
+					if (leftIndexToSet && rightIndexToSet)
+					{
+						i_AnimState[doubleShootIndex] = true;
+					}
+					// Double Melee
+					else
+					{
+						i_AnimState[doubleMeleeIndex] = true;
+					}
 				}
-				// Double Melee
-				else {
-					i_AnimState[doubleMeleeIndex] = true;
-				}
+				// Both are shells
+				else if (i_LeftWeapon->WeaponType == EnumWeaponType::Shell && i_RightWeapon->WeaponType == EnumWeaponType::Shell)
+				{
+					//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("anim 4"));
+					//int doubleShootIndex = 3;
+					//int doubleMeleeIndex = 2;
 
+					//i_AnimState[doubleShootIndex] = true;
+					////i_AnimState[doubleMeleeIndex] = true;
+
+					i_AnimState[0] = true;
+					i_AnimState[5] = false;
+				}
+				// Only left is shell
+				else if (i_LeftWeapon->WeaponType == EnumWeaponType::Shell)
+					LeftShellInTwoWeapons = true;
+				// Only right is shell
+				else if (i_RightWeapon->WeaponType == EnumWeaponType::Shell)
+					RightShellInTwoWeapons = true;
 			}
-			else if (i_LeftWeapon) {
+
+			// holding only left weapon / holding left weapon and right shell
+			if ((i_LeftWeapon && i_LeftWeapon->WeaponType != EnumWeaponType::Shell && !i_RightWeapon) || RightShellInTwoWeapons)
+			{
 				auto leftType = i_LeftWeapon->WeaponType;
 				int leftIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(leftType);
 				i_AnimState[leftIndexToSet] = true;
+				i_AnimState[6] = false;
 			}
-			else if (i_RightWeapon) {
+			// holding only right weapon / holding right weapon and left shell
+			if ((i_RightWeapon && i_RightWeapon->WeaponType != EnumWeaponType::Shell && !i_LeftWeapon) || LeftShellInTwoWeapons)
+			{
 				auto rightType = i_RightWeapon->WeaponType;
 				int rightIndexToSet = WeaponConfig::GetInstance()->GetAnimStateIndex(rightType);
 				i_AnimState[rightIndexToSet] = true;
+				i_AnimState[5] = false;
+			}
+
+			// holding only left shell
+			if (i_LeftWeapon && i_LeftWeapon->WeaponType == EnumWeaponType::Shell && !i_RightWeapon)
+			{
+				i_AnimState[1] = true;
+				i_AnimState[5] = true;
+			}
+			// holding only right shell
+			if (i_RightWeapon && i_RightWeapon->WeaponType == EnumWeaponType::Shell && !i_LeftWeapon)
+			{
+				i_AnimState[1] = true;
+				i_AnimState[6] = true;
 			}
 		}
 	}

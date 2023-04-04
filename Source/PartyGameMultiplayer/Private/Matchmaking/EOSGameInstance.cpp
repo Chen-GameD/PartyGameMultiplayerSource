@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	// Login();
+	//Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
@@ -37,21 +37,25 @@ void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
 
 FString UEOSGameInstance::GetPlayerUsername()
 {
-	if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+	if(GetIsLoggedIn())
 	{
-		if(IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface())
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
-			if(IdentityPtr->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+			if(IOnlineIdentityPtr IdentityPtr = OnlineSubsystem->GetIdentityInterface())
 			{
-				return IdentityPtr->GetPlayerNickname(0);
+				if(IdentityPtr->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+				{
+					return IdentityPtr->GetPlayerNickname(0);
+				}
 			}
 		}
 	}
-	return FString();
+	return PlayerName;
 }
 
 void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections)
 {
+	isLoading = true;
 	if(bIsLoggedIn)
 	{
 		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
@@ -64,9 +68,10 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 				SessionSettings.bIsLANMatch = IsLanServer;
 				SessionSettings.NumPublicConnections = NumberOfPublicConnections;
 				SessionSettings.bUsesPresence = true;
+				SessionSettings.bAllowJoinViaPresence = true;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
+				// SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
@@ -76,12 +81,14 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 	}
 	else
 	{
+		isLoading = false;
 		UE_LOG(LogTemp, Error, TEXT("Not logged IN"));
 	}
 }
 
 void UEOSGameInstance::FindSession()
 {
+	isLoading = true;
 	IsSessionsListAvailable = false;
 	if(bIsLoggedIn)
 	{
@@ -90,9 +97,10 @@ void UEOSGameInstance::FindSession()
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
-				SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-				SearchSettings->MaxSearchResults = 100;
+				//SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
+				SearchSettings->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
+				SearchSettings->MaxSearchResults = 100;
 				
 				SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnFindSessionComplete);
 				SessionPtr->FindSessions(0, SearchSettings.ToSharedRef());
@@ -101,12 +109,14 @@ void UEOSGameInstance::FindSession()
 	}
 	else
 	{
+		isLoading = false;
 		UE_LOG(LogTemp, Error, TEXT("Not logged IN"));
 	}
 }
 
 void UEOSGameInstance::DestroySession()
 {
+	isLoading = true;
 	if(bIsLoggedIn)
 	{
 		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
@@ -117,6 +127,10 @@ void UEOSGameInstance::DestroySession()
 				SessionPtr->DestroySession(SESSION_NAME);
 			}
 		}
+	}
+	else
+	{
+		isLoading = false;
 	}
 }
 
@@ -183,6 +197,7 @@ bool UEOSGameInstance::GetIsLoggedIn()
 
 void UEOSGameInstance::JoinSession(int32 index)
 {
+	isLoading = true;
 	if(bIsLoggedIn)
 	{
 		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
@@ -207,6 +222,7 @@ void UEOSGameInstance::JoinSession(int32 index)
 	}
 	else
 	{
+		isLoading = false;
 		UE_LOG(LogTemp, Error, TEXT("Not logged IN"));
 	}
 }
@@ -227,8 +243,10 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 	}
 	if(bWasSuccessful)
 	{
-		GetWorld()->ServerTravel(LevelText+"?listen", true);
+		const int mapIndex = DebugLevelSelect != -1 ? DebugLevelSelect : FMath::RandRange(0, LevelText.Num()-1);
+		GetWorld()->ServerTravel(LevelText[mapIndex] +"?listen", true);
 	}
+	isLoading = false;
 }
 
 void UEOSGameInstance::OnDestroySessionComplete(FName sessionName, bool bWasSuccessful)
@@ -245,6 +263,7 @@ void UEOSGameInstance::OnDestroySessionComplete(FName sessionName, bool bWasSucc
 			}
 		}
 	}
+	isLoading = false;
 }
 
 void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
@@ -274,6 +293,7 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 			}
 		}
 	}
+	isLoading = false;
 }
 
 void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
@@ -309,6 +329,7 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 			}
 		}
 	}
+	isLoading = false;
 }
 
 void UEOSGameInstance::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error)

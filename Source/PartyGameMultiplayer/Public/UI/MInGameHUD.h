@@ -31,7 +31,7 @@ public:
 /////Gameplay
 ////////////////////////////////////////////////////
 	UFUNCTION()
-	void StartGameUI();
+	void StartGameUI(FString& userName);
 
 ////////////////////////////////////////////////////
 /////Interface
@@ -39,9 +39,20 @@ public:
 	// Show or Hide InGame_PlayerStatusWidget
 	UFUNCTION()
 	void InGame_SetVisibilityPlayerStatusWidget(ESlateVisibility n_Visibility);
+	// Update PlayerName UI
+	UFUNCTION()
+	void InGame_UpdatePlayerNameUI(FString& userName);
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
+	// Update Player Skill UI
+	void InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime);
+	// Update Player Skill Opacity
+	void InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percentage);
+	// Toggle Player Buff Widget
+	void InGame_ToggleFireBuffWidget(bool IsShowing);
+	void InGame_ToggleShockBuffWidget(bool IsShowing);
+	
 
 	// Show or Hide InGame_PlayerWeaponInfoWidget
 	UFUNCTION()
@@ -58,10 +69,13 @@ public:
 	void InGame_UpdateTimer(int CurrentTimer);
 	// Show and update minigame hint ( with animation )
 	UFUNCTION()
-	void InGame_UpdateMinigameHint(FString i_Hint);
+	void InGame_UpdateMinigameHint(FString i_Hint, UTexture2D* i_HintImage);
 	// Initialize the game status UI content
 	UFUNCTION()
-	void InGame_InitGameStatusWidgetContent();
+	void InGame_InitGameStatusAndPlayerStatusWidgetContent();
+	// Broadcasting system
+	UFUNCTION()
+	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
 
 protected:
 	// In Game UI Class Ref

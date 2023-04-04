@@ -3,179 +3,37 @@
 
 #include "GameBase/MGameMode.h"
 
+#include <process.h>
+
+#include "EngineUtils.h"
 #include "M_PlayerState.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "Character/MPlayerController.h"
 #include "GameBase/MGameState.h"
-#include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "Math/TransformCalculus3D.h"
 #include "Character/MCharacter.h"
+#include "LevelInteraction/MinigameObject/MinigameChild/MinigameChild_Statue_Shell.h"
 #include "Matchmaking/EOSGameInstance.h"
 #include "Weapon/JsonFactory.h"
+#include "Weapon/ElementWeapon/WeaponShell.h"
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
-
+	
 	/*if (UJsonFactory::InitJsonObject_1())
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("GameMode Init JsonObject_1 succeeded"));
 	else
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("GameMode Init JsonObject_1 failed"));*/
 
-	CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
+	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
 }
 
-void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
+void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
-	if (IsValid(PlayerController))
-	{
-		FVector spawnLocation;
-		FRotator spawnRotation;
-
-		APlayerStart* spawnPlayerStart;
-		if (PlayerController->GetPlayerState<AM_PlayerState>()->TeamIndex == 1)
-		{
-			int index = FMath::RandRange(0, Team_1_SpawnPoints.Num() - 1);
-			spawnPlayerStart = Team_1_SpawnPoints[index];
-		}
-		else
-		{
-			int index = FMath::RandRange(0, Team_2_SpawnPoints.Num() - 1);
-			spawnPlayerStart = Team_2_SpawnPoints[index];
-		}
-		
-		spawnLocation = spawnPlayerStart->GetActorTransform().GetLocation();
-		spawnRotation = spawnPlayerStart->GetActorTransform().GetRotation().Rotator();
-
-		// Set skeletalMesh by team index
-		int index = 0;
-		AM_PlayerState* CurrentControllerPS = PlayerController->GetPlayerState<AM_PlayerState>();
-		if (CurrentControllerPS->TeamIndex == 1)
-		{
-			index = 0;
-		}
-		else if (CurrentControllerPS->TeamIndex == 2)
-		{
-			index = 1;
-		}
-		
-		USkeletalMesh* spawnCharacter = CharacterBPArray[index];
-
-		//ACharacter* charSpawned = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		//charSpawned->GetMesh()->SetSkeletalMesh(spawnCharacter);
-
-		APawn* spawnPawn = GetWorld()->SpawnActor<ACharacter>(CharaterBPType, spawnLocation, spawnRotation);
-		AMCharacter* spawnActor = Cast<AMCharacter>(spawnPawn);
-		spawnActor->Multicast_SetMesh(spawnCharacter);
-		
-
-		if (IsValid(spawnActor))
-		{
-			PlayerController->Possess(spawnActor);
-			Cast<AMPlayerController>(PlayerController)->Client_RefreshWeaponUI();
-		}
-	}
-}
-
-void AMGameMode::Server_RespawnMinigameObject_Implementation()
-{
-	// if (MinigameObjectClass)
-	// {
-	// 	FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
-	// 	FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-	// 	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameObjectClass, spawnLocation, spawnRotation);
-	// }
-
-	if (MinigameDataAsset)
-	{
-		FVector spawnLocation = MinigameObjectSpawnTransform.GetLocation();
-		FRotator spawnRotation = MinigameObjectSpawnTransform.GetRotation().Rotator();
-		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnLocation, spawnRotation);
-		spawnActor->UpdateScoreCanGet(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
-		
-		// Update Minigame Hint
-		AMGameState* MyGameState = GetGameState<AMGameState>();
-		if (MyGameState)
-		{
-			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].MinigameHint);
-		}
-	}
-}
-
-void AMGameMode::CheckGameStart()
-{
-	int const PlayerNum = UGameplayStatics::GetNumPlayerStates(GetWorld());
-	bool CanStart = true;
-
-	// Test
-	//CurrentPlayerNum = 2;
-	// Test
-	
-	if (TeamOnePlayerNum + TeamTwoPlayerNum == CurrentPlayerNum && CurrentPlayerNum == PlayerNum)
-	{
-		// All player join a team
-		if (TeamOnePlayerNum == TeamTwoPlayerNum)
-		{
-			// Team one and team two have the same num of players
-			// Check if they are ready
-			for (int index = 0; index < CurrentPlayerNum; index++)
-			{
-				AM_PlayerState* currentPlayerState = Cast<AM_PlayerState>(UGameplayStatics::GetPlayerState(GetWorld(), index));
-				if (!currentPlayerState->IsReady)
-				{
-					CanStart = false;
-				}
-			}
-
-			if (CanStart)
-			{
-				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
-			}
-		}
-		else
-		{
-			CanStart = false;
-		}
-	}
-	else
-	{
-		CanStart = false;
-	}
-
-	if (!CanStart)
-	{
-		GetWorldTimerManager().ClearTimer(StartGameCountDownTimerHandle);
-	}
-
-	NotifyAllClientPlayerControllerUpdateReadyState(CanStart);
-}
-
-void AMGameMode::NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady)
-{
-	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-	{
-		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-
-		currentController->GetNotifyPlayerControllerUpdateReadyState(IsAllReady);
-	}
-}
-
-void AMGameMode::StartTheGame()
-{
-	AMGameState* MyGameState = GetGameState<AMGameState>();
-	if (MyGameState)
-	{
-		// Set the game time
-		MyGameState->GameTime = MinigameDataAsset->MinigameConfigTable[CurrentMinigameIndex].GameTime;
-		
-		MyGameState->IsGameStart = true;
-		MyGameState->Server_StartGame();
-	}
-
-	Server_RespawnMinigameObject();
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 }
 
 void AMGameMode::PostLogin(APlayerController* NewPlayer)
@@ -220,20 +78,25 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				UE_LOG(LogTemp, Warning, TEXT("Success registration: %d"), bRegistrationSuccess);
 			}
 		}
+		
+		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
+		MyPlayerState->SetPlayerNameFromUsername();
 		CurrentPlayerNum++;
 
-		// for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-		// {
-		// 	AMPlayerController* controller = Cast<AMPlayerController>(*iterator);
-		//
-		// 	if (controller)
-		// 	{
-		// 		controller->Client_SynMeshWhenJoinSession();
-		// 	}
-		// }
-		//Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
-		Cast<AMPlayerController>(NewPlayer)->Client_SynMeshWhenJoinSession();
+		if (NewPlayer->IsLocalPlayerController())
+		{
+			AMCharacter* MyPawn = Cast<AMCharacter>(NewPlayer->GetPawn());
+			if (MyPawn)
+			{
+				MyPawn->OnRep_PlayerState();
+			}
+		}
 	}
+}
+
+void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 }
 
 void AMGameMode::Logout(AController* Exiting)
@@ -290,7 +153,195 @@ void AMGameMode::Logout(AController* Exiting)
 	}
 }
 
+void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
+{
+	if (IsValid(PlayerController))
+	{
+		FVector spawnLocation;
+		FRotator spawnRotation;
+
+		APlayerStart* spawnPlayerStart;
+		if (PlayerController->GetPlayerState<AM_PlayerState>()->TeamIndex == 1)
+		{
+			int index = FMath::RandRange(0, Team_1_SpawnPoints.Num() - 1);
+			spawnPlayerStart = Team_1_SpawnPoints[index];
+		}
+		else
+		{
+			int index = FMath::RandRange(0, Team_2_SpawnPoints.Num() - 1);
+			spawnPlayerStart = Team_2_SpawnPoints[index];
+		}
+		
+		spawnLocation = spawnPlayerStart->GetActorTransform().GetLocation();
+		spawnRotation = spawnPlayerStart->GetActorTransform().GetRotation().Rotator();
+
+		// Only Reset the location of the pawn and reset the status;
+		AMCharacter* MyCharacter = Cast<AMCharacter>(PlayerController->GetPawn());
+		if (MyCharacter)
+		{
+			MyCharacter->SetActorLocation(spawnLocation);
+			MyCharacter->SetActorRotation(spawnRotation);
+			MyCharacter->ResetCharacterStatus();
+
+			// Temp for syn mesh every time when player respawn
+			// After the customize function is finished
+			// Need to delete, let the mesh only update once when the client join an session
+			//Cast<AMPlayerController>(PlayerController)->NetMulticast_SynMesh();
+		}
+	}
+}
+
+void AMGameMode::Server_RespawnMinigameObject_Implementation()
+{
+	if (MinigameDataAsset)
+	{
+		// Spawn the minigame object
+		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+		FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+		if(spawnActor && MinigameDataAsset)
+			spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+
+		// Special rules
+		switch (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameType)
+		{
+		case EMinigameTypeEnum::SculptureType:
+			InitMinigame_ShellObject();
+			break;
+		case EMinigameTypeEnum::DefaultType:
+		default:
+			break;
+		}
+		
+		// Update Minigame Hint
+		AMGameState* MyGameState = GetGameState<AMGameState>();
+		if (MyGameState)
+		{
+			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHintImage);
+		}
+	}
+}
+
+void AMGameMode::CheckGameStart()
+{
+	int const PlayerNum = UGameplayStatics::GetNumPlayerStates(GetWorld());
+	bool CanStart = true;
+
+	// Test
+	//CurrentPlayerNum = 2;
+	// Test
+	
+	if (TeamOnePlayerNum + TeamTwoPlayerNum == CurrentPlayerNum && CurrentPlayerNum == PlayerNum)
+	{
+		// All player join a team
+		if (TeamOnePlayerNum == TeamTwoPlayerNum)
+		{
+			// Team one and team two have the same num of players
+			// Check if they are ready
+			for (int index = 0; index < CurrentPlayerNum; index++)
+			{
+				AM_PlayerState* currentPlayerState = Cast<AM_PlayerState>(UGameplayStatics::GetPlayerState(GetWorld(), index));
+				if (!currentPlayerState->IsReady)
+				{
+					CanStart = false;
+				}
+			}
+
+			if (CanStart)
+			{
+				// Can start the game
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+			}
+		}
+		else
+		{
+			CanStart = false;
+		}
+	}
+	else
+	{
+		CanStart = false;
+	}
+
+	if (!CanStart)
+	{
+		GetWorldTimerManager().ClearTimer(StartGameCountDownTimerHandle);
+	}
+
+	NotifyAllClientPlayerControllerUpdateReadyState(CanStart);
+}
+
+void AMGameMode::NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady)
+{
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+
+		currentController->GetNotifyPlayerControllerUpdateReadyState(IsAllReady);
+	}
+}
+
+void AMGameMode::StartTheGame()
+{
+	AMGameState* MyGameState = GetGameState<AMGameState>();
+	
+	if (MyGameState)
+	{
+		// Set the game time
+		MyGameState->GameTime = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].GameTime;
+		
+		MyGameState->IsGameStart = true;
+		MyGameState->Server_StartGame();
+	}
+
+	Server_RespawnMinigameObject();
+}
+
 void AMGameMode::TestRestartLevel()
 {
 	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+}
+
+void AMGameMode::InitMinigame_ShellObject()
+{
+	// Delete all MinigameChild_Statue_Shell actor
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMinigameChild_Statue_Shell::StaticClass(), FoundActors);
+	for(int i = 0; i < FoundActors.Num(); i++)
+	{
+		FoundActors[i]->Destroy();
+	}
+	
+	if (!IsGameInitialized)
+	{
+		// Start initialize
+		int SpawnShellNum = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation.Num();
+		for (int i = 0; i < SpawnShellNum; i++)
+		{
+			Server_RespawnShellObject(i);
+		}
+
+		IsGameInitialized = true;
+	}
+}
+
+void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformationIndex)
+{
+	FTransform spawnTransform;
+	if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Single)
+	{
+		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transform;
+	}
+	else if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Multiple)
+	{
+		int CurrentSpawnTransformIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transforms.Num() - 1);
+		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transforms[CurrentSpawnTransformIndex];
+	}
+
+	AWeaponShell* spawnActor = GetWorld()->SpawnActor<AWeaponShell>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_ActorClass, spawnTransform);
+	if(spawnActor)
+	{
+		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Int);
+		spawnActor->UpdateConfigIndex(AdditionalInformationIndex);
+	}
 }

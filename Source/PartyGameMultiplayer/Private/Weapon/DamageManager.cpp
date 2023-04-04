@@ -3,6 +3,9 @@
 #include "Weapon/DamageManager.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/BaseProjectile.h"
@@ -12,7 +15,8 @@
 #include "Weapon/WeaponDataHelper.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "Character/MCharacter.h"
-#include "LevelInteraction/MinigameMainObjective.h"
+#include "Character/MPlayerController.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 
 
 bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, AActor* DamagedActor, float DeltaTime)
@@ -21,17 +25,26 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 		return false;
 
 	EnumWeaponType WeaponType = EnumWeaponType::None;
+	bool IsBigWeapon = false;
 	if (auto p = Cast<ABaseWeapon>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (auto p = Cast<ABaseProjectile>(DamageCauser))
+	{
 		WeaponType = p->WeaponType;
+		IsBigWeapon = p->IsBigWeapon;
+	}
 	if (WeaponType == EnumWeaponType::None)
 		return false;
 
-	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameMainObjective>(DamagedActor))
+	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameObj_Enemy>(DamagedActor))
 	{
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+		if (IsBigWeapon)
+			WeaponName = "Big" + WeaponName;
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(WeaponName))
 			Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map[WeaponName];
 		if (0 < DeltaTime)
@@ -110,103 +123,109 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 	return true;
 }
 
-bool ADamageManager::ApplyBuff(EnumWeaponType WeaponType, AController* Controller, TSubclassOf<UDamageType> DamageTypeClass, class AMCharacter* DamagedCharacter, float DeltaTime)
-{	
-	if (WeaponType == EnumWeaponType::None || !Controller || !DamagedCharacter || !AWeaponDataHelper::DamageManagerDataAsset)
+bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd)
+{
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
-	TArray<EnumAttackBuff> AttackBuffs;
-	if (WeaponType == EnumWeaponType::Fork)
-		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	else if (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
-		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	else if (WeaponType == EnumWeaponType::Blower)
-		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	else if (WeaponType == EnumWeaponType::Lighter)
-		AttackBuffs.Add(EnumAttackBuff::Burning);
-	else if (WeaponType == EnumWeaponType::Flamethrower)
+	float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
+	float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
+	float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
+
+	float OldBuffPoints = BuffPoints;
+	BuffPoints += buffPointsToAdd;
+	if (AttackBuff == EnumAttackBuff::Saltcure || AttackBuff == EnumAttackBuff::Shellheal)
+		BuffPoints = FMath::Clamp(BuffPoints, 0.0f, 1.0f);
+
+	if (OldBuffPoints < 1.0f && 1.0f <= BuffPoints)
 	{
-		AttackBuffs.Add(EnumAttackBuff::Burning);
-		AttackBuffs.Add(EnumAttackBuff::Knockback);
-	}
-	else if (WeaponType == EnumWeaponType::Flamefork)
-	{
-		if (DamageTypeClass == UMeleeDamageType::StaticClass())
-			AttackBuffs.Add(EnumAttackBuff::Knockback);
-		else
-			AttackBuffs.Add(EnumAttackBuff::Burning);
-	}		
-	else if (WeaponType == EnumWeaponType::Taser)
-		AttackBuffs.Add(EnumAttackBuff::Paralysis);
-
-	for (int32 i = 0; i < AttackBuffs.Num(); i++)
-	{
-		EnumAttackBuff AttackBuff = AttackBuffs[i];
-
-		if (!DamagedCharacter->CheckBuffMap(AttackBuff))
-			continue;
-
-		float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
-		float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
-		float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
-
-		float buffPointsToAdd = 0.0f;
-		float buffTimeToAdd = 0.0f;
-		if (AttackBuff == EnumAttackBuff::Knockback && Controller->GetPawn())
+		if (AttackBuff == EnumAttackBuff::Paralysis)
 		{
-			FVector AttackingDirection = Controller->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
-			AttackingDirection.Normalize();
-			DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection;
-		}	
-		if (AttackBuff == EnumAttackBuff::Paralysis && Controller->GetPawn())
-		{
-			FVector Direction_SelfToAttacker = Controller->GetPawn()->GetActorLocation() - DamagedCharacter->GetActorLocation();
-			if (100.0f < Direction_SelfToAttacker.Length())
-			{
-				Direction_SelfToAttacker.Normalize();
-				DamagedCharacter->TaserDragDirection_SinceLastApplyBuff = Direction_SelfToAttacker;
-			}			
+			// Set Character's IsParalyzed to true
+			DamagedCharacter->IsParalyzed = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsParalyzed();
 		}
-		
-		FString ParName = "";
-		// Assign buffPointsToAdd (up to 3 times, the value may be overwrote by the next Search And Assign)
-		ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" + 
-				AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerHit";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_" +
-			AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_PointsToAdd_PerSec";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		BuffPoints += buffPointsToAdd;
-		if (1.0f <= BuffPoints)
+		else if (AttackBuff == EnumAttackBuff::Saltcure)
+		{			
+			// Set Character's IsHealing to true
+			DamagedCharacter->IsHealing = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsHealing();
+		}
+		else if (AttackBuff == EnumAttackBuff::Shellheal)
 		{
-			// time to add		
-			ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";	
-			// When it is burning, we add the designated time and substract 1 from BuffPoints; 	
-			// We know only Burning has "Burning_TimeToAdd"
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName)) 
+			// Set Character's IsHealing to true
+			DamagedCharacter->IsHealing = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsHealing();
+		}
+	}
+
+	// When the Burning BuffPoints increases to the next integer(1, 2, 3, 4 ...), with add buff time and etc.
+	if (AttackBuff == EnumAttackBuff::Burning)
+	{
+		if ( !DamagedCharacter->IsHealing && 0.99f <= (FMath::FloorToInt(BuffPoints) - FMath::FloorToInt(OldBuffPoints)))
+		{
+			// Burning_TimeToAdd
+			FString ParName = AWeaponDataHelper::AttackBuffEnumToString_Map[AttackBuff] + "_TimeToAdd";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			{
-				buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				BuffRemainedTime += buffTimeToAdd;
-				BuffAccumulatedTime += buffTimeToAdd;
-				BuffPoints -= floorf(BuffPoints);
-			}		
-			// When it is paralysis, we will add DeltaTime(because that's the damage frequency of Taser), 
-			// not touch the BuffPoints	
-			if (AttackBuff == EnumAttackBuff::Paralysis)
-			{
-				buffTimeToAdd = DeltaTime;
+				float buffTimeToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				BuffRemainedTime += buffTimeToAdd;
 				BuffAccumulatedTime += buffTimeToAdd;
 			}
-			// When it is knockback, we will neither add time nor touch the BuffPoints
+			// Set Character's IsBurned to true
+			DamagedCharacter->IsBurned = true;
+			if (DamagedCharacter->GetNetMode() == NM_ListenServer)
+				DamagedCharacter->OnRep_IsBurned();
+			// Set Server_TheControllerApplyingLatestBurningBuff 
+			DamagedCharacter->Server_TheControllerApplyingLatestBurningBuff = AttackerController;
+		}		
+	}
+	
+	return true;
+}
+
+bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime)
+{	
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
+		return false;
+
+	/* Knockback */
+	if (AttackBuff == EnumAttackBuff::Knockback && AttackerController->GetPawn())
+	{
+		FVector AttackingDirection = AttackerController->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+		AttackingDirection.Normalize();
+		DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection;
+		float Knockback_MoveSpeed = 0.0f;
+		FString ParName = "";
+		ParName = "Knockback_MoveSpeed";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_Knockback_MoveSpeed";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		AttackingDirection.Z = 0.0f;
+		AttackingDirection *= Knockback_MoveSpeed;
+		DamagedCharacter->LaunchCharacter(AttackingDirection, true, false);
+	}
+	/* Paralysis */
+	else if (AttackBuff == EnumAttackBuff::Paralysis && AttackerController->GetPawn())
+	{
+		FVector Direction_TargetToAttacker = AttackerController->GetPawn()->GetActorLocation() - DamagedCharacter->GetActorLocation();
+		if (100.0f < Direction_TargetToAttacker.Length())
+		{
+			Direction_TargetToAttacker.Normalize();
+			float DragSpeedRatio = 0.0f;
+			FString ParName = "Paralysis_DragSpeedRatio";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+
+			//DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
+			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
 		}
-	}	
-	DamagedCharacter->ActByBuff_PerDamage(DeltaTime);
+	}
 	return true;
 }
 

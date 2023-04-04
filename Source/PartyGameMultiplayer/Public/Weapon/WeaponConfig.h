@@ -46,7 +46,8 @@ private:
 		{"Taser", "Taser_Socket"},
 		{"Alarmgun", "Alarmgun_Socket"},
 		{"Bomb", "Bomb_Socket"},
-		{"Cannon", "Cannon_Socket"}
+		{"Cannon", "Cannon_Socket"},
+		{"Shell", "Shell_Socket"}
 	};
 
 	std::map<FString, EnumWeaponType> CombineWeaponIndex{
@@ -77,11 +78,10 @@ private:
 		{EnumWeaponType::Taser, 1},
 		{EnumWeaponType::Alarmgun, 4},
 		{EnumWeaponType::Bomb, 0},
-		{EnumWeaponType::Cannon, 4}
+		{EnumWeaponType::Cannon, 4},
+		{EnumWeaponType::Shell, 1}
 	};
 
 private:
 };
 
-// init static member
-WeaponConfig* WeaponConfig::Instance = nullptr;

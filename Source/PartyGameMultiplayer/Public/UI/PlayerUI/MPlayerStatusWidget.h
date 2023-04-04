@@ -44,7 +44,9 @@ public:
 
 	// Skill Information
 	UFUNCTION()
-	void SkillUIUpdate(SkillType UseSkill, float percentage);
+	void OnSkillUse(SkillType UseSkill, float CoolDownTotalTime);
+	UFUNCTION()
+	void SkillUIOpacityUpdate(SkillType UseSkill, float percentage);
 
 protected:
 	// Player Information

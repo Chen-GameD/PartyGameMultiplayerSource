@@ -35,10 +35,10 @@ AProjectileCannon::AProjectileCannon()
 		CannonMesh->SetRelativeScale3D(FVector(8.0f, 8.0f, 8.0f));
 	}
 
-	ProjectileMovementComponent->InitialSpeed = 700.0f;
-	ProjectileMovementComponent->MaxSpeed = 700.0f;
+	ProjectileMovementComponent->InitialSpeed = 900.0f;
+	ProjectileMovementComponent->MaxSpeed = 900.0f;
 	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->ProjectileGravityScale = 0.9f;
+	ProjectileMovementComponent->ProjectileGravityScale = 1.5f;
 
 	HasAppliedRadialDamage = false;
 }
@@ -106,6 +106,8 @@ void AProjectileCannon::OnProjectileOverlapBegin(class UPrimitiveComponent* Over
 
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
+	// Apply knockback buff
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
 
 	// Cannon's Range Damage will be delayed
 	//ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
