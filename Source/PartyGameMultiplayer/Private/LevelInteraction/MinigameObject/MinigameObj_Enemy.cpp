@@ -42,6 +42,9 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 
 	RisingSpeed = 100.0f;
 	RisingTargetHeight = 100.0f;
+
+	DropWeaponDelay = 1.0f;
+	RespawnDelay = 5.0f;
 }
 
 
@@ -128,11 +131,6 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		OnRep_CurrentHealth();
 	if (CurrentHealth <= 0)
 	{
-		/*if (SkeletalMesh)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Server"));
-			SkeletalMesh->DestroyComponent();
-		}*/
 		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
 		{
 			killerPS->addScore(ScoreCanGet);
@@ -148,18 +146,22 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 void AMinigameObj_Enemy::Server_WhenDead()
 {
 	// Drop the Big Weapon
-	FVector spawnLocation = Server_SpawnBigWeaponLocation;
-	FRotator spawnRotation = Server_SpawnBigWeaponRotation;
-	FActorSpawnParameters spawnParameters;
-	spawnParameters.Instigator = nullptr;
-	spawnParameters.Owner = nullptr;
-	auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+	FTimerHandle DropWeaponTimerHandle;
+	GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
+		{
+			FVector spawnLocation = Server_SpawnBigWeaponLocation;
+			FRotator spawnRotation = Server_SpawnBigWeaponRotation;
+			FActorSpawnParameters spawnParameters;
+			spawnParameters.Instigator = nullptr;
+			spawnParameters.Owner = nullptr;
+			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+		}, DropWeaponDelay, false);
 
-	// Server or NetMultiCast/OnRep_CurrentHealth: genrate a new little crab and walk into the ocean.
+	// TODO: Server or NetMultiCast/OnRep_CurrentHealth: genrate a new little crab and walk into the ocean.
 
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;
-	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, 5, false);
+	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, RespawnDelay, false);
 }
 
 void AMinigameObj_Enemy::BeginPlay()
@@ -179,10 +181,14 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 
 	if (CurrentHealth <= 0)
 	{
-		// HideCurrentCrab
-		SetActorEnableCollision(false);
-		SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-		FollowWidget->SetVisibility(false);
+		// HideCrab
+		FTimerHandle HideCrabTimerHandle;
+		GetWorldTimerManager().SetTimer(HideCrabTimerHandle, [this]
+			{
+				SetActorEnableCollision(false);
+				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+				FollowWidget->SetVisibility(false);
+			}, DropWeaponDelay, false);
 
 		// TODO: generate vfx& sfx
 		

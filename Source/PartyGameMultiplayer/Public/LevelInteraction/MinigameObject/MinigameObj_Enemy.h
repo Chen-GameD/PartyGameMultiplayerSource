@@ -40,12 +40,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
 
+	// Spawn related
+	// ===========================
 	FVector Server_SpawnBigWeaponLocation;
 	FRotator Server_SpawnBigWeaponRotation;
-
 	bool IsRisingFromSand;
 	float RisingTargetHeight;
 	float RisingSpeed;
+
+	// Death related
+	// ===========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float DropWeaponDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float RespawnDelay;
 
 protected:
 private:

@@ -15,6 +15,7 @@ class PARTYGAMEMULTIPLAYER_API AWeaponBlower : public ABaseWeapon
 public:
 	AWeaponBlower();
 	virtual void Tick(float DeltaTime) override;
+	virtual void AttackStart(float AttackTargetDistance) override;
 protected:
 private:
 

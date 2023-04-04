@@ -76,3 +76,39 @@ void AWeaponBlower::Tick(float DeltaTime)
 		}
 	}
 }
+
+void AWeaponBlower::AttackStart(float AttackTargetDistance)
+{
+	if (bAttackOn || !GetOwner())
+		return;
+
+	// If the weapon has cd
+	if (0 < CD_MaxEnergy)
+	{
+		if (AttackType == EnumAttackType::Constant)
+		{
+			if (CD_LeftEnergy <= 0)
+				return;
+		}
+		else
+		{
+			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+				CD_LeftEnergy -= CD_MinEnergyToAttak;
+			else
+				return;
+		}
+	}
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_bAttackOn();
+	ApplyDamageCounter = 0;
+
+	float ApplyDamageAndKnockbackDelay = 0.25f;
+	FTimerHandle ApplyDamageAndKnockbackTimerHandle;
+	GetWorldTimerManager().SetTimer(ApplyDamageAndKnockbackTimerHandle, [this]
+		{
+			SetActorEnableCollision(true);
+		}, ApplyDamageAndKnockbackDelay, false);
+}
