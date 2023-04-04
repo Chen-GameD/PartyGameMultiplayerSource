@@ -24,6 +24,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_ChangeSpeed(float SpeedRatio);
 
+	// Sfx
+	// ==================================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallExplodeSfx();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;

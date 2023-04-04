@@ -56,7 +56,7 @@ void AProjectileCannon::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		if (0.5f <= TimePassed_SinceExplosion && !HasAppliedRadialDamage)
+		if (0.2f <= TimePassed_SinceExplosion && !HasAppliedRadialDamage)
 		{
 			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedRadialDamage = true;
@@ -81,6 +81,8 @@ void AProjectileCannon::OnRep_HasExploded()
 		ProjectileMovementComponent->StopMovementImmediately();
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	
+		CallExplodeSfx();
 	}
 }
 

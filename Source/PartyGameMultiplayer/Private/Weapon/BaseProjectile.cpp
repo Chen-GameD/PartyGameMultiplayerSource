@@ -187,6 +187,8 @@ void ABaseProjectile::OnRep_HasExploded()
 		ProjectileMovementComponent->StopMovementImmediately();		
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	
+		CallExplodeSfx();
 	}
 }
 
