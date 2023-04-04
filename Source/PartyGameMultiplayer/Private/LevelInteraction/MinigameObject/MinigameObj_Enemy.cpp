@@ -4,6 +4,7 @@
 
 #include "Components/WidgetComponent.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
@@ -34,6 +35,13 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	BigWeaponMesh->SetupAttachment(CrabMesh);
 	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
+	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
+	Explode_NC->SetupAttachment(CrabMesh);
+	Explode_NC->bAutoActivate = false;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);
+
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
 
@@ -43,7 +51,7 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	RisingSpeed = 100.0f;
 	RisingTargetHeight = 100.0f;
 
-	DropWeaponDelay = 1.0f;
+	DropWeaponDelay = 2.25f;
 	RespawnDelay = 5.0f;
 }
 
@@ -193,8 +201,14 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 				FollowWidget->SetVisibility(false);
 			}, DropWeaponDelay, false);
 
-		// TODO: generate vfx& sfx
-		
+		// Vfx
+		/*FVector SpawnLocation = GetActorLocation();
+		FRotator SpawnRotation = GetActorRotation();
+		FVector SpawnScale = FVector::One();
+		if (Explode_NS)
+			Explode_NC = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Explode_NS, SpawnLocation, SpawnRotation, SpawnScale);*/
+		if (Explode_NC)
+			Explode_NC->Activate();	
 	}
 
 	// Set UI: Health Bar
