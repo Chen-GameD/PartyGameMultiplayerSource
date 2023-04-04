@@ -649,12 +649,22 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	IsPickingWeapon = false;
 
+	// UI
+	// ======================================================================
+	// Set Inventory UI
 	if (GetNetMode() == NM_ListenServer)
-	{
 		SetTextureInUI();
+	// Set Tip Weapon UI
+	if (CurrentTouchedWeapon.Num() > 0)
+	{
+		if (!IsDead)
+			SetTipUI(true, CurrentTouchedWeapon[0]);
+		else
+			SetTipUI(false);
 	}
 
 	// Adjust the walking speed according to the holding weapon
+	// =================================================================================
 	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 	// Add Shellheal buff if holding any shells
 	int CntShellHeld = 0;
