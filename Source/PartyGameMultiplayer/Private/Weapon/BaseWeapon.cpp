@@ -499,6 +499,11 @@ void ABaseWeapon::OnRep_IsPickedUp()
 		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
 		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
 	}	
+
+	if (AttackOnEffect && AttackOnEffect->IsActive())
+	{
+		AttackOnEffect->Deactivate();
+	}
 }
 
 
