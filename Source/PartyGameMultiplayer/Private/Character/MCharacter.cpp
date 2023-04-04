@@ -23,6 +23,8 @@
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
 #include "Character/animUtils.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "M_PlayerState.h"
 
 #include "EngineUtils.h"
 #include "Character/MPlayerController.h"
@@ -201,6 +203,7 @@ void AMCharacter::CheckPlayerFollowWidgetTick()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ListenServer pawn's PlayerFollowWdiget is not ready!"));
 	}
 }
+
 #pragma endregion Constructor
 
 // Replicated Properties
@@ -1423,7 +1426,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			NetMulticast_CallGetHitVfx();
 			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 		}
-
+		
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1436,6 +1439,9 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			AttackerPS->addScore(5);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
+
+			// Broadcast function
+			BroadcastToAllController(EventInstigator, false);
 		}
 
 		return DamageTaken;
@@ -1837,8 +1843,8 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						AttackerPS->addScore(5);
 						AttackerPS->addKill(1);
 						MyPS->addDeath(1);
-						// TODO: broadcast burning kill
-
+						// Broadcast burning kill
+						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
 					}					
 				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
@@ -1940,6 +1946,45 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				}
 			}
 		}
+	}
+}
+
+void AMCharacter::BroadcastToAllController(AController* AttackController, bool IsFireBuff)
+{
+	AM_PlayerState* AttackerPS = AttackController->GetPlayerState<AM_PlayerState>();
+	AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+	// Broadcast burning kill
+	AMCharacter* AttackCharacter = Cast<AMCharacter>(AttackController->GetPawn());
+	UTexture2D* WeaponImage = nullptr;
+	// Get Weapon Image
+	if (AttackCharacter && !IsFireBuff)
+	{
+		if (AttackCharacter->CombineWeapon)
+		{
+			WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->LeftWeapon && AttackCharacter->RightWeapon && AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
+		{
+			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->LeftWeapon != nullptr && AttackCharacter->LeftWeapon->WeaponType != EnumWeaponType::Shell)
+		{
+			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->RightWeapon != nullptr && AttackCharacter->RightWeapon->WeaponType != EnumWeaponType::Shell)
+		{
+			WeaponImage = AttackCharacter->RightWeapon->WeaponImage_Broadcast;
+		}
+	}
+	else
+	{
+		// Fire Image
+		WeaponImage = FireImage;
+	}
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+		currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
 	}
 }
 

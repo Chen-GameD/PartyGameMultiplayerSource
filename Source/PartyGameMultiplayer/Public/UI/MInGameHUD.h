@@ -73,6 +73,9 @@ public:
 	// Initialize the game status UI content
 	UFUNCTION()
 	void InGame_InitGameStatusAndPlayerStatusWidgetContent();
+	// Broadcasting system
+	UFUNCTION()
+	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
 
 protected:
 	// In Game UI Class Ref

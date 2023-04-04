@@ -2,6 +2,8 @@
 
 
 #include "UI/PlayerUI/MGameStatusWidget.h"
+#include "SlateCore.h"
+
 
 #include <string>
 
@@ -52,4 +54,18 @@ void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoIm
 	MinigameInfoImage->SetBrushFromTexture(i_InfoImage);
 
 	ShowMinigameInfoAnimation();
+}
+
+void UMGameStatusWidget::UpdateAndShowBroadcastingInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage)
+{
+	KillerName->SetColorAndOpacity(FSlateColor(KillerTeamIndex == 1 ? Team1Color : Team2Color));
+	DeceasedName->SetColorAndOpacity(FSlateColor(DeceasedTeamIndex == 1 ? Team1Color : Team2Color));
+	KillerName->SetText(FText::FromString(i_KillerName));
+	DeceasedName->SetText(FText::FromString(i_DeceasedName));
+	WeaponImage->SetBrushFromTexture(i_WeaponImage);
+	BroadcastTimer = 0;
+	IsNeedShowBroadcast = true;
+	BroadcastCanvas->SetVisibility(ESlateVisibility::Visible);
+	BroadcastingAnimationEvent();
+	UpdateKillBoardInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 }

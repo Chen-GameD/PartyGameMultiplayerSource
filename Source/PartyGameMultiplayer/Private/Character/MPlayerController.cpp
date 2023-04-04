@@ -4,6 +4,7 @@
 #include "Character/MPlayerController.h"
 
 #include "EngineUtils.h"
+#include "M_PlayerState.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
@@ -91,6 +92,14 @@ void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDown
 	if (MyInGameHUD)
 	{
 		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
+	}
+}
+
+void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_BroadcastInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 	}
 }
 

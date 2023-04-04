@@ -73,9 +73,10 @@ public:
 	// InGame UI
 	UFUNCTION()
 	void UI_InGame_UpdateHealth(float percentage);
-
 	UFUNCTION()
 	void UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime);
+	UFUNCTION(Client, Reliable)
+	void UI_InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
 
 	// HUD getter
 	UFUNCTION(BlueprintCallable)

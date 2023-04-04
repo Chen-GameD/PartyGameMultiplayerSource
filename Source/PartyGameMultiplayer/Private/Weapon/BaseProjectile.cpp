@@ -19,6 +19,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "WaterBodyActor.h"
+#include "Net/UnrealNetwork.h"
 
 
 ABaseProjectile::ABaseProjectile()
