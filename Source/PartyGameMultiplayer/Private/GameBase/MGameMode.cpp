@@ -80,7 +80,8 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 		
 		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
-		MyPlayerState->SetPlayerNameFromUsername();
+		MyPlayerState->Client_SetPlayerNameFromGameInstance();
+		MyPlayerState->Client_SetPlayerSkinFromGameInstance();
 		CurrentPlayerNum++;
 
 		if (NewPlayer->IsLocalPlayerController())
