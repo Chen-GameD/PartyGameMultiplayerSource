@@ -31,6 +31,7 @@
 #include "Character/CursorHitPlane.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
 
 // Constructor
@@ -1081,6 +1082,9 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
 	SetTipUI(false);
+	//
+	// GetMesh()->SetSimulatePhysics(true);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 // Multicast respawn result, reset all kinds of variables
@@ -1099,6 +1103,22 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
 	}
+	// GetMesh()->SetSimulatePhysics(false);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// GetMesh()->AlwaysLoadOnClient = true;
+	// GetMesh()->AlwaysLoadOnServer = true;
+	// GetMesh()->bOwnerNoSee = false;
+	// GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+	// GetMesh()->bCastDynamicShadow = true;
+	// GetMesh()->bAffectDynamicIndirectLighting = true;
+	// GetMesh()->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	// GetMesh()->SetupAttachment(GetCapsuleComponent());
+	// static FName MeshCollisionProfileName(TEXT("CharacterMesh"));
+	// GetMesh()->SetCollisionProfileName(MeshCollisionProfileName);
+	// GetMesh()->SetGenerateOverlapEvents(false);
+	// GetMesh()->SetCanEverAffectNavigation(false);
+	//
+	// SetPlayerSkin();
 }
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
