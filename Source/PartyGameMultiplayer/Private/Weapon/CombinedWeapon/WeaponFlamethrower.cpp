@@ -80,3 +80,40 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 		}
 	}
 }
+
+void AWeaponFlamethrower::AttackStart(float AttackTargetDistance)
+{
+	if (bAttackOn || !GetOwner())
+		return;
+
+	// If the weapon has cd
+	if (0 < CD_MaxEnergy)
+	{
+		if (AttackType == EnumAttackType::Constant)
+		{
+			if (CD_LeftEnergy <= 0)
+				return;
+		}
+		else
+		{
+			if (CD_MinEnergyToAttak <= CD_LeftEnergy)
+				CD_LeftEnergy -= CD_MinEnergyToAttak;
+			else
+				return;
+		}
+	}
+
+	bAttackOn = true;
+	// Listen server
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_bAttackOn();
+	ApplyDamageCounter = 0;
+
+	float ApplyDamageAndKnockbackDelay = 0.05f;
+	FTimerHandle ApplyDamageAndKnockbackTimerHandle;
+	GetWorldTimerManager().SetTimer(ApplyDamageAndKnockbackTimerHandle, [this]
+		{
+			if(bAttackOn)
+				SetActorEnableCollision(true);
+		}, ApplyDamageAndKnockbackDelay, false);
+}

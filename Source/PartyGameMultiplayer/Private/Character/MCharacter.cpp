@@ -96,9 +96,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsAllowDash = true;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-	DashDistance = 200.0f;
+	DashDistance = 300.0f;
 	DashTime = 0.2f;
-	DashSpeed = DashDistance / DashTime;
 	DashCoolDown = 5.0f;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
@@ -853,7 +852,8 @@ void AMCharacter::Server_Dash_Implementation()
 		}
 
 		// Dash implement
-		NetMulticast_AdjustMaxWalkSpeed(DashSpeed/OriginalMaxWalkSpeed);
+		float DashSpeed = DashDistance / DashTime;
+		NetMulticast_AdjustMaxWalkSpeed(DashSpeed /OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
 		GetWorld()->GetTimerManager().SetTimer(DashingTimer, this, &AMCharacter::RefreshDash, DashTime, false);
@@ -1698,13 +1698,13 @@ void AMCharacter::Tick(float DeltaTime)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with buff
-		ActByBuff_PerTick(DeltaTime);
+		ActByBuff_PerTick(DeltaTime);		
 	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		// Effect Land/Jump
+		// Vfx Land/Jump
 		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
 		if (oldIsOnGround != IsOnGround)
@@ -1727,7 +1727,7 @@ void AMCharacter::Tick(float DeltaTime)
 		else
 			Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 
-		// EffectRun
+		// Vfx Run
 		if (OriginalMaxWalkSpeed * 0.15f < GetCharacterMovement()->Velocity.Size())
 		{
 			if (IsOnGround)
@@ -1750,6 +1750,20 @@ void AMCharacter::Tick(float DeltaTime)
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
 			}			
+		}
+
+		// Vfx (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
+		if (IsHealing)
+		{
+			// Activate VFX
+			if (EffectHeal && !EffectHeal->IsActive())
+				EffectHeal->Activate();
+		}
+		else
+		{
+			// Deactivate VFX
+			if (EffectHeal && EffectHeal->IsActive())
+				EffectHeal->Deactivate();
 		}
 	}
 

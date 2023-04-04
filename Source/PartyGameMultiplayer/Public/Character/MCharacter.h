@@ -419,18 +419,15 @@ protected:
 
 	// Action
 	bool IsOnGround;
+	float OriginalMaxWalkSpeed;
 	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
 	bool IsAllowDash;
-	UPROPERTY(EditAnywhere, Category = "Server_Dash")
+	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashDistance;
-	UPROPERTY(EditAnywhere, Category = "Server_Dash")
+	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashTime;
-	UPROPERTY(EditAnywhere, Category = "Server_Dash")
-	float OriginalMaxWalkSpeed;
-	UPROPERTY(EditAnywhere, Category = "Server_Dash")
-	float DashSpeed;
-	UPROPERTY(EditAnywhere, Category = "Server_Dash")
+	UPROPERTY(EditAnywhere, Category = "Dash")
 	float DashCoolDown;
 	FTimerHandle DashingTimer;
 

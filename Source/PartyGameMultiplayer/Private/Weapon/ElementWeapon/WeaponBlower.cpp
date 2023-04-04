@@ -109,6 +109,7 @@ void AWeaponBlower::AttackStart(float AttackTargetDistance)
 	FTimerHandle ApplyDamageAndKnockbackTimerHandle;
 	GetWorldTimerManager().SetTimer(ApplyDamageAndKnockbackTimerHandle, [this]
 		{
-			SetActorEnableCollision(true);
+			if (bAttackOn)
+				SetActorEnableCollision(true);
 		}, ApplyDamageAndKnockbackDelay, false);
 }
