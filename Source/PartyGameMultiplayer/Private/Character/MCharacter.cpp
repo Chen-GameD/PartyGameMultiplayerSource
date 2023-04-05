@@ -145,6 +145,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
 
 	IsInvincible = false;
+	InvincibleTimer = 0;
+	InvincibleMaxTime = 10.0f;
 }
 
 void AMCharacter::Restart()
@@ -658,10 +660,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		if (IsInvincible)
 		{
 			IsInvincible = false;
-			if (GetNetMode() == NM_ListenServer)
-				OnRep_IsInvincible();
-		}
-			
+			InvincibleTimer = 0;
+		}			
 	}
 
 	// UI
@@ -1114,8 +1114,7 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
 		IsInvincible = true;
-		if (GetNetMode() == NM_ListenServer)
-			OnRep_IsInvincible();
+		InvincibleTimer = 0;
 	}
 }
 
@@ -1416,22 +1415,6 @@ void AMCharacter::OnRep_IsParalyzed()
 			if (pMInGameHUD)
 				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
 		}
-	}
-}
-
-void AMCharacter::OnRep_IsInvincible()
-{
-	if (IsInvincible)
-	{
-		// Vfx
-		if (EffectBurn && !EffectBurn->IsActive())
-			EffectBurn->Activate();
-	}
-	else
-	{
-		// Vfx
-		if (EffectBurn && EffectBurn->IsActive())
-			EffectBurn->Deactivate();
 	}
 }
 
@@ -1743,6 +1726,17 @@ void AMCharacter::BeginPlay()
 void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (IsInvincible)
+	{
+		InvincibleTimer += DeltaTime;
+		if (InvincibleMaxTime < InvincibleTimer)
+		{
+			InvincibleTimer = 0;
+			if (GetLocalRole() == ROLE_Authority)
+				IsInvincible = false;			
+		}
+	}		
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)

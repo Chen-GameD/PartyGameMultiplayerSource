@@ -162,8 +162,6 @@ public:
 		void OnRep_IsBurned();
 	UFUNCTION()
 		void OnRep_IsParalyzed();
-	UFUNCTION()
-		void OnRep_IsInvincible();
 	UFUNCTION(Client, Reliable)
 		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
 
@@ -395,8 +393,10 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
-	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
+	UPROPERTY(Replicated)
 		bool IsInvincible;
+	float InvincibleTimer;
+	float InvincibleMaxTime;
 	
 	// Effects
 	// =============================
