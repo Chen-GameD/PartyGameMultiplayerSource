@@ -982,19 +982,6 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	//if (EffectGetHit && !EffectGetHit->IsActive())
-	//{
-	//	EffectGetHit->Activate();
-	//	// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
-	//	// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-	//	float Delay = 0.1f;
-	//	FTimerHandle timerHandle;
-	//	GetWorldTimerManager().SetTimer(timerHandle, [this]
-	//		{
-	//			EffectGetHit->Deactivate();
-	//		}, Delay, false);
-	//}
-
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())

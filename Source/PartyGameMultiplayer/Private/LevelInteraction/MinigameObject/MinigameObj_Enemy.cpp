@@ -197,8 +197,10 @@ void AMinigameObj_Enemy::BeginPlay()
 	Super::BeginPlay();
 
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+	{
 		pFollowWidget->SetHealthByPercentage(1);
-	FollowWidget->SetVisibility(false);
+		FollowWidget->SetVisibility(false);
+	}	
 	SetActorEnableCollision(false);
 
 	IsRisingFromSand = true; 
