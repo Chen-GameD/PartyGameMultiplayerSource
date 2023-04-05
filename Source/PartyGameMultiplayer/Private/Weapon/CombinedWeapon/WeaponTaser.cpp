@@ -291,9 +291,13 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					bTargetCanBeAttacked = false;
 			}
 			// Check if this minigame can be attacked
-			else if(auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
+			else if(auto pMinigameEnemyBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
 			{
-	
+				if (!ADamageManager::CanApplyDamageToEnemyCrab(pMinigameEnemyBeingHit->SpecificWeaponClass, WeaponType))
+				{
+					bTargetCanBeAttacked = false;
+					pMinigameEnemyBeingHit->NetMulticast_ShowNoDamageHint(HoldingController, 0.5f * (pMinigameEnemyBeingHit->CrabCenterMesh->GetComponentLocation() + AttackDetectComponent->GetComponentLocation()));
+				}					
 			}
 
 			if (!bTargetCanBeAttacked)

@@ -19,7 +19,7 @@ public:
 	void Server_WhenDead();
 
 	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_CallShieldVfx(AController* pController);
+		void NetMulticast_ShowNoDamageHint(AController* pController, FVector HitLocation);
 
 protected:
 	virtual void BeginPlay() override;
@@ -32,12 +32,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class USkeletalMeshComponent* CrabMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* CrabCenterMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* CollisionMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* BigWeaponMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<class AActor> SpecificNoDamageHintActorClass;
 
 	// Vfx
 	// =========================================================
@@ -50,6 +54,8 @@ public:
 	// =============================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
+	float Local_ShowNoDamageHint_Interval;
+	float Local_ShowNoDamageHint_LastTime;
 
 	// Spawn related
 	// ===========================

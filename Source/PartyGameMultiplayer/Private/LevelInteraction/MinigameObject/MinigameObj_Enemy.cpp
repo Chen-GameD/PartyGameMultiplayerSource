@@ -10,10 +10,7 @@
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
-#include "Weapon/ElementWeapon/WeaponFork.h"
-#include "Weapon/ElementWeapon/WeaponLighter.h"
-#include "Weapon/ElementWeapon/WeaponBlower.h"
-#include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "UI/MinigameObjFollowWidget.h"
 
@@ -26,6 +23,10 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	CrabMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CrabMesh"));
 	CrabMesh->SetupAttachment(RootMesh);
 	CrabMesh->SetCollisionProfileName(TEXT("Custom"));
+
+	CrabCenterMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CrabCenterMesh"));
+	CrabCenterMesh->SetupAttachment(CrabMesh);
+	CrabCenterMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
 	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CollisionMesh"));
 	CollisionMesh->SetupAttachment(CrabMesh);
@@ -60,6 +61,9 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 
 	DropWeaponDelay = 2.25f;
 	RespawnDelay = 5.0f;
+
+	Local_ShowNoDamageHint_Interval = 1.0f;
+	Local_ShowNoDamageHint_LastTime = -1.0f;
 }
 
 
@@ -112,38 +116,9 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	}
 	if (WeaponType == EnumWeaponType::None)
 		return 0.0f;
-
-	bool beingAttackedByInvalidWeapon = false;
-	if (SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Fork && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Bomb)
-			beingAttackedByInvalidWeapon = true;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Lighter && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Cannon)
-			beingAttackedByInvalidWeapon = true;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Blower && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Alarmgun)
-			beingAttackedByInvalidWeapon = true;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Alarm && WeaponType != EnumWeaponType::Bomb && WeaponType != EnumWeaponType::Cannon && WeaponType != EnumWeaponType::Alarmgun)
-			beingAttackedByInvalidWeapon = true;
-	}
-	if (beingAttackedByInvalidWeapon)
-	{
-		AController* pController = nullptr;
-		if (auto p = Cast<ABaseWeapon>(DamageCauser))
-			pController = p->GetHoldingController();
-		if (auto p = Cast<ABaseProjectile>(DamageCauser))
-			pController = p->Controller;
-		NetMulticast_CallShieldVfx(pController);
+	
+	if (!ADamageManager::CanApplyDamageToEnemyCrab(SpecificWeaponClass, WeaponType))
 		return 0.0f;
-	}
 
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 	if (IsBigWeapon)
@@ -232,11 +207,23 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 }
 
 
-void AMinigameObj_Enemy::NetMulticast_CallShieldVfx_Implementation(AController* pController)
+void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AController* pController, FVector HitLocation)
 {
 	if (GetWorld()->GetFirstPlayerController() == pController)
 	{
-		if (Shield_NC)
-			Shield_NC->Activate();
+		if (Local_ShowNoDamageHint_LastTime < 0 || Local_ShowNoDamageHint_Interval < GetWorld()->TimeSeconds - Local_ShowNoDamageHint_LastTime)
+		{
+			FVector spawnLocation = HitLocation;
+			FRotator spawnRotation = FRotator::ZeroRotator;
+			AActor* NoDamageHintActor = GetWorld()->SpawnActor<AActor>(SpecificNoDamageHintActorClass, spawnLocation, spawnRotation);
+			FTimerHandle TimerHandle;
+			float NoDamageHintActor_LifeTime = Local_ShowNoDamageHint_Interval;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NoDamageHintActor]()
+				{
+					if (NoDamageHintActor)
+						NoDamageHintActor->Destroy();
+				}, NoDamageHintActor_LifeTime, false);
+			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
+		}		
 	}	
 }

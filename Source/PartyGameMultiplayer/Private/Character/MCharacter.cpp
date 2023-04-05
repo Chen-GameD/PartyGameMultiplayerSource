@@ -859,7 +859,7 @@ void AMCharacter::Dash()
 {
 	// Update UI
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	if (MyPlayerController && IsAllowDash)
+	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
 	}
@@ -873,12 +873,8 @@ void AMCharacter::Server_Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-
-		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
-		{
 			OnRep_IsAllowDash();
-		}
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
