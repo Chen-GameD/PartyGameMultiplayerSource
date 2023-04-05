@@ -64,6 +64,9 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 
 	Local_ShowNoDamageHint_Interval = 1.0f;
 	Local_ShowNoDamageHint_LastTime = -1.0f;
+
+	Server_CallGetHitEffects_MinInterval = 0.5f;
+	Server_LastTime_CallGetHitEffects = -1.0f;
 }
 
 
@@ -128,8 +131,17 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	else
 		return 0.0f;
 
-	CurrentHealth -= DamageTaken;
-	CurrentHealth = FMath::Max(CurrentHealth, 0);
+	// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
+	if (Server_LastTime_CallGetHitEffects < 0 || Server_CallGetHitEffects_MinInterval < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
+	{
+		//NetMulticast_CallGetHitSfx();
+		
+		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
+
+		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
+	}
+
+	CurrentHealth = FMath::Max(CurrentHealth - DamageTaken, 0);
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_CurrentHealth();
 	if (CurrentHealth <= 0)
@@ -138,7 +150,6 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		{
 			killerPS->addScore(ScoreCanGet);
 		}
-
 		Server_WhenDead();
 	}
 
@@ -160,7 +171,14 @@ void AMinigameObj_Enemy::Server_WhenDead()
 			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
 		}, DropWeaponDelay, false);
 
-	// TODO: Server or NetMultiCast/OnRep_CurrentHealth: genrate a new little crab and walk into the ocean.
+	// Spawn the little crab that walks into the ocean.
+	FTimerHandle SpawnCrabTimerHandle;
+	GetWorldTimerManager().SetTimer(SpawnCrabTimerHandle, [this]
+		{
+			FVector spawnLocation = GetActorLocation();
+			FRotator spawnRotation = GetActorRotation();
+			auto pLittleCrab = GetWorld()->SpawnActor<AActor>(SpecificLittleCrabClass, spawnLocation, spawnRotation);
+		}, DropWeaponDelay * 0.5f, false);
 
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;

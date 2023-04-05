@@ -42,6 +42,11 @@ public:
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificNoDamageHintActorClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TSubclassOf<class AActor> SpecificLittleCrabClass;
+
+	float Server_CallGetHitEffects_MinInterval;
+	float Server_LastTime_CallGetHitEffects;
 
 	// Vfx
 	// =========================================================
