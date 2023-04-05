@@ -1446,7 +1446,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
-			AttackerPS->addScore(5);
+			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
 
