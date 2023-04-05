@@ -393,6 +393,10 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
+	UPROPERTY(Replicated)
+		bool IsInvincible;
+	float InvincibleTimer;
+	float InvincibleMaxTime;
 	
 	// Effects
 	// =============================

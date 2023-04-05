@@ -4,6 +4,7 @@
 
 #include "Components/WidgetComponent.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
@@ -34,6 +35,20 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	BigWeaponMesh->SetupAttachment(CrabMesh);
 	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
+	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
+	Explode_NC->SetupAttachment(CrabMesh);
+	Explode_NC->bAutoActivate = false;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);
+
+	Shield_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShieldVfx"));
+	Shield_NC->SetupAttachment(CrabMesh);
+	Shield_NC->bAutoActivate = false;
+	/*static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);*/
+
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
 
@@ -43,7 +58,7 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	RisingSpeed = 100.0f;
 	RisingTargetHeight = 100.0f;
 
-	DropWeaponDelay = 1.0f;
+	DropWeaponDelay = 2.25f;
 	RespawnDelay = 5.0f;
 }
 
@@ -55,10 +70,12 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 	if (IsRisingFromSand && GetActorLocation().Z < RisingTargetHeight)
 	{
 		FVector TargetLocation = GetActorLocation() + FVector::UpVector * RisingSpeed * DeltaTime;
+		// The End
 		if (RisingTargetHeight <= TargetLocation.Z)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
+			SetActorEnableCollision(true);
 			IsRisingFromSand = false;
 
 			// Server
@@ -96,25 +113,36 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	if (WeaponType == EnumWeaponType::None)
 		return 0.0f;
 
+	bool beingAttackedByInvalidWeapon = false;
 	if (SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
 	{
 		if (WeaponType != EnumWeaponType::Fork && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Bomb)
-			return 0.0f;
+			beingAttackedByInvalidWeapon = true;
 	}
 	else if (SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
 	{
 		if (WeaponType != EnumWeaponType::Lighter && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Cannon)
-			return 0.0f;
+			beingAttackedByInvalidWeapon = true;
 	}
 	else if (SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
 	{
 		if (WeaponType != EnumWeaponType::Blower && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Alarmgun)
-			return 0.0f;
+			beingAttackedByInvalidWeapon = true;
 	}
 	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
 	{
 		if (WeaponType != EnumWeaponType::Alarm && WeaponType != EnumWeaponType::Bomb && WeaponType != EnumWeaponType::Cannon && WeaponType != EnumWeaponType::Alarmgun)
-			return 0.0f;
+			beingAttackedByInvalidWeapon = true;
+	}
+	if (beingAttackedByInvalidWeapon)
+	{
+		AController* pController = nullptr;
+		if (auto p = Cast<ABaseWeapon>(DamageCauser))
+			pController = p->GetHoldingController();
+		if (auto p = Cast<ABaseProjectile>(DamageCauser))
+			pController = p->Controller;
+		NetMulticast_CallShieldVfx(pController);
+		return 0.0f;
 	}
 
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
@@ -171,6 +199,7 @@ void AMinigameObj_Enemy::BeginPlay()
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(1);
 	FollowWidget->SetVisibility(false);
+	SetActorEnableCollision(false);
 
 	IsRisingFromSand = true; 
 }
@@ -190,11 +219,22 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 				FollowWidget->SetVisibility(false);
 			}, DropWeaponDelay, false);
 
-		// TODO: generate vfx& sfx
-		
+		// Vfx
+		if (Explode_NC)
+			Explode_NC->Activate();	
 	}
 
 	// Set UI: Health Bar
 	if(UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
+}
+
+
+void AMinigameObj_Enemy::NetMulticast_CallShieldVfx_Implementation(AController* pController)
+{
+	if (GetWorld()->GetFirstPlayerController() == pController)
+	{
+		if (Shield_NC)
+			Shield_NC->Activate();
+	}	
 }

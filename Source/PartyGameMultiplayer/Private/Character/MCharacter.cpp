@@ -144,6 +144,10 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
+
+	IsInvincible = false;
+	InvincibleTimer = 0;
+	InvincibleMaxTime = 10.0f;
 }
 
 void AMCharacter::Restart()
@@ -232,6 +236,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsHealing);
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
+	DOREPLIFETIME(AMCharacter, IsInvincible);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -649,6 +654,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 
 	IsPickingWeapon = false;
+
+	// Invincible Status
+	if (LeftWeapon || RightWeapon || CombineWeapon)
+	{
+		if (IsInvincible)
+		{
+			IsInvincible = false;
+			InvincibleTimer = 0;
+		}			
+	}
 
 	// UI
 	// ======================================================================
@@ -1102,6 +1117,8 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		IsInvincible = true;
+		InvincibleTimer = 0;
 	}
 	// GetMesh()->SetSimulatePhysics(false);
 	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -1433,7 +1450,7 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0)
+	if (DamageTaken <= 0 || IsInvincible)
 		return 0.0f;
 
 	if (!IsDead)
@@ -1466,7 +1483,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
-			AttackerPS->addScore(5);
+			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
 
@@ -1730,6 +1747,17 @@ void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsInvincible)
+	{
+		InvincibleTimer += DeltaTime;
+		if (InvincibleMaxTime < InvincibleTimer)
+		{
+			InvincibleTimer = 0;
+			if (GetLocalRole() == ROLE_Authority)
+				IsInvincible = false;			
+		}
+	}		
+
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -1788,7 +1816,7 @@ void AMCharacter::Tick(float DeltaTime)
 			}			
 		}
 
-		// Vfx (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
+		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
 		if (IsHealing)
 		{
 			// Activate VFX
@@ -1800,6 +1828,20 @@ void AMCharacter::Tick(float DeltaTime)
 			// Deactivate VFX
 			if (EffectHeal && EffectHeal->IsActive())
 				EffectHeal->Deactivate();
+		}
+
+		// Vfx Invincible
+		if (IsInvincible)
+		{
+			// Vfx
+			if (EffectBurn && !EffectBurn->IsActive())
+				EffectBurn->Activate();
+		}
+		else
+		{
+			// Vfx
+			if (EffectBurn && EffectBurn->IsActive())
+				EffectBurn->Deactivate();
 		}
 	}
 

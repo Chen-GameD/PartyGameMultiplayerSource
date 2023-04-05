@@ -17,6 +17,10 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void Server_WhenDead();
+
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallShieldVfx(AController* pController);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnRep_CurrentHealth() override;
@@ -34,6 +38,13 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
+
+	// Vfx
+	// =========================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Explode_NC;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Shield_NC;
 
 	// UI
 	// =============================
