@@ -143,6 +143,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
+
+	IsInvincible = false;
 }
 
 void AMCharacter::Restart()
@@ -231,6 +233,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsHealing);
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
+	DOREPLIFETIME(AMCharacter, IsInvincible);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -648,6 +651,18 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 
 	IsPickingWeapon = false;
+
+	// Invincible Status
+	if (LeftWeapon || RightWeapon || CombineWeapon)
+	{
+		if (IsInvincible)
+		{
+			IsInvincible = false;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_IsInvincible();
+		}
+			
+	}
 
 	// UI
 	// ======================================================================
@@ -1098,6 +1113,9 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		IsInvincible = true;
+		if (GetNetMode() == NM_ListenServer)
+			OnRep_IsInvincible();
 	}
 }
 
@@ -1401,6 +1419,22 @@ void AMCharacter::OnRep_IsParalyzed()
 	}
 }
 
+void AMCharacter::OnRep_IsInvincible()
+{
+	if (IsInvincible)
+	{
+		// Vfx
+		if (EffectBurn && !EffectBurn->IsActive())
+			EffectBurn->Activate();
+	}
+	else
+	{
+		// Vfx
+		if (EffectBurn && EffectBurn->IsActive())
+			EffectBurn->Deactivate();
+	}
+}
+
 void AMCharacter::SetCurrentHealth(float healthValue)
 {
 	if (GetLocalRole() == ROLE_Authority)
@@ -1413,7 +1447,7 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0)
+	if (DamageTaken <= 0 || IsInvincible)
 		return 0.0f;
 
 	if (!IsDead)
@@ -1768,7 +1802,7 @@ void AMCharacter::Tick(float DeltaTime)
 			}			
 		}
 
-		// Vfx (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
+		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
 		if (IsHealing)
 		{
 			// Activate VFX
@@ -1780,6 +1814,20 @@ void AMCharacter::Tick(float DeltaTime)
 			// Deactivate VFX
 			if (EffectHeal && EffectHeal->IsActive())
 				EffectHeal->Deactivate();
+		}
+
+		// Vfx Invincible
+		if (IsInvincible)
+		{
+			// Vfx
+			if (EffectBurn && !EffectBurn->IsActive())
+				EffectBurn->Activate();
+		}
+		else
+		{
+			// Vfx
+			if (EffectBurn && EffectBurn->IsActive())
+				EffectBurn->Deactivate();
 		}
 	}
 

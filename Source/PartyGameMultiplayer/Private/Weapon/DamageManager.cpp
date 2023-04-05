@@ -125,7 +125,7 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 
 bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd)
 {
-	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
@@ -189,7 +189,7 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 
 bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime)
 {	
-	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	/* Knockback */
