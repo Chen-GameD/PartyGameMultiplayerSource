@@ -23,12 +23,15 @@
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
 #include "Character/animUtils.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "M_PlayerState.h"
 
 #include "EngineUtils.h"
 #include "Character/MPlayerController.h"
 #include "Character/CursorHitPlane.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
 
 // Constructor
@@ -96,9 +99,8 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsAllowDash = true;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
-	DashDistance = 200.0f;
+	DashDistance = 300.0f;
 	DashTime = 0.2f;
-	DashSpeed = DashDistance / DashTime;
 	DashCoolDown = 5.0f;
 
 	//MeshRotation = GetMesh()->GetRelativeRotation();
@@ -136,7 +138,16 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectLand->SetupAttachment(RootComponent);
 	EffectLand->bAutoActivate = false;
 
+	Server_TheControllerApplyingLatestBurningBuff = nullptr;
+
 	Server_CanMove = true;
+
+	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
+	Server_LastTime_CallGetHitSfxVfx = -1.0f;
+
+	IsInvincible = false;
+	InvincibleTimer = 0;
+	InvincibleMaxTime = 10.0f;
 }
 
 void AMCharacter::Restart()
@@ -197,6 +208,7 @@ void AMCharacter::CheckPlayerFollowWidgetTick()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ListenServer pawn's PlayerFollowWdiget is not ready!"));
 	}
 }
+
 #pragma endregion Constructor
 
 // Replicated Properties
@@ -224,6 +236,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsHealing);
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
+	DOREPLIFETIME(AMCharacter, IsInvincible);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -476,27 +489,28 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (LeftWeapon)
 			{
-				// Drop off left weapon
+				LeftWeapon->NetMulticast_CallThrewAwaySfx();
+				// Drop off combine weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
-
 			}
 		}
 		else
 		{
 			if (RightWeapon)
 			{
-				// Drop off right weapon
+				RightWeapon->NetMulticast_CallThrewAwaySfx();
+				// Drop off combine weapon
 				if (CombineWeapon)
 				{
 					CombineWeapon->Destroy();
 					CombineWeapon = nullptr;
 				}
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft);				
 			}
 		}
 	}
@@ -521,6 +535,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
+			if (LeftWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			temp += "_Left";
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
@@ -529,12 +545,40 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
-			// Check if need combine
-			if (RightWeapon)
+			// Pick up left big weapon and drop right weapon and/or combine weapon
+			if (LeftWeapon->IsBigWeapon)
 			{
-				// Set isRightHeld Anim State
-				this->AnimState[6] = true;
-				OnCombineWeapon();
+				DropOffWeapon(false);
+				// Drop off combine weapon
+				if (CombineWeapon)
+				{
+					CombineWeapon->Destroy();
+					CombineWeapon = nullptr;
+				}
+				LeftWeapon->NetMulticast_CallPickedUpSfx();
+			}
+			// Pick up left regular weapon
+			else
+			{
+				// Check if need combine
+				if (RightWeapon)
+				{
+					if (RightWeapon->IsBigWeapon)
+					{
+						DropOffWeapon(false);
+					}
+					else
+					{
+						// Set isRightHeld Anim State
+						this->AnimState[6] = true;
+						OnCombineWeapon(isLeft);
+					}					
+				}
+				// no combining, pick up this weapon alone
+				else
+				{
+					LeftWeapon->NetMulticast_CallPickedUpSfx();
+				}
 			}
 
 			// Update Weapon Type Anim State
@@ -558,6 +602,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
 			temp += "_Right";
+			if (RightWeapon->IsBigWeapon)
+				temp = "Big" + temp;
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
@@ -565,13 +611,41 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
-			// Check if need combine
-			if (LeftWeapon)
+			// Pick up right big weapon and drop left weapon and/or combine weapon
+			if (RightWeapon->IsBigWeapon)
 			{
-				// Set isLeftHeld Anim State
-				this->AnimState[5] = true;
-				OnCombineWeapon();
+				DropOffWeapon(true);
+				// Drop off combine weapon
+				if (CombineWeapon)
+				{
+					CombineWeapon->Destroy();
+					CombineWeapon = nullptr;
+				}
+				RightWeapon->NetMulticast_CallPickedUpSfx();
 			}
+			// Pick up right regular weapon
+			else
+			{
+				// Check if need combine
+				if (LeftWeapon)
+				{
+					if (LeftWeapon->IsBigWeapon)
+					{
+						DropOffWeapon(true);
+					}
+					else
+					{
+						// Set isLeftHeld Anim State
+						this->AnimState[5] = true;
+						OnCombineWeapon(isLeft);
+					}					
+				}
+				// no combining, pick up this weapon alone
+				else
+				{
+					RightWeapon->NetMulticast_CallPickedUpSfx();
+				}
+			}			
 
 			// Update Weapon Type Anim State
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
@@ -581,12 +655,32 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	IsPickingWeapon = false;
 
-	if (GetNetMode() == NM_ListenServer)
+	// Invincible Status
+	if (LeftWeapon || RightWeapon || CombineWeapon)
 	{
+		if (IsInvincible)
+		{
+			IsInvincible = false;
+			InvincibleTimer = 0;
+		}			
+	}
+
+	// UI
+	// ======================================================================
+	// Set Inventory UI
+	if (GetNetMode() == NM_ListenServer)
 		SetTextureInUI();
+	// Set Tip Weapon UI
+	if (CurrentTouchedWeapon.Num() > 0)
+	{
+		if (!IsDead)
+			SetTipUI(true, CurrentTouchedWeapon[0]);
+		else
+			SetTipUI(false);
 	}
 
 	// Adjust the walking speed according to the holding weapon
+	// =================================================================================
 	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
 	// Add Shellheal buff if holding any shells
 	int CntShellHeld = 0;
@@ -680,7 +774,7 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 	}
 }
 
-void AMCharacter::OnCombineWeapon()
+void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 {
 	if (IsDead)
 		return;
@@ -695,16 +789,24 @@ void AMCharacter::OnCombineWeapon()
 		}
 
 		TSubclassOf<ABaseWeapon> combineWeaponRef;
+		// can combine
 		if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
 		{
 			combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
 			isHoldingCombineWeapon = true;
 		}
+		// cannot combine
 		else
 		{
+			// 2 identical weapons or at least one of them is a shell
 			LeftWeapon->SetActorHiddenInGame(false);
-			RightWeapon->SetActorHiddenInGame(false);
+			RightWeapon->SetActorHiddenInGame(false);			
 			isHoldingCombineWeapon = false;
+			// Sfx
+			if(bJustPickedLeft)
+				LeftWeapon->NetMulticast_CallPickedUpSfx();
+			else
+				RightWeapon->NetMulticast_CallPickedUpSfx();
 			return;
 		}
 
@@ -717,6 +819,7 @@ void AMCharacter::OnCombineWeapon()
 			CombineWeapon->WeaponType == EnumWeaponType::Cannon ||
 			CombineWeapon->WeaponType == EnumWeaponType::Alarmgun);
 		CombineWeapon->GetPickedUp(this);
+		CombineWeapon->NetMulticast_CallPickedUpSfx();
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
 
 		//Hide left and right weapon
@@ -756,7 +859,7 @@ void AMCharacter::Dash()
 {
 	// Update UI
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	if (MyPlayerController && IsAllowDash)
+	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
 	}
@@ -770,15 +873,12 @@ void AMCharacter::Server_Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-
-		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
-		{
 			OnRep_IsAllowDash();
-		}
 
 		// Dash implement
-		NetMulticast_AdjustMaxWalkSpeed(DashSpeed/OriginalMaxWalkSpeed);
+		float DashSpeed = DashDistance / DashTime;
+		NetMulticast_AdjustMaxWalkSpeed(DashSpeed /OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
 		GetWorld()->GetTimerManager().SetTimer(DashingTimer, this, &AMCharacter::RefreshDash, DashTime, false);
@@ -878,19 +978,6 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	//if (EffectGetHit && !EffectGetHit->IsActive())
-	//{
-	//	EffectGetHit->Activate();
-	//	// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
-	//	// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-	//	float Delay = 0.1f;
-	//	FTimerHandle timerHandle;
-	//	GetWorldTimerManager().SetTimer(timerHandle, [this]
-	//		{
-	//			EffectGetHit->Deactivate();
-	//		}, Delay, false);
-	//}
-
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())
@@ -906,6 +993,9 @@ void AMCharacter::OnHealthUpdate()
 
 	if (IsDead)
 		return;
+
+	if (CurrentHealth <= 0)
+		CallDeathSfx();
 
 	//Client-specific functionality
 	if (IsLocallyControlled())
@@ -990,6 +1080,9 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
 	SetTipUI(false);
+	//
+	// GetMesh()->SetSimulatePhysics(true);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 // Multicast respawn result, reset all kinds of variables
@@ -1007,7 +1100,25 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		IsInvincible = true;
+		InvincibleTimer = 0;
 	}
+	// GetMesh()->SetSimulatePhysics(false);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// GetMesh()->AlwaysLoadOnClient = true;
+	// GetMesh()->AlwaysLoadOnServer = true;
+	// GetMesh()->bOwnerNoSee = false;
+	// GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+	// GetMesh()->bCastDynamicShadow = true;
+	// GetMesh()->bAffectDynamicIndirectLighting = true;
+	// GetMesh()->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	// GetMesh()->SetupAttachment(GetCapsuleComponent());
+	// static FName MeshCollisionProfileName(TEXT("CharacterMesh"));
+	// GetMesh()->SetCollisionProfileName(MeshCollisionProfileName);
+	// GetMesh()->SetGenerateOverlapEvents(false);
+	// GetMesh()->SetCanEverAffectNavigation(false);
+	//
+	// SetPlayerSkin();
 }
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
@@ -1067,12 +1178,12 @@ void AMCharacter::SetPlayerNameUIInformation()
 void AMCharacter::SetPlayerSkin()
 {
 	// TODO
-	UEOSGameInstance* gameInstance = Cast<UEOSGameInstance>(GetGameInstance());
-	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection,
-		CharacterMatParamNameArray[gameInstance->characterIndex], gameInstance->colorPicked);
-	gameInstance->colorPicked;
-
-	GetMesh()->SetSkeletalMesh(CharacterBPArray[gameInstance->characterIndex]);
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+	if (MyPlayerState)
+	{
+		UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, CharacterMatParamNameArray[MyPlayerState->characterIndex], MyPlayerState->colorPicked);
+		GetMesh()->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+	}
 }
 
 void AMCharacter::InitFollowWidget()
@@ -1198,12 +1309,15 @@ void AMCharacter::OnRep_IsAllowDash()
 {
 	if (!IsAllowDash)
 	{
+		// Vfx
 		if (EffectDash)
 		{
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
 		}
+		// Sfx
+		CallDashSfx();
 	}
 }
 
@@ -1227,9 +1341,12 @@ void AMCharacter::OnRep_IsBurned()
 {
 	if (IsBurned)
 	{
-		// Activate VFX
+		// Vfx
 		if (EffectBurn && !EffectBurn->IsActive())
 			EffectBurn->Activate();
+
+		// Sfx
+		CallBurningBuffStartSfx();
 
 		// Toggle on Character's Burning buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1244,9 +1361,12 @@ void AMCharacter::OnRep_IsBurned()
 	}
 	else
 	{
-		// Deactivate VFX
+		// Vfx
 		if (EffectBurn && EffectBurn->IsActive())
 			EffectBurn->Deactivate();
+
+		// Sfx
+		CallBurningBuffStopSfx();
 
 		// Toggle off Character's Burning buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1263,9 +1383,12 @@ void AMCharacter::OnRep_IsParalyzed()
 {
 	if (IsParalyzed)
 	{
-		// Activate VFX
+		// Vfx
 		//if (EffectBurn && !EffectBurn->IsActive())
 		//	EffectBurn->Activate();
+
+		// Sfx
+		CallParalysisBuffStartSfx();
 
 		// Toggle on Character's Paralysis buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1280,9 +1403,12 @@ void AMCharacter::OnRep_IsParalyzed()
 	}
 	else
 	{
-		// Deactivate VFX
+		// Vfx
 		//if (EffectBurn && EffectBurn->IsActive())
 		//	EffectBurn->Deactivate();
+
+		// Sfx
+		CallParalysisBuffStopSfx();
 
 		// Toggle off Character's Paralysis buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1307,6 +1433,9 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	if (DamageTaken <= 0 || IsInvincible)
+		return 0.0f;
+
 	if (!IsDead)
 	{
 		// Check if it is the attack from self or teammates
@@ -1320,24 +1449,15 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
 			return 0.0f;
 
-		float damageApplied = CurrentHealth - DamageTaken;
-		SetCurrentHealth(damageApplied);
-
-		//EnumWeaponType WeaponType = EnumWeaponType::None;
-		//float DeltaTime_DamageCauser = 0;
-		//if (auto p = Cast<ABaseWeapon>(DamageCauser))
-		//{
-		//	WeaponType = p->WeaponType;
-		//	DeltaTime_DamageCauser = p->CurDeltaTime;
-		//}
-		//if (auto p = Cast<ABaseProjectile>(DamageCauser))
-		//{
-		//	WeaponType = p->WeaponType;
-		//	DeltaTime_DamageCauser = p->CurDeltaTime;
-		//}
-		//if (WeaponType == EnumWeaponType::None)
-		//	return false;
-		//ADamageManager::ApplyBuff(WeaponType, EventInstigator, DamageEvent.DamageTypeClass, this, DeltaTime_DamageCauser);
+		// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
+		if (Server_LastTime_CallGetHitSfxVfx < 0 || Server_CallGetHitSfxVfx_MinInterval <= GetWorld()->TimeSeconds - Server_LastTime_CallGetHitSfxVfx)
+		{
+			NetMulticast_CallGetHitSfx();
+			NetMulticast_CallGetHitVfx();
+			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
+		}
+		
+		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
 		if (isHoldingCombineWeapon && CombineWeapon && CombineWeapon->WeaponType == EnumWeaponType::Taser)
@@ -1346,12 +1466,15 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
-			AttackerPS->addScore(5);
+			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
+
+			// Broadcast function
+			BroadcastToAllController(EventInstigator, false);
 		}
 
-		return damageApplied;
+		return DamageTaken;
 	}
 
 	return 0.0f;
@@ -1400,45 +1523,53 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 		{
 			CharacterFollowWidget->ShowTip();
 			// Update Weapon UI
-			// Left
-			if (RightWeapon)
+			if (CurrentTouchWeapon->IsBigWeapon)
 			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
+				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
+			}
+			else
+			{
+				// Left
+				if (RightWeapon && !(RightWeapon->IsBigWeapon))
 				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->PickUpTextureUI_Q);
+					if (WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName()) >= 0)
+					{
+						TSubclassOf<ABaseWeapon> combineWeaponRef;
+						combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(CurrentTouchWeapon->GetWeaponName(), RightWeapon->GetWeaponName())];
+						ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+						CharacterFollowWidget->SetLeftWeaponTipUI(combineWeapon->PickUpTextureUI_Q);
+					}
+					else
+					{
+						CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
+					}
 				}
 				else
 				{
 					CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
 				}
-			}
-			else
-			{
-				CharacterFollowWidget->SetLeftWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_Q);
-			}
 
-			// Right
-			if (LeftWeapon)
-			{
-				if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+				// Right
+				if (LeftWeapon && !(LeftWeapon->IsBigWeapon))
 				{
-					TSubclassOf<ABaseWeapon> combineWeaponRef;
-					combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
-					ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
-					CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->PickUpTextureUI_E);
+					if (WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName()) >= 0)
+					{
+						TSubclassOf<ABaseWeapon> combineWeaponRef;
+						combineWeaponRef = weaponArray[WeaponConfig::GetInstance()->GetOnCombineClassRef(LeftWeapon->GetWeaponName(), CurrentTouchWeapon->GetWeaponName())];
+						ABaseWeapon* combineWeapon = Cast<ABaseWeapon>(combineWeaponRef->GetDefaultObject());
+						CharacterFollowWidget->SetRightWeaponTipUI(combineWeapon->PickUpTextureUI_E);
+					}
+					else
+					{
+						CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
+					}
 				}
 				else
 				{
 					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 				}
-			}
-			else
-			{
-				CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
-			}
+			}			
 		}
 		else
 		{
@@ -1599,17 +1730,28 @@ void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsInvincible)
+	{
+		InvincibleTimer += DeltaTime;
+		if (InvincibleMaxTime < InvincibleTimer)
+		{
+			InvincibleTimer = 0;
+			if (GetLocalRole() == ROLE_Authority)
+				IsInvincible = false;			
+		}
+	}		
+
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with buff
-		ActByBuff_PerTick(DeltaTime);
+		ActByBuff_PerTick(DeltaTime);		
 	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		// Effect Land/Jump
+		// Vfx Land/Jump
 		bool oldIsOnGround = IsOnGround;
 		IsOnGround = GetCharacterMovement()->IsMovingOnGround();
 		if (oldIsOnGround != IsOnGround)
@@ -1632,7 +1774,7 @@ void AMCharacter::Tick(float DeltaTime)
 		else
 			Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 
-		// EffectRun
+		// Vfx Run
 		if (OriginalMaxWalkSpeed * 0.15f < GetCharacterMovement()->Velocity.Size())
 		{
 			if (IsOnGround)
@@ -1655,6 +1797,34 @@ void AMCharacter::Tick(float DeltaTime)
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
 			}			
+		}
+
+		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
+		if (IsHealing)
+		{
+			// Activate VFX
+			if (EffectHeal && !EffectHeal->IsActive())
+				EffectHeal->Activate();
+		}
+		else
+		{
+			// Deactivate VFX
+			if (EffectHeal && EffectHeal->IsActive())
+				EffectHeal->Deactivate();
+		}
+
+		// Vfx Invincible
+		if (IsInvincible)
+		{
+			// Vfx
+			if (EffectBurn && !EffectBurn->IsActive())
+				EffectBurn->Activate();
+		}
+		else
+		{
+			// Vfx
+			if (EffectBurn && EffectBurn->IsActive())
+				EffectBurn->Deactivate();
 		}
 	}
 
@@ -1698,7 +1868,7 @@ void AMCharacter::Tick(float DeltaTime)
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
@@ -1715,7 +1885,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				FString ParName = "BurningDamagePerSecond";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-				SetCurrentHealth(CurrentHealth - DeltaTime * BurningBuffDamagePerSecond);
+				float TargetCurrentHealth = CurrentHealth - DeltaTime * BurningBuffDamagePerSecond;
+				SetCurrentHealth(TargetCurrentHealth);
+				if (TargetCurrentHealth <= 0.0f)
+				{
+					auto MyController = GetController();
+					if (Server_TheControllerApplyingLatestBurningBuff && MyController)
+					{
+						AM_PlayerState* AttackerPS = Server_TheControllerApplyingLatestBurningBuff->GetPlayerState<AM_PlayerState>();
+						AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
+						// Add Scores
+						AttackerPS->addScore(5);
+						AttackerPS->addKill(1);
+						MyPS->addDeath(1);
+						// Broadcast burning kill
+						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
+					}					
+				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
 			else
@@ -1818,6 +2004,45 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 	}
 }
 
+void AMCharacter::BroadcastToAllController(AController* AttackController, bool IsFireBuff)
+{
+	AM_PlayerState* AttackerPS = AttackController->GetPlayerState<AM_PlayerState>();
+	AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+	// Broadcast burning kill
+	AMCharacter* AttackCharacter = Cast<AMCharacter>(AttackController->GetPawn());
+	UTexture2D* WeaponImage = nullptr;
+	// Get Weapon Image
+	if (AttackCharacter && !IsFireBuff)
+	{
+		if (AttackCharacter->CombineWeapon)
+		{
+			WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->LeftWeapon && AttackCharacter->RightWeapon && AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
+		{
+			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->LeftWeapon != nullptr && AttackCharacter->LeftWeapon->WeaponType != EnumWeaponType::Shell)
+		{
+			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
+		}
+		else if (AttackCharacter->RightWeapon != nullptr && AttackCharacter->RightWeapon->WeaponType != EnumWeaponType::Shell)
+		{
+			WeaponImage = AttackCharacter->RightWeapon->WeaponImage_Broadcast;
+		}
+	}
+	else
+	{
+		// Fire Image
+		WeaponImage = FireImage;
+	}
+	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	{
+		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+		currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+	}
+}
+
 // void AMCharacter::FollowWidget_PerTick(float DeltaTime)
 // {
 // 	if (PlayerFollowWidget_NeedDisappear)
@@ -1839,3 +2064,15 @@ void AMCharacter::Client_MoveCharacter_Implementation(FVector MoveDirection, flo
 {
 	AddMovementInput(MoveDirection, SpeedRatio);
 }
+
+#pragma region Effects
+void AMCharacter::NetMulticast_CallGetHitSfx_Implementation()
+{
+	CallGetHitSfx();
+}
+
+void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
+{
+	EffectGetHit->Activate();
+}
+#pragma endregion Effects

@@ -80,7 +80,8 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 		
 		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
-		MyPlayerState->SetPlayerNameFromUsername();
+		MyPlayerState->Client_SetPlayerNameFromGameInstance();
+		MyPlayerState->Client_SetPlayerSkinFromGameInstance();
 		CurrentPlayerNum++;
 
 		if (NewPlayer->IsLocalPlayerController())
@@ -119,15 +120,15 @@ void AMGameMode::Logout(AController* Exiting)
 				else
 				{
 					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-					// check(IsValid(NetConnectionRef));
-					// UniqueNetIdRepl = NetConnectionRef->PlayerId;
+					check(IsValid(NetConnectionRef));
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
 				}
 			}
 			else
 			{
 				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				// check(IsValid(NetConnectionRef));
-				// UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				check(IsValid(NetConnectionRef));
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
 			}
 		
 			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();

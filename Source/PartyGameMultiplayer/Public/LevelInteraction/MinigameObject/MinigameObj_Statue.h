@@ -24,6 +24,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	USkeletalMeshComponent* GetSkeletalMesh();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStatueFinishedEvent();
+
 protected:
 	// only is called on server
 	UFUNCTION(Category = "Weapon")
@@ -32,6 +35,12 @@ protected:
 	virtual void OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	virtual void OnRep_CurrentHealth() override;
+
+public:
+	// UI
+	// =============================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* FollowWidget;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")

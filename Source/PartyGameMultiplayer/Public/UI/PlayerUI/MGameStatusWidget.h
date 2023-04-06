@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/CanvasPanel.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "MGameStatusWidget.generated.h"
@@ -36,6 +37,15 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowTimerAnimation();
 
+	// Broadcasting System
+	UFUNCTION()
+	void UpdateAndShowBroadcastingInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateKillBoardInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BroadcastingAnimationEvent();
+	
+
 protected:
 	// Team Score
 	UPROPERTY(meta = (BindWidget))
@@ -52,5 +62,25 @@ protected:
 	UTextBlock* MinigameInfo;
 	UPROPERTY(meta = (BindWidget))
 	UImage* MinigameInfoImage;
+
+	// Broadcasting System Information
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	UCanvasPanel* BroadcastCanvas;
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	UTextBlock* KillerName;
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* DeceasedName;
+	UPROPERTY(meta = (BindWidget))
+	UImage* WeaponImage;
+	UPROPERTY(BlueprintReadWrite)
+	FLinearColor Team1Color;
+	UPROPERTY(BlueprintReadWrite)
+	FLinearColor Team2Color;
+	UPROPERTY(BlueprintReadWrite)
+	float BroadcastTotalTime = 3;
+	UPROPERTY(BlueprintReadWrite)
+	float BroadcastTimer = 0;
+	UPROPERTY(BlueprintReadWrite)
+	bool IsNeedShowBroadcast = false;
 	
 };

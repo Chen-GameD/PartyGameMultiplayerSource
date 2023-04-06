@@ -23,7 +23,7 @@
 #include "Weapon/WeaponDataHelper.h"
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
-#include "LevelInteraction/MinigameMainObjective.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -32,6 +32,7 @@ ABaseWeapon::ABaseWeapon()
 
 	IsPickedUp = false;
 	HasBeenCombined = false;
+	IsBigWeapon = false;
 	WeaponType = EnumWeaponType::None;
 	WeaponName = "";
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
@@ -73,6 +74,13 @@ ABaseWeapon::ABaseWeapon()
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
+
+	if (WeaponMesh)
+	{
+		WeaponMeshDefaultRelativeLocation = WeaponMesh->GetRelativeLocation();
+		WeaponMeshDefaultRelativeRotation = WeaponMesh->GetRelativeRotation();
+		WeaponMeshDefaultRelativeScale = WeaponMesh->GetRelativeScale3D();
+	}
 }
 
 
@@ -148,10 +156,23 @@ void ABaseWeapon::Tick(float DeltaTime)
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
 					for (auto& Elem : AttackObjectMap)
-					{						
-						if (Cast<ACharacter>(Elem.Key) || Cast<AMinigameMainObjective>(Elem.Key))
+					{					
+						AActor* DamagedActor = Elem.Key;						
+						if (DamagedActor)
 						{
-							ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), Elem.Key, DeltaTime);
+							bool IsDamagedActorDead = false;
+							if (auto pMCharacter = Cast<AMCharacter>(DamagedActor))
+							{
+								if (pMCharacter->GetCurrentHealth() <= 0)
+									IsDamagedActorDead = true;
+							}
+							else if (auto pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(DamagedActor))
+							{
+								if (pMinigameObj_Enemy->GetCurrentHealth() <= 0)
+									IsDamagedActorDead = true;
+							}
+							if(!IsDamagedActorDead)
+								ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UDamageType::StaticClass(), DamagedActor, DeltaTime);
 						}
 					}
 				}				
@@ -162,7 +183,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
-		if (!IsPickedUp)
+		if (!IsPickedUp && !IsBigWeapon)
 		{
 			PlayAnimationWhenNotBeingPickedUp(DeltaTime);
 		}
@@ -272,9 +293,7 @@ void ABaseWeapon::AttackStart(float AttackTargetDistance)
 	bAttackOn = true;
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
-	{
 		OnRep_bAttackOn();
-	}
 	ApplyDamageCounter = 0;
 	
 	if (AttackType != EnumAttackType::SpawnProjectile)
@@ -451,40 +470,51 @@ void ABaseWeapon::OnRep_bAttackOn()
 {
 	if (bAttackOn)
 	{		
+		// Vfx
 		if(AttackOnEffect)
 			AttackOnEffect->Activate();
+		// Sfx
+		CallAttackStartSfx();
 	}
 	else
 	{
+		// Vfx
 		if (AttackOnEffect)
 			AttackOnEffect->Deactivate();
+		// Sfx
+		CallAttackStopSfx();
 	}
 }
 
 void ABaseWeapon::OnRep_bAttackOverlap()
 {
-	/*if (bAttackOverlap)
-	{
-		GenerateAttackHitEffect();		
-	}*/
 }
 
 void ABaseWeapon::OnRep_IsPickedUp()
 {
 	if (IsPickedUp)
 	{
+		// Vfx
 		if (HaloEffect_NSComponent && HaloEffect_NSComponent->IsActive())
 		{
 			HaloEffect_NSComponent->Deactivate();
 			HaloEffect_NSComponent->SetVisibility(false);
 		}
+
+		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
+		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
 	}
 	else
 	{		
-		TimePassed_SinceGetThrewAway = 0;
+		TimePassed_SinceGetThrewAway = 0;	
+		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
+		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
+	}	
+
+	if (AttackOnEffect && AttackOnEffect->IsActive())
+	{
+		AttackOnEffect->Deactivate();
 	}
-	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
-	WeaponMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
 }
 
 
@@ -497,10 +527,10 @@ void ABaseWeapon::OnRep_IsPickedUp()
 void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, 
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (IsPickedUp && GetOwner())
+	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameMainObjective>(OtherActor) )
+			Cast<AMinigameObj_Enemy>(OtherActor) )
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);
@@ -512,11 +542,14 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				OnRep_bAttackOverlap();
 			}
 
-			if (AttackType != EnumAttackType::Constant && ApplyDamageCounter == 0 && HoldingController)
+			if (AttackType != EnumAttackType::Constant)
 			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-				ApplyDamageCounter++;
+				if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
+				{
+					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ApplyDamageCounter++;
+				}				
 			}				
 		}
 	}
@@ -529,7 +562,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 	//if (IsPickedUp && GetOwner())
 	//{
 	//	if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-	//		Cast<AMinigameMainObjective>(OtherActor))
+	//		Cast<AMinigameObj_Enemy>(OtherActor))
 	//	{
 	//		if (AttackObjectMap.Contains(OtherActor))
 	//		{
@@ -595,3 +628,14 @@ void ABaseWeapon::SpawnProjectile(float AttackTargetDistance)
 }
 
 
+#pragma region Effects
+void ABaseWeapon::NetMulticast_CallPickedUpSfx_Implementation()
+{
+	CallPickedUpSfx();
+}
+
+void ABaseWeapon::NetMulticast_CallThrewAwaySfx_Implementation()
+{
+	CallThrewAwaySfx();
+}
+#pragma endregion Effects

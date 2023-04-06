@@ -22,6 +22,9 @@ AMinigameObj_Balloon::AMinigameObj_Balloon()
 	BlowUpEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BlowUpEffect"));
 	BlowUpEffect->SetupAttachment(RootMesh);
 	BlowUpEffect->bAutoActivate = false;
+
+	MaxHealth = 1200.0f;
+	CurrentHealth = MaxHealth;
 }
 
 float AMinigameObj_Balloon::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)

@@ -24,6 +24,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_ChangeSpeed(float SpeedRatio);
 
+	// Sfx
+	// ==================================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallExplodeSfx();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
@@ -41,6 +46,7 @@ private:
 // MEMBER VARIABLES
 public:
 	EnumWeaponType WeaponType;
+	bool IsBigWeapon;
 	class AController* Controller;
 	float CurDeltaTime;
 

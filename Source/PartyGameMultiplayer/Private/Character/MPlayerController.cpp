@@ -4,6 +4,7 @@
 #include "Character/MPlayerController.h"
 
 #include "EngineUtils.h"
+#include "M_PlayerState.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Character/MCharacter.h"
@@ -56,7 +57,7 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
 	{
-		GetPlayerState<AM_PlayerState>()->UpdateTeamIndex(i_TeamIndex);
+		GetPlayerState<AM_PlayerState>()->Server_UpdateTeamIndex(i_TeamIndex);
 	}
 }
 
@@ -64,7 +65,7 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
-	MyServerPlayerState->UpdatePlayerReadyState();
+	MyServerPlayerState->Server_UpdatePlayerReadyState();
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
@@ -91,6 +92,14 @@ void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDown
 	if (MyInGameHUD)
 	{
 		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
+	}
+}
+
+void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_BroadcastInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 	}
 }
 

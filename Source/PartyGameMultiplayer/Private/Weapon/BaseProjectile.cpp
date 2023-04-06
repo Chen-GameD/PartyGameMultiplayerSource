@@ -19,6 +19,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 #include "WaterBodyActor.h"
+#include "Net/UnrealNetwork.h"
 
 
 ABaseProjectile::ABaseProjectile()
@@ -126,6 +127,7 @@ void ABaseProjectile::BeginPlay()
 			return;
 		}
 		WeaponType = pWeapon->WeaponType;
+		IsBigWeapon = pWeapon->IsBigWeapon;
 		Controller = pWeapon->GetHoldingController();
 		if (!Controller)
 		{
@@ -133,11 +135,19 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
+		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
+	// Client
+	else
+	{
+		SetActorEnableCollision(false);
+	}
 
 	/* Assign member variables by map */
 	FString ParName = "";
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
+	if (IsBigWeapon)
+		WeaponName = "Big" + WeaponName;
 	// total time	
 	ParName = WeaponName + "_TotalTime";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains(ParName))
@@ -153,12 +163,6 @@ void ABaseProjectile::BeginPlay()
 	// Is constant damage
 	if (0.0f < TotalDamageTime)
 		bApplyConstantDamage = true;
-
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
-	}
 
 	// Client(Listen Server)
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
@@ -183,6 +187,8 @@ void ABaseProjectile::OnRep_HasExploded()
 		ProjectileMovementComponent->StopMovementImmediately();		
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	
+		CallExplodeSfx();
 	}
 }
 

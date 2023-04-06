@@ -14,8 +14,9 @@
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
-#include "LevelInteraction/MinigameMainObjective.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 #include "Character/MCharacter.h"
+#include "M_PlayerState.h"
 
 
 AWeaponTaser::AWeaponTaser()
@@ -122,9 +123,9 @@ void AWeaponTaser::Tick(float DeltaTime)
 						AttackStop();
 				}
 				// Stop attack when the MinigameMainObjective is dead
-				else if (AMinigameMainObjective* pMinigameMainObjective = Cast<AMinigameMainObjective>(Server_ActorBeingHit))
+				else if (AMinigameObj_Enemy* pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(Server_ActorBeingHit))
 				{
-					if (pMinigameMainObjective->GetCurrentHealth() <= 0)
+					if (pMinigameObj_Enemy->GetCurrentHealth() <= 0)
 						AttackStop();
 				}
 			}
@@ -264,7 +265,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 	if (IsPickedUp && GetOwner())
 	{
 		// if hit characters / minigame objects
-		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameMainObjective>(OtherActor))
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_Enemy>(OtherActor))
 		{
 			bool bTargetCanBeAttacked = true;
 			// Check if this character can be attacked
@@ -285,11 +286,18 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 						bTargetCanBeAttacked = false;
 					}
 				}
+				// if it hits an invincible character
+				if (pCharacterBeingHit->IsInvincible)
+					bTargetCanBeAttacked = false;
 			}
 			// Check if this minigame can be attacked
-			else if(auto pMiniGameObjectBeingHit = Cast<AMinigameMainObjective>(OtherActor))
+			else if(auto pMinigameEnemyBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
 			{
-	
+				if (!ADamageManager::CanApplyDamageToEnemyCrab(pMinigameEnemyBeingHit->SpecificWeaponClass, WeaponType))
+				{
+					bTargetCanBeAttacked = false;
+					pMinigameEnemyBeingHit->NetMulticast_ShowNoDamageHint(HoldingController, 0.5f * (pMinigameEnemyBeingHit->CrabCenterMesh->GetComponentLocation() + AttackDetectComponent->GetComponentLocation()));
+				}					
 			}
 
 			if (!bTargetCanBeAttacked)
@@ -306,7 +314,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
 					Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
 				}
-				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameMainObjective>(OtherActor))
+				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
 				{
 					Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
 					Server_ActorBeingHit_To_TaserFork_WhenHit *= 0.5f;
@@ -335,7 +343,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 		// if hits something other than characters and minigame objects
 		else
 		{			
-			// if hits weapon/projectiles, penetrate, otherwise(building, rocks, etc) pass through
+			// if hits weapon/projectiles, penetrate, otherwise(building, rocks, etc) goes back
 			if (!Cast<ABaseWeapon>(OtherActor) && !Cast<ABaseProjectile>(OtherActor))
 				AttackStop();
 		}

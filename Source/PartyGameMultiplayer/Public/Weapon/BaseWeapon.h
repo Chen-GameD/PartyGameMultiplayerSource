@@ -38,8 +38,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AController* GetHoldingController() const;
 
-	//// only on server, generate stuff like damage, buff and so on
-	//virtual void GenerateDamageLike(class AActor* DamagedActor, float DeltaTime = 0.0f);
+	// Effects
+	// ====================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallAttackStopSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallPickedUpSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallPickedUpSfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallThrewAwaySfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallThrewAwaySfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -84,6 +96,8 @@ private:
 public:
 	EnumWeaponType WeaponType;
 	EnumAttackType AttackType;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool IsBigWeapon;
 	bool IsCombineWeapon;  // if it is a combine type weapon or not
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "HoldingStatus")
 	bool HasBeenCombined; // if the weapon has been combined (to a combine type weapon)
@@ -95,6 +109,10 @@ public:
 	UTexture2D* PickUpTextureUI_E;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 	UTexture2D* PickUpTextureUI_Q;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Broadcast;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Message;
 	// Ele: short for Element
 	ABaseWeapon* EleWeapon_1;
 	ABaseWeapon* EleWeapon_2;
@@ -136,6 +154,10 @@ protected:
 		FRotator DisplayCaseRotation;
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
 		FVector DisplayCaseScale;
+
+	FVector WeaponMeshDefaultRelativeLocation;
+	FRotator WeaponMeshDefaultRelativeRotation;
+	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
 	int ApplyDamageCounter;

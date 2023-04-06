@@ -205,3 +205,11 @@ void AMInGameHUD::InGame_InitGameStatusAndPlayerStatusWidgetContent()
 	}
 	
 }
+
+void AMInGameHUD::InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage)
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->UpdateAndShowBroadcastingInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
+	}
+}

@@ -23,10 +23,11 @@
 
 AMinigameMainObjective::AMinigameMainObjective()
 {
-	MaxHealth = 1200.0f;
+	MaxHealth = 0.0f;
 	CurrentHealth = MaxHealth;
 
-	bReplicates = true;
+	CallGetHitSfxVfx_MinInterval = 0.25f;
+	LastTime_CallGetHitSfxVfx = -1.0f;
 }
 
 
@@ -42,10 +43,18 @@ void AMinigameMainObjective::BeginPlay()
 	Super::BeginPlay();
 }
 
-// client-only
 void AMinigameMainObjective::OnRep_CurrentHealth()
 {
-	
+	// Sfx
+	if (CurrentHealth <= 0)
+		CallDeathSfx();
+
+	// Call GetHit vfx & sfx (health can only be decreased)
+	if (LastTime_CallGetHitSfxVfx < 0 || CallGetHitSfxVfx_MinInterval <= GetWorld()->TimeSeconds - LastTime_CallGetHitSfxVfx)
+	{
+		CallGetHitSfx();
+		LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
+	}
 }
 
 void AMinigameMainObjective::StartToRespawnActor()
@@ -55,7 +64,7 @@ void AMinigameMainObjective::StartToRespawnActor()
 	{
 		MyGameMode->Server_RespawnMinigameObject();
 	}
-	AMinigameMainObjective::Destroy(true, true);
+	Destroy(true, true);
 }
 
 void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)

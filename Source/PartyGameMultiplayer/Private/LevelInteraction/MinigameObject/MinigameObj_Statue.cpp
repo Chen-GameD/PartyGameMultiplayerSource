@@ -5,12 +5,15 @@
 
 #include <string>
 
+#include "M_PlayerState.h"
 #include "Character/MPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Engine/StaticMeshActor.h"
 #include "GameBase/MGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
+#include "Components/WidgetComponent.h"
+#include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_Statue::AMinigameObj_Statue()
 {
@@ -24,6 +27,9 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	ShellOverlapComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ShellOverlapSphere"));
 	ShellOverlapComponent->SetupAttachment(RootMesh);
 	ShellOverlapComponent->SetSphereRadius(300, true);
+
+	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
+	FollowWidget->SetupAttachment(RootMesh);
 	
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
@@ -52,9 +58,14 @@ void AMinigameObj_Statue::BeginPlay()
 	// Client
 	else
 	{
-		// Disable some high-cost behaviors
-		SetActorEnableCollision(false);
+		// Cannot disable the collision(to improve performance), 
+		// because the server would correct client's position during collsion happening on the server, causing shaking in client's end.
+		//SetActorEnableCollision(false);
 	}
+
+	// UI
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(0);
 }
 
 USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
@@ -69,7 +80,9 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);
 		if (OverlapShell)
 		{
-			this->CurrentHealth--;
+			CurrentHealth--;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_CurrentHealth();
 			CurrentSocketIndex++;
 			
 			// Detect which player drop the shell
@@ -110,10 +123,6 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 			if (CurrentHealth <= 0)
 			{
 				IsCompleteBuild = true;
-				if (GetNetMode() == NM_ListenServer)
-				{
-					OnRep_CurrentHealth();
-				}
 
 				// Add Sculpture Complete Score
 				if (OverlapShell->GetPreHoldingController())
@@ -148,23 +157,16 @@ void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp,
 
 void AMinigameObj_Statue::OnRep_CurrentHealth()
 {
-	Super::OnRep_CurrentHealth();
-
 	if (CurrentHealth <= 0)
 	{
-		// if (SkeletalMesh)
-		// {
-		// 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Destroying MiniGameObjective's SkeletalMesh on Client"));
-		// 	SkeletalMesh->DestroyComponent();
-		// }
-		// if (BlowUpEffect)
-		// {
-		// 	BlowUpEffect->Activate();
-		// }
-		// EnableBlowUpGeometryCacheComponent();
-
 		// Destroy VFX & Effect
 		// TODO
-		
+		OnStatueFinishedEvent();
+
+		// Sfx
+		CallDeathSfx();
 	}
+
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
 }
