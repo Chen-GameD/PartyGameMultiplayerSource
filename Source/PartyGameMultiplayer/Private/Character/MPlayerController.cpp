@@ -57,7 +57,7 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
 	{
-		GetPlayerState<AM_PlayerState>()->UpdateTeamIndex(i_TeamIndex);
+		GetPlayerState<AM_PlayerState>()->Server_UpdateTeamIndex(i_TeamIndex);
 	}
 }
 
@@ -65,7 +65,7 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
-	MyServerPlayerState->UpdatePlayerReadyState();
+	MyServerPlayerState->Server_UpdatePlayerReadyState();
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)

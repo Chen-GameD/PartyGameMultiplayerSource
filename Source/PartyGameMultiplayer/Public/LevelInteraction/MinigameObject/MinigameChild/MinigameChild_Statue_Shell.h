@@ -35,7 +35,11 @@ public:
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Component")
-	UStaticMeshComponent* ShellMeshComponent;
+		UStaticMeshComponent* ShellMeshComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* ShellFly_NC;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* ShellInsert_NC;
 
 private:
 	float TimeElapsed = 0;

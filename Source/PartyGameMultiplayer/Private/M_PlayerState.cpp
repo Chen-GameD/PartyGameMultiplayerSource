@@ -9,7 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Matchmaking/EOSGameInstance.h"
 
-void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
+void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Name)
 {
 	PlayerNameString = i_Name;
 	FString PlayerNameMessage = FString::Printf(TEXT("SetPlayerState Player Name to ")) + PlayerNameString;
@@ -21,7 +21,7 @@ void AM_PlayerState::UpdatePlayerName_Implementation(const FString& i_Name)
 	}
 }
 
-void AM_PlayerState::UpdatePlayerReadyState_Implementation()
+void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()
 {
 	if (TeamIndex != 0)
 	{
@@ -42,7 +42,7 @@ void AM_PlayerState::UpdatePlayerReadyState_Implementation()
 }
 
 
-void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
+void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	// Quit from current team
@@ -104,10 +104,30 @@ void AM_PlayerState::UpdateTeamIndex_Implementation(int i_TeamIndex)
 	}
 }
 
-void AM_PlayerState::SetPlayerNameFromUsername_Implementation()
+void AM_PlayerState::Client_SetPlayerNameFromGameInstance_Implementation()
 {
 	PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
-	UpdatePlayerName(PlayerNameString);
+	Server_UpdatePlayerName(PlayerNameString);
+}
+
+void AM_PlayerState::Client_SetPlayerSkinFromGameInstance_Implementation()
+{
+	UEOSGameInstance* MyGameInstance = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()));
+	if (MyGameInstance)
+	{
+		Server_UpdatePlayerSkin(MyGameInstance->colorPicked, MyGameInstance->characterIndex);
+	}
+}
+
+void AM_PlayerState::Server_UpdatePlayerSkin_Implementation(FLinearColor i_ColorPicked, int i_CharacterIndex)
+{
+	colorPicked = i_ColorPicked;
+	characterIndex = i_CharacterIndex;
+
+	if (GetNetMode() == NM_ListenServer)
+	{
+		OnRep_PlayerSkinInformation();
+	}
 }
 
 void AM_PlayerState::OnRep_PlayerNameString()
@@ -174,6 +194,8 @@ void AM_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AM_PlayerState, PlayerNameString);
 	DOREPLIFETIME(AM_PlayerState, TeamIndex);
 	DOREPLIFETIME(AM_PlayerState, IsReady);
+	DOREPLIFETIME(AM_PlayerState, colorPicked);
+	DOREPLIFETIME(AM_PlayerState, characterIndex);
 }
 #pragma endregion Replicated Properties
 

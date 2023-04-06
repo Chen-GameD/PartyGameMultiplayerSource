@@ -31,6 +31,7 @@
 #include "Character/CursorHitPlane.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
 
 // Constructor
@@ -858,7 +859,7 @@ void AMCharacter::Dash()
 {
 	// Update UI
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	if (MyPlayerController && IsAllowDash)
+	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
 	}
@@ -872,12 +873,8 @@ void AMCharacter::Server_Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-
-		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
-		{
 			OnRep_IsAllowDash();
-		}
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
@@ -981,19 +978,6 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	//if (EffectGetHit && !EffectGetHit->IsActive())
-	//{
-	//	EffectGetHit->Activate();
-	//	// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
-	//	// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-	//	float Delay = 0.1f;
-	//	FTimerHandle timerHandle;
-	//	GetWorldTimerManager().SetTimer(timerHandle, [this]
-	//		{
-	//			EffectGetHit->Deactivate();
-	//		}, Delay, false);
-	//}
-
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())
@@ -1096,6 +1080,9 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
 	SetTipUI(false);
+	//
+	// GetMesh()->SetSimulatePhysics(true);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 }
 
 // Multicast respawn result, reset all kinds of variables
@@ -1116,6 +1103,22 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		IsInvincible = true;
 		InvincibleTimer = 0;
 	}
+	// GetMesh()->SetSimulatePhysics(false);
+	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// GetMesh()->AlwaysLoadOnClient = true;
+	// GetMesh()->AlwaysLoadOnServer = true;
+	// GetMesh()->bOwnerNoSee = false;
+	// GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
+	// GetMesh()->bCastDynamicShadow = true;
+	// GetMesh()->bAffectDynamicIndirectLighting = true;
+	// GetMesh()->PrimaryComponentTick.TickGroup = TG_PrePhysics;
+	// GetMesh()->SetupAttachment(GetCapsuleComponent());
+	// static FName MeshCollisionProfileName(TEXT("CharacterMesh"));
+	// GetMesh()->SetCollisionProfileName(MeshCollisionProfileName);
+	// GetMesh()->SetGenerateOverlapEvents(false);
+	// GetMesh()->SetCanEverAffectNavigation(false);
+	//
+	// SetPlayerSkin();
 }
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
@@ -1175,12 +1178,12 @@ void AMCharacter::SetPlayerNameUIInformation()
 void AMCharacter::SetPlayerSkin()
 {
 	// TODO
-	UEOSGameInstance* gameInstance = Cast<UEOSGameInstance>(GetGameInstance());
-	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection,
-		CharacterMatParamNameArray[gameInstance->characterIndex], gameInstance->colorPicked);
-	gameInstance->colorPicked;
-
-	GetMesh()->SetSkeletalMesh(CharacterBPArray[gameInstance->characterIndex]);
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+	if (MyPlayerState)
+	{
+		UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, CharacterMatParamNameArray[MyPlayerState->characterIndex], MyPlayerState->colorPicked);
+		GetMesh()->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+	}
 }
 
 void AMCharacter::InitFollowWidget()

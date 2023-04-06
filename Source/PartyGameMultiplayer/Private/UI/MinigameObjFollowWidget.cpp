@@ -7,7 +7,8 @@ void UMinigameObjFollowWidget::SetHealthByPercentage(float i_percentage)
 {
 	if (IsValid(HealthBar))
 	{
-		HealthBar->SetPercent(i_percentage);
+		//HealthBar->SetPercent(i_percentage);
+		SetHealthProgressBar(i_percentage);
 	}
 }
 
