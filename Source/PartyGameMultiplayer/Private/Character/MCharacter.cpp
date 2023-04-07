@@ -142,7 +142,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Server_CanMove = true;
 
-	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
+	Server_CallGetHitSfxVfx_MinInterval = 0.5f;
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
 
 	IsInvincible = false;
@@ -2067,5 +2067,6 @@ void AMCharacter::NetMulticast_CallGetHitSfx_Implementation()
 void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
 {
 	EffectGetHit->Activate();
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("EffectGetHit is called"));
 }
 #pragma endregion Effects
