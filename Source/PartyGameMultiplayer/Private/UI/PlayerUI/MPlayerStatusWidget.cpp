@@ -45,7 +45,7 @@ void UMPlayerStatusWidget::UpdateHealthBar(float percentage)
 	}
 }
 
-void UMPlayerStatusWidget::ToggleInvicibleUI(bool isShowing)
+void UMPlayerStatusWidget::ToggleInvincibleUI(bool isShowing)
 {
 	if (InvincibleUI)
 	{

@@ -104,6 +104,14 @@ void AMInGameHUD::InGame_UpdatePlayerHealth(float percentage)
 	}
 }
 
+void AMInGameHUD::InGame_ToggleInvincibleUI(bool isShowing)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->ToggleInvincibleUI(isShowing);
+	}
+}
+
 void AMInGameHUD::InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime)
 {
 	if (InGame_PlayerStatusWidget)
@@ -120,19 +128,19 @@ void AMInGameHUD::InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percenta
 	}
 }
 
-void AMInGameHUD::InGame_ToggleFireBuffWidget(bool IsShowing)
+void AMInGameHUD::InGame_ToggleFireBuffWidget(bool isShowing)
 {
 	if (InGame_PlayerStatusWidget)
 	{
-		InGame_PlayerStatusWidget->ToggleFireBuffUI(IsShowing);
+		InGame_PlayerStatusWidget->ToggleFireBuffUI(isShowing);
 	}
 }
 
-void AMInGameHUD::InGame_ToggleShockBuffWidget(bool IsShowing)
+void AMInGameHUD::InGame_ToggleShockBuffWidget(bool isShowing)
 {
 	if (InGame_PlayerStatusWidget)
 	{
-		InGame_PlayerStatusWidget->ToggleShockBuffUI(IsShowing);
+		InGame_PlayerStatusWidget->ToggleShockBuffUI(isShowing);
 	}
 }
 

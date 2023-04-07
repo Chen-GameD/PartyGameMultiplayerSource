@@ -45,13 +45,15 @@ public:
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
+	UFUNCTION()
+	void InGame_ToggleInvincibleUI(bool isShowing);
 	// Update Player Skill UI
 	void InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime);
 	// Update Player Skill Opacity
 	void InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percentage);
 	// Toggle Player Buff Widget
-	void InGame_ToggleFireBuffWidget(bool IsShowing);
-	void InGame_ToggleShockBuffWidget(bool IsShowing);
+	void InGame_ToggleFireBuffWidget(bool isShowing);
+	void InGame_ToggleShockBuffWidget(bool isShowing);
 	
 
 	// Show or Hide InGame_PlayerWeaponInfoWidget

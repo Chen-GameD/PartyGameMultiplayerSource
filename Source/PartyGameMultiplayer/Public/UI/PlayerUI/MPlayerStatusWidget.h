@@ -30,7 +30,7 @@ public:
 	UFUNCTION()
 	void UpdateHealthBar(float percentage);
 	UFUNCTION()
-	void ToggleInvicibleUI(bool isShowing);
+	void ToggleInvincibleUI(bool isShowing);
 	UFUNCTION()
 	void SetPlayerName(FString i_Name);
 
