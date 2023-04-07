@@ -32,9 +32,9 @@ void UMPlayerStatusWidget::NativeConstruct()
 	}
 }
 
-void UMPlayerStatusWidget::ShowWidget(bool IsShowing)
+void UMPlayerStatusWidget::ShowWidget(bool isShowing)
 {
-	this->SetVisibility(IsShowing ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	this->SetVisibility(isShowing ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 }
 
 void UMPlayerStatusWidget::UpdateHealthBar(float percentage)
@@ -45,30 +45,38 @@ void UMPlayerStatusWidget::UpdateHealthBar(float percentage)
 	}
 }
 
+void UMPlayerStatusWidget::ToggleInvicibleUI(bool isShowing)
+{
+	if (InvincibleUI)
+	{
+		InvincibleUI->SetVisibility(isShowing ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	}
+}
+
 void UMPlayerStatusWidget::SetPlayerName(FString i_Name)
 {
 	PlayerName->SetText(FText::FromString(i_Name));
 }
 
-void UMPlayerStatusWidget::ToggleBuffUI(bool IsShowing)
+void UMPlayerStatusWidget::ToggleBuffUI(bool isShowing)
 {
-	ToggleFireBuffUI(IsShowing);
-	ToggleShockBuffUI(IsShowing);
+	ToggleFireBuffUI(isShowing);
+	ToggleShockBuffUI(isShowing);
 }
 
-void UMPlayerStatusWidget::ToggleFireBuffUI(bool IsShowing)
+void UMPlayerStatusWidget::ToggleFireBuffUI(bool isShowing)
 {
 	if (BuffInfo)
 	{
-		BuffInfo->ToggleFireBuff(IsShowing);
+		BuffInfo->ToggleFireBuff(isShowing);
 	}
 }
 
-void UMPlayerStatusWidget::ToggleShockBuffUI(bool IsShowing)
+void UMPlayerStatusWidget::ToggleShockBuffUI(bool isShowing)
 {
 	if (BuffInfo)
 	{
-		BuffInfo->ToggleShockBuff(IsShowing);
+		BuffInfo->ToggleShockBuff(isShowing);
 	}
 }
 
