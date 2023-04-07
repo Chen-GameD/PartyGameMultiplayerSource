@@ -1080,9 +1080,12 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
 	SetTipUI(false);
-	//
-	// GetMesh()->SetSimulatePhysics(true);
-	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	if (IsLocallyControlled())
+	{
+		// Broadcast Camera animation
+		BPF_DeathCameraAnimation(true);
+	}
 }
 
 // Multicast respawn result, reset all kinds of variables
@@ -1103,22 +1106,12 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		IsInvincible = true;
 		InvincibleTimer = 0;
 	}
-	// GetMesh()->SetSimulatePhysics(false);
-	// GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	// GetMesh()->AlwaysLoadOnClient = true;
-	// GetMesh()->AlwaysLoadOnServer = true;
-	// GetMesh()->bOwnerNoSee = false;
-	// GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPose;
-	// GetMesh()->bCastDynamicShadow = true;
-	// GetMesh()->bAffectDynamicIndirectLighting = true;
-	// GetMesh()->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	// GetMesh()->SetupAttachment(GetCapsuleComponent());
-	// static FName MeshCollisionProfileName(TEXT("CharacterMesh"));
-	// GetMesh()->SetCollisionProfileName(MeshCollisionProfileName);
-	// GetMesh()->SetGenerateOverlapEvents(false);
-	// GetMesh()->SetCanEverAffectNavigation(false);
-	//
-	// SetPlayerSkin();
+
+	if (IsLocallyControlled())
+	{
+		// Reset Camera
+		BPF_DeathCameraAnimation(false);
+	}
 }
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
@@ -1233,7 +1226,7 @@ void AMCharacter::SetOutlineEffect(bool isVisible)
 void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-	playerController->SetCanMove(i_CanMove);
+	playerController->Server_SetCanMove(i_CanMove);
 	Server_CanMove = i_CanMove;
 }
 

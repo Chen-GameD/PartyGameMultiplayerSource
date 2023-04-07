@@ -74,7 +74,7 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 	}
 }
 
-void AMPlayerController::SetCanMove_Implementation(bool i_CanMove)
+void AMPlayerController::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	CanMove = i_CanMove;
 }
@@ -366,9 +366,9 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 		//	float Thickness = 5.0f;
 		//	DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
 		//}	
-		APawn* const MyPawn = GetPawn();
+		AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
 		AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		if (MyPawn && MyGameState && CanMove)
+		if (MyPawn && !MyPawn->GetIsDead() && MyGameState && CanMove)
 		{
 			if (MyGameState->IsGameStart)
 			{

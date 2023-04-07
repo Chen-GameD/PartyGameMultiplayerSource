@@ -153,6 +153,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_RespawnResult();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_DeathCameraAnimation(bool isBroadcast);
+
 	UFUNCTION()
 	void ResetCharacterStatus();
 
