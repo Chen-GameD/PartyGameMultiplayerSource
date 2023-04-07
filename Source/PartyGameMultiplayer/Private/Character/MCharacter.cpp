@@ -31,6 +31,7 @@
 #include "Character/CursorHitPlane.h"
 #include "Components/WidgetComponent.h"
 #include "GameBase/MGameState.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
 
 // Constructor
@@ -141,8 +142,12 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Server_CanMove = true;
 
-	Server_CallGetHitSfxVfx_MinInterval = 0.25f;
+	Server_CallGetHitSfxVfx_MinInterval = 0.5f;
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
+
+	IsInvincible = false;
+	InvincibleTimer = 0;
+	InvincibleMaxTime = 10.0f;
 }
 
 void AMCharacter::Restart()
@@ -231,6 +236,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsHealing);
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
+	DOREPLIFETIME(AMCharacter, IsInvincible);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -649,6 +655,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 
 	IsPickingWeapon = false;
 
+	// Invincible Status
+	if (LeftWeapon || RightWeapon || CombineWeapon)
+	{
+		if (IsInvincible)
+		{
+			IsInvincible = false;
+			InvincibleTimer = 0;
+		}			
+	}
+
 	// UI
 	// ======================================================================
 	// Set Inventory UI
@@ -843,7 +859,7 @@ void AMCharacter::Dash()
 {
 	// Update UI
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	if (MyPlayerController && IsAllowDash)
+	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
 	}
@@ -857,12 +873,8 @@ void AMCharacter::Server_Dash_Implementation()
 	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
 		IsAllowDash = false;
-
-		// Listen Server
 		if (GetNetMode() == NM_ListenServer)
-		{
 			OnRep_IsAllowDash();
-		}
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
@@ -966,19 +978,6 @@ void AMCharacter::MoveRight(float Value)
 #pragma region Health
 void AMCharacter::OnHealthUpdate()
 {
-	//if (EffectGetHit && !EffectGetHit->IsActive())
-	//{
-	//	EffectGetHit->Activate();
-	//	// Make sure that the Delay is not smaller than the shortest attack interval by melee weapons(around 0.3s),
-	//	// which means, we want every strike by the fork/flamefork_wave to trigger an effectGetHit
-	//	float Delay = 0.1f;
-	//	FTimerHandle timerHandle;
-	//	GetWorldTimerManager().SetTimer(timerHandle, [this]
-	//		{
-	//			EffectGetHit->Deactivate();
-	//		}, Delay, false);
-	//}
-
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
 		if (!IsLocallyControlled())
@@ -1081,6 +1080,12 @@ void AMCharacter::NetMulticast_DieResult_Implementation()
 	this->GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 	SetFollowWidgetVisibility(false);
 	SetTipUI(false);
+
+	if (IsLocallyControlled())
+	{
+		// Broadcast Camera animation
+		BPF_DeathCameraAnimation(true);
+	}
 }
 
 // Multicast respawn result, reset all kinds of variables
@@ -1098,6 +1103,14 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		IsInvincible = true;
+		InvincibleTimer = 0;
+	}
+
+	if (IsLocallyControlled())
+	{
+		// Reset Camera
+		BPF_DeathCameraAnimation(false);
 	}
 }
 
@@ -1158,12 +1171,12 @@ void AMCharacter::SetPlayerNameUIInformation()
 void AMCharacter::SetPlayerSkin()
 {
 	// TODO
-	UEOSGameInstance* gameInstance = Cast<UEOSGameInstance>(GetGameInstance());
-	UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection,
-		CharacterMatParamNameArray[gameInstance->characterIndex], gameInstance->colorPicked);
-	gameInstance->colorPicked;
-
-	GetMesh()->SetSkeletalMesh(CharacterBPArray[gameInstance->characterIndex]);
+	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+	if (MyPlayerState)
+	{
+		UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, CharacterMatParamNameArray[MyPlayerState->characterIndex], MyPlayerState->colorPicked);
+		GetMesh()->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+	}
 }
 
 void AMCharacter::InitFollowWidget()
@@ -1213,7 +1226,7 @@ void AMCharacter::SetOutlineEffect(bool isVisible)
 void AMCharacter::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-	playerController->SetCanMove(i_CanMove);
+	playerController->Server_SetCanMove(i_CanMove);
 	Server_CanMove = i_CanMove;
 }
 
@@ -1413,7 +1426,7 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0)
+	if (DamageTaken <= 0 || IsInvincible)
 		return 0.0f;
 
 	if (!IsDead)
@@ -1446,7 +1459,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
-			AttackerPS->addScore(5);
+			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
 
@@ -1710,6 +1723,17 @@ void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (IsInvincible)
+	{
+		InvincibleTimer += DeltaTime;
+		if (InvincibleMaxTime < InvincibleTimer)
+		{
+			InvincibleTimer = 0;
+			if (GetLocalRole() == ROLE_Authority)
+				IsInvincible = false;			
+		}
+	}		
+
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
@@ -1768,7 +1792,7 @@ void AMCharacter::Tick(float DeltaTime)
 			}			
 		}
 
-		// Vfx (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
+		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
 		if (IsHealing)
 		{
 			// Activate VFX
@@ -1780,6 +1804,20 @@ void AMCharacter::Tick(float DeltaTime)
 			// Deactivate VFX
 			if (EffectHeal && EffectHeal->IsActive())
 				EffectHeal->Deactivate();
+		}
+
+		// Vfx Invincible
+		if (IsInvincible)
+		{
+			// Vfx
+			if (EffectBurn && !EffectBurn->IsActive())
+				EffectBurn->Activate();
+		}
+		else
+		{
+			// Vfx
+			if (EffectBurn && EffectBurn->IsActive())
+				EffectBurn->Deactivate();
 		}
 	}
 
@@ -2029,5 +2067,6 @@ void AMCharacter::NetMulticast_CallGetHitSfx_Implementation()
 void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
 {
 	EffectGetHit->Activate();
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("EffectGetHit is called"));
 }
 #pragma endregion Effects

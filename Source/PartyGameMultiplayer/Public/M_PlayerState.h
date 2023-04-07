@@ -26,16 +26,20 @@ public:
 	bool IsReady = false;
 
 	UFUNCTION(Server, Reliable)
-	void UpdateTeamIndex(int i_TeamIndex = 1);
-
-	UFUNCTION(Server, Reliable)
-	void UpdatePlayerName(const FString& i_Name);
+	void Server_UpdateTeamIndex(int i_TeamIndex = 1);
 
 	UFUNCTION(Client, Reliable)
-	void SetPlayerNameFromUsername();
+	void Client_SetPlayerNameFromGameInstance();
+	UFUNCTION(Server, Reliable)
+	void Server_UpdatePlayerName(const FString& i_Name);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SetPlayerSkinFromGameInstance();
+	UFUNCTION(Server, Reliable)
+	void Server_UpdatePlayerSkin(FLinearColor i_ColorPicked, int i_CharacterIndex);
 
 	UFUNCTION(Server, Reliable)
-	void UpdatePlayerReadyState();
+	void Server_UpdatePlayerReadyState();
 
 	UFUNCTION()
 	void OnRep_PlayerNameString();
@@ -67,4 +71,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "SKD")
 	void addDeath(int i_deathToAdd);
+
+	// Customization
+	UPROPERTY(ReplicatedUsing=OnRep_PlayerSkinInformation, EditAnywhere, BlueprintReadWrite)
+	FLinearColor colorPicked;
+
+	UPROPERTY(ReplicatedUsing=OnRep_PlayerSkinInformation, EditAnywhere, BlueprintReadWrite)
+	int characterIndex;
 };

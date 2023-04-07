@@ -10,6 +10,10 @@
 #include "Weapon/BaseWeapon.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseDamageCauser.h"
+#include "Weapon/ElementWeapon/WeaponFork.h"
+#include "Weapon/ElementWeapon/WeaponLighter.h"
+#include "Weapon/ElementWeapon/WeaponBlower.h"
+#include "Weapon/ElementWeapon/WeaponAlarm.h"
 #include "Weapon/CombinedWeapon/WeaponBomb.h"
 //#include "Weapon/JsonFactory.h"
 #include "Weapon/WeaponDataHelper.h"
@@ -26,21 +30,34 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 
 	EnumWeaponType WeaponType = EnumWeaponType::None;
 	bool IsBigWeapon = false;
+	AController* pController = nullptr;
 	if (auto p = Cast<ABaseWeapon>(DamageCauser))
 	{
 		WeaponType = p->WeaponType;
 		IsBigWeapon = p->IsBigWeapon;
+		pController = p->GetHoldingController();
 	}
 	if (auto p = Cast<ABaseProjectile>(DamageCauser))
 	{
 		WeaponType = p->WeaponType;
 		IsBigWeapon = p->IsBigWeapon;
+		pController = p->Controller;
 	}
 	if (WeaponType == EnumWeaponType::None)
 		return false;
 
 	if (Cast<AMCharacter>(DamagedActor) || Cast<AMinigameObj_Enemy>(DamagedActor))
 	{
+		// If need to show "No Damage" when hitting the enemy crab
+		if (auto pMinigameEnemy = Cast<AMinigameObj_Enemy>(DamagedActor))
+		{
+			if (!ADamageManager::CanApplyDamageToEnemyCrab(pMinigameEnemy->SpecificWeaponClass, WeaponType))
+			{
+				pMinigameEnemy->NetMulticast_ShowNoDamageHint(pController, 0.5f * (pMinigameEnemy->CrabCenterMesh->GetComponentLocation() + DamageCauser->GetActorLocation()));
+				return 0.0f;
+			}			
+		}
+
 		float Damage = 0.0f;
 		FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 		if (IsBigWeapon)
@@ -125,7 +142,7 @@ bool ADamageManager::TryApplyRadialDamage(AActor* DamageCauser, AController* Con
 
 bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd)
 {
-	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
@@ -189,7 +206,7 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 
 bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime)
 {	
-	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
+	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
 	/* Knockback */
@@ -230,3 +247,29 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 }
 
 
+bool ADamageManager::CanApplyDamageToEnemyCrab(TSubclassOf<class ABaseWeapon> EnemyCrab_SpecificWeaponClass, EnumWeaponType WeaponType)
+{
+	bool beingAttackedByValidWeapon = true;
+	if (EnemyCrab_SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
+	{
+		if (WeaponType != EnumWeaponType::Fork && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Bomb)
+			beingAttackedByValidWeapon = false;
+	}
+	else if (EnemyCrab_SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
+	{
+		if (WeaponType != EnumWeaponType::Lighter && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Cannon)
+			beingAttackedByValidWeapon = false;
+	}
+	else if (EnemyCrab_SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
+	{
+		if (WeaponType != EnumWeaponType::Blower && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Alarmgun)
+			beingAttackedByValidWeapon = false;
+	}
+	else if (EnemyCrab_SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
+	{
+		if (WeaponType != EnumWeaponType::Alarm && WeaponType != EnumWeaponType::Bomb && WeaponType != EnumWeaponType::Cannon && WeaponType != EnumWeaponType::Alarmgun)
+			beingAttackedByValidWeapon = false;
+	}
+
+	return beingAttackedByValidWeapon;
+}

@@ -80,7 +80,8 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		}
 		
 		AM_PlayerState* MyPlayerState = NewPlayer->GetPlayerState<AM_PlayerState>();
-		MyPlayerState->SetPlayerNameFromUsername();
+		MyPlayerState->Client_SetPlayerNameFromGameInstance();
+		MyPlayerState->Client_SetPlayerSkinFromGameInstance();
 		CurrentPlayerNum++;
 
 		if (NewPlayer->IsLocalPlayerController())
@@ -327,7 +328,7 @@ void AMGameMode::InitMinigame_ShellObject()
 
 void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformationIndex)
 {
-	FTransform spawnTransform;
+	/*FTransform spawnTransform;
 	if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Single)
 	{
 		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transform;
@@ -343,5 +344,5 @@ void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformat
 	{
 		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Int);
 		spawnActor->UpdateConfigIndex(AdditionalInformationIndex);
-	}
+	}*/
 }

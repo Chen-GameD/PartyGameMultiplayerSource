@@ -57,7 +57,7 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
 	{
-		GetPlayerState<AM_PlayerState>()->UpdateTeamIndex(i_TeamIndex);
+		GetPlayerState<AM_PlayerState>()->Server_UpdateTeamIndex(i_TeamIndex);
 	}
 }
 
@@ -65,7 +65,7 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
-	MyServerPlayerState->UpdatePlayerReadyState();
+	MyServerPlayerState->Server_UpdatePlayerReadyState();
 
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	if (MyGameMode)
@@ -74,7 +74,7 @@ void AMPlayerController::GetReadyButtonClick_Implementation()
 	}
 }
 
-void AMPlayerController::SetCanMove_Implementation(bool i_CanMove)
+void AMPlayerController::Server_SetCanMove_Implementation(bool i_CanMove)
 {
 	CanMove = i_CanMove;
 }
@@ -366,9 +366,9 @@ void AMPlayerController::PlayerTick(float DeltaTime)
 		//	float Thickness = 5.0f;
 		//	DrawDebugLine(GetWorld(), Start, End, Color, false, Duration, 0, Thickness);
 		//}	
-		APawn* const MyPawn = GetPawn();
+		AMCharacter* const MyPawn = Cast<AMCharacter>(GetPawn());
 		AMGameState* const MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		if (MyPawn && MyGameState && CanMove)
+		if (MyPawn && !MyPawn->GetIsDead() && MyGameState && CanMove)
 		{
 			if (MyGameState->IsGameStart)
 			{

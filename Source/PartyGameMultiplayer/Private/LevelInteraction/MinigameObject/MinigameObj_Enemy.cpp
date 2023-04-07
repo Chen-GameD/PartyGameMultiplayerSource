@@ -4,15 +4,13 @@
 
 #include "Components/WidgetComponent.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
-#include "Weapon/ElementWeapon/WeaponFork.h"
-#include "Weapon/ElementWeapon/WeaponLighter.h"
-#include "Weapon/ElementWeapon/WeaponBlower.h"
-#include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "UI/MinigameObjFollowWidget.h"
 
@@ -26,6 +24,10 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	CrabMesh->SetupAttachment(RootMesh);
 	CrabMesh->SetCollisionProfileName(TEXT("Custom"));
 
+	CrabCenterMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CrabCenterMesh"));
+	CrabCenterMesh->SetupAttachment(CrabMesh);
+	CrabCenterMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
 	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CollisionMesh"));
 	CollisionMesh->SetupAttachment(CrabMesh);
 	CollisionMesh->SetCollisionProfileName(TEXT("Custom"));
@@ -33,6 +35,20 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	BigWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BigWeaponMesh"));
 	BigWeaponMesh->SetupAttachment(CrabMesh);
 	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
+	Explode_NC->SetupAttachment(CrabMesh);
+	Explode_NC->bAutoActivate = false;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);
+
+	Shield_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShieldVfx"));
+	Shield_NC->SetupAttachment(CrabMesh);
+	Shield_NC->bAutoActivate = false;
+	/*static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);*/
 
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
@@ -43,8 +59,14 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	RisingSpeed = 100.0f;
 	RisingTargetHeight = 100.0f;
 
-	DropWeaponDelay = 1.0f;
+	DropWeaponDelay = 2.25f;
 	RespawnDelay = 5.0f;
+
+	Local_ShowNoDamageHint_Interval = 1.0f;
+	Local_ShowNoDamageHint_LastTime = -1.0f;
+
+	Server_CallGetHitEffects_MinInterval = 0.5f;
+	Server_LastTime_CallGetHitEffects = -1.0f;
 }
 
 
@@ -55,10 +77,12 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 	if (IsRisingFromSand && GetActorLocation().Z < RisingTargetHeight)
 	{
 		FVector TargetLocation = GetActorLocation() + FVector::UpVector * RisingSpeed * DeltaTime;
+		// The End
 		if (RisingTargetHeight <= TargetLocation.Z)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
+			SetActorEnableCollision(true);
 			IsRisingFromSand = false;
 
 			// Server
@@ -95,27 +119,9 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	}
 	if (WeaponType == EnumWeaponType::None)
 		return 0.0f;
-
-	if (SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Fork && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Bomb)
-			return 0.0f;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Lighter && WeaponType != EnumWeaponType::Flamefork && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Cannon)
-			return 0.0f;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Blower && WeaponType != EnumWeaponType::Taser && WeaponType != EnumWeaponType::Flamethrower && WeaponType != EnumWeaponType::Alarmgun)
-			return 0.0f;
-	}
-	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
-	{
-		if (WeaponType != EnumWeaponType::Alarm && WeaponType != EnumWeaponType::Bomb && WeaponType != EnumWeaponType::Cannon && WeaponType != EnumWeaponType::Alarmgun)
-			return 0.0f;
-	}
+	
+	if (!ADamageManager::CanApplyDamageToEnemyCrab(SpecificWeaponClass, WeaponType))
+		return 0.0f;
 
 	FString WeaponName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType];
 	if (IsBigWeapon)
@@ -125,8 +131,17 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	else
 		return 0.0f;
 
-	CurrentHealth -= DamageTaken;
-	CurrentHealth = FMath::Max(CurrentHealth, 0);
+	// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
+	if (Server_LastTime_CallGetHitEffects < 0 || Server_CallGetHitEffects_MinInterval < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
+	{
+		//NetMulticast_CallGetHitSfx();
+		
+		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
+
+		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
+	}
+
+	CurrentHealth = FMath::Max(CurrentHealth - DamageTaken, 0);
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_CurrentHealth();
 	if (CurrentHealth <= 0)
@@ -135,7 +150,6 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		{
 			killerPS->addScore(ScoreCanGet);
 		}
-
 		Server_WhenDead();
 	}
 
@@ -157,7 +171,14 @@ void AMinigameObj_Enemy::Server_WhenDead()
 			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
 		}, DropWeaponDelay, false);
 
-	// TODO: Server or NetMultiCast/OnRep_CurrentHealth: genrate a new little crab and walk into the ocean.
+	// Spawn the little crab that walks into the ocean.
+	FTimerHandle SpawnCrabTimerHandle;
+	GetWorldTimerManager().SetTimer(SpawnCrabTimerHandle, [this]
+		{
+			FVector spawnLocation = GetActorLocation();
+			FRotator spawnRotation = GetActorRotation();
+			auto pLittleCrab = GetWorld()->SpawnActor<AActor>(SpecificLittleCrabClass, spawnLocation, spawnRotation);
+		}, DropWeaponDelay * 0.5f, false);
 
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;
@@ -169,8 +190,11 @@ void AMinigameObj_Enemy::BeginPlay()
 	Super::BeginPlay();
 
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+	{
 		pFollowWidget->SetHealthByPercentage(1);
-	FollowWidget->SetVisibility(false);
+		FollowWidget->SetVisibility(false);
+	}	
+	SetActorEnableCollision(false);
 
 	IsRisingFromSand = true; 
 }
@@ -190,11 +214,34 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 				FollowWidget->SetVisibility(false);
 			}, DropWeaponDelay, false);
 
-		// TODO: generate vfx& sfx
-		
+		// Vfx
+		if (Explode_NC)
+			Explode_NC->Activate();	
 	}
 
 	// Set UI: Health Bar
 	if(UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
+}
+
+
+void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AController* pController, FVector HitLocation)
+{
+	if (GetWorld()->GetFirstPlayerController() == pController)
+	{
+		if (Local_ShowNoDamageHint_LastTime < 0 || Local_ShowNoDamageHint_Interval < GetWorld()->TimeSeconds - Local_ShowNoDamageHint_LastTime)
+		{
+			FVector spawnLocation = HitLocation;
+			FRotator spawnRotation = FRotator::ZeroRotator;
+			AActor* NoDamageHintActor = GetWorld()->SpawnActor<AActor>(SpecificNoDamageHintActorClass, spawnLocation, spawnRotation);
+			FTimerHandle TimerHandle;
+			float NoDamageHintActor_LifeTime = Local_ShowNoDamageHint_Interval;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NoDamageHintActor]()
+				{
+					if (NoDamageHintActor)
+						NoDamageHintActor->Destroy();
+				}, NoDamageHintActor_LifeTime, false);
+			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
+		}		
+	}	
 }

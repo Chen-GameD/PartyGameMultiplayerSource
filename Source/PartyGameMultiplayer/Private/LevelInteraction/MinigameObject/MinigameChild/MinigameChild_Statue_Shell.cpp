@@ -2,9 +2,10 @@
 
 
 #include "LevelInteraction/MinigameObject/MinigameChild/MinigameChild_Statue_Shell.h"
-
 #include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 #include "Net/UnrealNetwork.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 // Sets default values
 AMinigameChild_Statue_Shell::AMinigameChild_Statue_Shell()
@@ -15,6 +16,14 @@ AMinigameChild_Statue_Shell::AMinigameChild_Statue_Shell()
 	ShellMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShellMesh"));
 	ShellMeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
 	ShellMeshComponent->SetupAttachment(RootComponent);
+
+	ShellFly_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellFlyVfx"));
+	ShellFly_NC->SetupAttachment(ShellMeshComponent);
+	ShellFly_NC->bAutoActivate = true;
+
+	ShellInsert_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsertVfx"));
+	ShellInsert_NC->SetupAttachment(ShellMeshComponent);
+	ShellInsert_NC->bAutoActivate = false;
 	
 	bReplicates = true;
 	bFinishInsert = false;
@@ -83,8 +92,18 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 			}
 			CallShellInsertSfx();
 			bFinishInsert = true;
-		}
-			
+			if (ShellFly_NC && ShellFly_NC->IsActive())
+			{
+				ShellFly_NC->Deactivate();
+				//HaloEffect_NSComponent->SetVisibility(false);
+			}
+			if (ShellInsert_NC && !ShellInsert_NC->IsActive())
+			{
+				ShellInsert_NC->SetWorldRotation(FRotator::ZeroRotator);
+				ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
+				ShellInsert_NC->Activate();
+			}
+		}			
 	}
 
 }

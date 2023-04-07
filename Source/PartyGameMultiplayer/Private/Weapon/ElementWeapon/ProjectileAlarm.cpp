@@ -72,5 +72,7 @@ void AProjectileAlarm::OnRep_HasExploded()
 
 		if (AttackHitEffect_NSSystem)
 			AttackHitEffect_NSComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), AttackHitEffect_NSSystem, GetActorLocation());
+	
+		CallExplodeSfx();
 	}
 }

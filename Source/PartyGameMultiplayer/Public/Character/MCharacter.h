@@ -153,6 +153,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_RespawnResult();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_DeathCameraAnimation(bool isBroadcast);
+
 	UFUNCTION()
 	void ResetCharacterStatus();
 
@@ -393,6 +396,10 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
+	UPROPERTY(Replicated)
+		bool IsInvincible;
+	float InvincibleTimer;
+	float InvincibleMaxTime;
 	
 	// Effects
 	// =============================

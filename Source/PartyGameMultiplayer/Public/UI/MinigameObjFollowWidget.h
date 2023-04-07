@@ -21,16 +21,14 @@ class PARTYGAMEMULTIPLAYER_API UMinigameObjFollowWidget : public UUserWidget
 public:
 	void SetHealthByPercentage(float i_percentage);
 	void SetName(FString i_Name);
-protected:
-private:
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetHealthProgressBar(float Percent);
 
-
-public:
 protected:
-	UPROPERTY(meta = (BindWidget))
-		UProgressBar* HealthBar;
+	// UPROPERTY(meta = (BindWidget))
+	// 	UProgressBar* HealthBar;
 	UPROPERTY(meta = (BindWidget))
 		UTextBlock* Name;
-private:
-
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	UImage* HealthBar;
 };

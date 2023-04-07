@@ -16,6 +16,7 @@
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 #include "Character/MCharacter.h"
+#include "M_PlayerState.h"
 
 
 AWeaponTaser::AWeaponTaser()
@@ -285,11 +286,18 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 						bTargetCanBeAttacked = false;
 					}
 				}
+				// if it hits an invincible character
+				if (pCharacterBeingHit->IsInvincible)
+					bTargetCanBeAttacked = false;
 			}
 			// Check if this minigame can be attacked
-			else if(auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
+			else if(auto pMinigameEnemyBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
 			{
-	
+				if (!ADamageManager::CanApplyDamageToEnemyCrab(pMinigameEnemyBeingHit->SpecificWeaponClass, WeaponType))
+				{
+					bTargetCanBeAttacked = false;
+					pMinigameEnemyBeingHit->NetMulticast_ShowNoDamageHint(HoldingController, 0.5f * (pMinigameEnemyBeingHit->CrabCenterMesh->GetComponentLocation() + AttackDetectComponent->GetComponentLocation()));
+				}					
 			}
 
 			if (!bTargetCanBeAttacked)

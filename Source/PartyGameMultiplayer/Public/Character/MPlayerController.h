@@ -67,7 +67,7 @@ public:
 	void Server_RequestRespawn();
 
 	UFUNCTION(Server, Reliable)
-	void SetCanMove(bool i_CanMove);
+	void Server_SetCanMove(bool i_CanMove);
 
 	// UI Update
 	// InGame UI
