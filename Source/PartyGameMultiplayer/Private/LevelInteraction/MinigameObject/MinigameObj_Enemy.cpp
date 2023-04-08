@@ -137,7 +137,7 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		//NetMulticast_CallGetHitSfx();
 		
 		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
-
+		this->isAttacked = true;
 		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
 	}
 
@@ -244,4 +244,14 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
 		}		
 	}	
+}
+
+// Replicated Properties
+// =======================================================
+#pragma region Replicated Properties
+void AMinigameObj_Enemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AMinigameObj_Enemy, isAttacked);
 }

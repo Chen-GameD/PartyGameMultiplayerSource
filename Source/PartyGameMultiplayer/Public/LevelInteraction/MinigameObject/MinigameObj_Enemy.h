@@ -14,6 +14,8 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Enemy : public AMinigameMainObjectiv
 
 public:
 	AMinigameObj_Enemy();
+	/** Property replication */
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void Server_WhenDead();
@@ -44,6 +46,9 @@ public:
 		TSubclassOf<class AActor> SpecificNoDamageHintActorClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificLittleCrabClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
+		bool isAttacked = false;
 
 	float Server_CallGetHitEffects_MinInterval;
 	float Server_LastTime_CallGetHitEffects;
