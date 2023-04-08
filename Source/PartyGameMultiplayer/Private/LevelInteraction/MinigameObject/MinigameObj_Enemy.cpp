@@ -212,11 +212,12 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 				SetActorEnableCollision(false);
 				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
 				FollowWidget->SetVisibility(false);
+				BPF_BroadcastCrabAnimation();
 			}, DropWeaponDelay, false);
 
 		// Vfx
 		if (Explode_NC)
-			Explode_NC->Activate();	
+			Explode_NC->Activate();
 	}
 
 	// Set UI: Health Bar

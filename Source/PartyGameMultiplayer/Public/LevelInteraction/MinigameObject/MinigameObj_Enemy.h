@@ -23,6 +23,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_ShowNoDamageHint(AController* pController, FVector HitLocation);
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_BroadcastCrabAnimation();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnRep_CurrentHealth() override;
