@@ -179,7 +179,7 @@ void ABaseProjectile::OnRep_HasExploded()
 	{
 		if (AttackOnEffect_NSComponent)
 		{
-			AttackOnEffect_NSComponent->Deactivate();  // Not working somehow
+			AttackOnEffect_NSComponent->Deactivate();
 			AttackOnEffect_NSComponent->SetVisibility(false);
 		}			
 

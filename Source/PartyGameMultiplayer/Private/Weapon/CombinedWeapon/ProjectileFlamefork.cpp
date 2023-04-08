@@ -83,7 +83,7 @@ void AProjectileFlamefork::OnProjectileOverlapBegin(class UPrimitiveComponent* O
 		return;
 
 	Origin = this->GetActorLocation();
-	HasExploded = true;
+	//HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
 	{
 		OnRep_HasExploded();

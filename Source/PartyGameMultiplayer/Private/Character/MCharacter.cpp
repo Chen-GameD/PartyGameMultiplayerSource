@@ -661,6 +661,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		if (IsInvincible)
 		{
 			IsInvincible = false;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_IsInvincible();
 			InvincibleTimer = 0;
 		}			
 	}
@@ -1103,7 +1105,6 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
-		IsInvincible = true;
 		InvincibleTimer = 0;
 	}
 
@@ -1288,6 +1289,9 @@ void AMCharacter::ResetCharacterStatus()
 		CurrentHealth = MaxHealth;
 		OnHealthUpdate();
 		IsDead = false;
+		IsInvincible = true;
+		if (GetNetMode() == NM_ListenServer)
+			OnRep_IsInvincible();
 		NetMulticast_RespawnResult();
 	}
 }
@@ -1411,6 +1415,39 @@ void AMCharacter::OnRep_IsParalyzed()
 			if (pMInGameHUD)
 				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
 		}
+	}
+}
+
+void AMCharacter::OnRep_IsInvincible()
+{
+	if (IsInvincible)
+	{
+		// Vfx
+		if (EffectBurn && !EffectBurn->IsActive())
+			EffectBurn->Activate();
+		// Toggle On Character's Invincible buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleInvincibleUI(true);
+		}
+	}
+	else
+	{
+		// Vfx
+		if (EffectBurn && EffectBurn->IsActive())
+			EffectBurn->Deactivate();
+		// Toggle Off Character's Invincible buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleInvincibleUI(false);
+		}
+		InvincibleTimer = 0;
 	}
 }
 
@@ -1730,7 +1767,11 @@ void AMCharacter::Tick(float DeltaTime)
 		{
 			InvincibleTimer = 0;
 			if (GetLocalRole() == ROLE_Authority)
-				IsInvincible = false;			
+			{
+				IsInvincible = false;
+				if (GetNetMode() == NM_ListenServer)
+					OnRep_IsInvincible();
+			}						
 		}
 	}		
 
@@ -1804,20 +1845,6 @@ void AMCharacter::Tick(float DeltaTime)
 			// Deactivate VFX
 			if (EffectHeal && EffectHeal->IsActive())
 				EffectHeal->Deactivate();
-		}
-
-		// Vfx Invincible
-		if (IsInvincible)
-		{
-			// Vfx
-			if (EffectBurn && !EffectBurn->IsActive())
-				EffectBurn->Activate();
-		}
-		else
-		{
-			// Vfx
-			if (EffectBurn && EffectBurn->IsActive())
-				EffectBurn->Deactivate();
 		}
 	}
 
