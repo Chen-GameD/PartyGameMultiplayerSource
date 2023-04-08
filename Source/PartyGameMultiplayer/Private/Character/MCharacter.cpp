@@ -82,6 +82,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 	CurFov = MinFov = 90.0f;
 	MaxFov = 108.0f;
+	FollowCameraRelativeRotationVector = FVector(0, 0, 0);
 
 	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -108,14 +109,10 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	Client_LowSpeedWalkAccumulateTime = 0;
-	
-	BubbleMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BubbleMesh"));
-	BubbleMesh->SetupAttachment(RootComponent);
-	BubbleMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
 	EffectBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleStart"));
 	EffectBubbleStart->SetupAttachment(RootComponent);
-	EffectBubbleStart->bAutoActivate = false;	
+	EffectBubbleStart->bAutoActivate = false;
 
 	EffectBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleOn"));
 	EffectBubbleOn->SetupAttachment(RootComponent);
@@ -344,9 +341,9 @@ void AMCharacter::Attack_Implementation(float AttackTargetDistance)
 			return;
 		// Can't Attack when holding only shells
 		bool HasWeaponOtherThanShells = false;
-		if ( (LeftWeapon && LeftWeapon->WeaponType != EnumWeaponType::Shell) || 
+		if ((LeftWeapon && LeftWeapon->WeaponType != EnumWeaponType::Shell) ||
 			(RightWeapon && RightWeapon->WeaponType != EnumWeaponType::Shell) ||
-			CombineWeapon )
+			CombineWeapon)
 			HasWeaponOtherThanShells = true;
 		if (!HasWeaponOtherThanShells)
 			return;
@@ -527,7 +524,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 					CombineWeapon->Destroy();
 					CombineWeapon = nullptr;
 				}
-				DropOffWeapon(isLeft);				
+				DropOffWeapon(isLeft);
 			}
 		}
 	}
@@ -589,7 +586,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 						// Set isRightHeld Anim State
 						this->AnimState[6] = true;
 						OnCombineWeapon(isLeft);
-					}					
+					}
 				}
 				// no combining, pick up this weapon alone
 				else
@@ -655,14 +652,14 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 						// Set isLeftHeld Anim State
 						this->AnimState[5] = true;
 						OnCombineWeapon(isLeft);
-					}					
+					}
 				}
 				// no combining, pick up this weapon alone
 				else
 				{
 					RightWeapon->NetMulticast_CallPickedUpSfx();
 				}
-			}			
+			}
 
 			// Update Weapon Type Anim State
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
@@ -681,7 +678,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (GetNetMode() == NM_ListenServer)
 				OnRep_IsInvincible();
 			InvincibleTimer = 0;
-		}			
+		}
 	}
 
 	// UI
@@ -719,7 +716,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			}
 			// apply shellheal buff
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
-		}			
+		}
 		else
 			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
 	}
@@ -819,10 +816,10 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		{
 			// 2 identical weapons or at least one of them is a shell
 			LeftWeapon->SetActorHiddenInGame(false);
-			RightWeapon->SetActorHiddenInGame(false);			
+			RightWeapon->SetActorHiddenInGame(false);
 			isHoldingCombineWeapon = false;
 			// Sfx
-			if(bJustPickedLeft)
+			if (bJustPickedLeft)
 				LeftWeapon->NetMulticast_CallPickedUpSfx();
 			else
 				RightWeapon->NetMulticast_CallPickedUpSfx();
@@ -897,7 +894,7 @@ void AMCharacter::Server_Dash_Implementation()
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
-		NetMulticast_AdjustMaxWalkSpeed(DashSpeed /OriginalMaxWalkSpeed);
+		NetMulticast_AdjustMaxWalkSpeed(DashSpeed / OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
 		GetWorld()->GetTimerManager().SetTimer(DashingTimer, this, &AMCharacter::RefreshDash, DashTime, false);
@@ -1311,7 +1308,7 @@ void AMCharacter::ResetCharacterStatus()
 			IsInvincible = true;
 			if (GetNetMode() == NM_ListenServer)
 				OnRep_IsInvincible();
-		}		
+		}
 		NetMulticast_RespawnResult();
 	}
 }
@@ -1373,7 +1370,7 @@ void AMCharacter::OnRep_IsBurned()
 			if (pMInGameHUD)
 			{
 				pMInGameHUD->InGame_ToggleFireBuffWidget(true);
-			}				
+			}
 		}
 	}
 	else
@@ -1393,7 +1390,7 @@ void AMCharacter::OnRep_IsBurned()
 			if (pMInGameHUD)
 				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
 		}
-	}	
+	}
 }
 
 void AMCharacter::OnRep_IsParalyzed()
@@ -1448,18 +1445,18 @@ void AMCharacter::OnRep_IsInvincible()
 			//EffectBubbleStart->ResetSystem();
 			EffectBubbleStart->Activate();
 			//EffectBubbleStart->SetVisibility(true);
-		}	
+		}
 		FTimerHandle ShowBubbleOnVfxTimerHandle;
 		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
 			{
 				if (EffectBubbleOn)
 				{
-					if(!EffectBubbleOn->IsActive())
+					if (!EffectBubbleOn->IsActive())
 						EffectBubbleOn->Activate();
 					EffectBubbleOn->SetVisibility(true);
-				}					
+				}
 			}, 1.0, false);
-		
+
 
 		// Toggle On Character's Invincible buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1481,7 +1478,7 @@ void AMCharacter::OnRep_IsInvincible()
 		{
 			EffectBubbleStart->Deactivate();
 			EffectBubbleStart->SetVisibility(false);
-		}*/			
+		}*/
 
 		// Toggle Off Character's Invincible buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
@@ -1530,7 +1527,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			NetMulticast_CallGetHitVfx();
 			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 		}
-		
+
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1645,7 +1642,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 				{
 					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 				}
-			}			
+			}
 		}
 		else
 		{
@@ -1782,7 +1779,7 @@ void AMCharacter::BeginPlay()
 	}
 
 	if (IsLocallyControlled())
-	{		
+	{
 		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
@@ -1799,7 +1796,7 @@ void AMCharacter::BeginPlay()
 				pMInGameHUD->InGame_ToggleInvincibleUI(false);
 			}
 		}
-	}	
+	}
 }
 
 
@@ -1818,15 +1815,15 @@ void AMCharacter::Tick(float DeltaTime)
 				IsInvincible = false;
 				if (GetNetMode() == NM_ListenServer)
 					OnRep_IsInvincible();
-			}						
+			}
 		}
-	}		
+	}
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with buff
-		ActByBuff_PerTick(DeltaTime);		
+		ActByBuff_PerTick(DeltaTime);
 	}
 
 	// Client(Listen Server)
@@ -1849,7 +1846,7 @@ void AMCharacter::Tick(float DeltaTime)
 				if (EffectJump && EffectJump->GetAsset())
 					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectJump->GetAsset(), EffectJump->GetComponentLocation());
 			}
-		}		
+		}
 		if (!IsOnGround)
 			Client_MaxHeightDuringLastTimeOffGround = FMath::Max(Client_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
 		else
@@ -1862,11 +1859,11 @@ void AMCharacter::Tick(float DeltaTime)
 			{
 				if (EffectRun && !(EffectRun->IsActive()))
 					EffectRun->Activate();
-			}	
+			}
 			else
-			{				
+			{
 				if (EffectRun && EffectRun->IsActive())
-					EffectRun->Deactivate();				
+					EffectRun->Deactivate();
 			}
 			Client_LowSpeedWalkAccumulateTime = 0;
 		}
@@ -1877,7 +1874,7 @@ void AMCharacter::Tick(float DeltaTime)
 			{
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
-			}			
+			}
 		}
 
 		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
@@ -1895,40 +1892,120 @@ void AMCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	//if (IsLocallyControlled())
-	//{
-	//	// Zoom
-	//	//float ZoomOutSpeed = 100.0f;
-	//	//float ZoomInSpeed = ZoomOutSpeed * 0.5f;
-	//	float ZoomOutSpeed = 1400.0f;
-	//	float ZoomInSpeed = ZoomOutSpeed * 0.75f;
-	//	if (bShouldZoomOut)
-	//	{
-	//		//if (CurFov < MaxFov)
-	//		//{
-	//		//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
-	//		//	FollowCamera->SetFieldOfView(CurFov);
-	//		//}
-	//		if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
-	//		{
-	//			Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
-	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-	//		}
-	//	}
-	//	else
-	//	{
-	//		//if (MinFov < CurFov)
-	//		//{
-	//		//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
-	//		//	FollowCamera->SetFieldOfView(CurFov);
-	//		//}
-	//		if (Local_MinCameraArmLength < Local_CurCameraArmLength)
-	//		{
-	//			Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
-	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-	//		}
-	//	}
-	//}
+	if (IsLocallyControlled())
+	{
+		// Zoom
+		if (auto pPlayerController = Cast<APlayerController>(GetController()))
+		{
+			float mouse_x, mouse_y;
+			bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
+			int32 viewport_x, viewport_y;
+			pPlayerController->GetViewportSize(viewport_x, viewport_y);
+			if (success && 0 < viewport_x && 0 < viewport_y)
+			{
+				float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
+
+				float FinalX = -700.0f * 0.75f;
+				float FinalZ = -250.0f * 0.75f;
+				float FinalRoll = -8.0f * 0.75f;
+				/*
+				// Discrete
+				int GearCnt = 3;
+				float LevelRange = 1.0f / GearCnt;				
+				int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
+				if (lowerYRatio <= 0)
+					Gear = 0;					
+				float TargetX = FinalX * Gear * LevelRange;
+				float TargetZ = FinalZ * Gear * LevelRange;
+				float TargetRoll = FinalRoll * Gear * LevelRange;
+				*/
+				float TargetX = FinalX * lowerYRatio;
+				float TargetZ = FinalZ * lowerYRatio;
+				float TargetRoll = FinalRoll * lowerYRatio;
+				float TimeFromMinToMax = 0.5f;
+				if (lowerYRatio < 0.5f)
+				{
+					TargetX = TargetZ = TargetRoll = 0;
+					TimeFromMinToMax = 1.0f;
+				}					
+				
+				// Location
+				FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
+				if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
+				{
+					// Location X
+					if (CurRelativeLocation.X < TargetX)
+					{
+						CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+						CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
+					}
+					else if (TargetX < CurRelativeLocation.X)
+					{
+						CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+						CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
+					}
+					// Location Z
+					if (CurRelativeLocation.Z < TargetZ)
+					{
+						CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+						CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
+					}
+					else if (TargetZ < CurRelativeLocation.Z)
+					{
+						CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+						CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
+					}
+					FollowCamera->SetRelativeLocation(CurRelativeLocation);
+				}
+				// Rotation
+				if (FollowCameraRelativeRotationVector.X != TargetRoll)
+				{
+					if (FollowCameraRelativeRotationVector.X < TargetRoll)
+					{
+						FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+						FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
+					}
+					else if (TargetRoll < FollowCameraRelativeRotationVector.X)
+					{
+						FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+						FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
+					}
+					FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
+				}						
+			}
+		}
+
+		////float ZoomOutSpeed = 100.0f;
+		////float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+		//float ZoomOutSpeed = 1400.0f;
+		//float ZoomInSpeed = ZoomOutSpeed * 0.75f;
+		//if (bShouldZoomOut)
+		//{
+		//	//if (CurFov < MaxFov)
+		//	//{
+		//	//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+		//	//	FollowCamera->SetFieldOfView(CurFov);
+		//	//}
+		//	if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
+		//	{
+		//		Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
+		//		CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+		//	}
+		//}
+		//else
+		//{
+		//	//if (MinFov < CurFov)
+		//	//{
+		//	//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+		//	//	FollowCamera->SetFieldOfView(CurFov);
+		//	//}
+		//	if (Local_MinCameraArmLength < Local_CurCameraArmLength)
+		//	{
+		//		Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
+		//		CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+		//	}
+		//}
+	}
 }
 #pragma endregion Engine life cycle function
 
@@ -1967,7 +2044,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						MyPS->addDeath(1);
 						// Broadcast burning kill
 						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
-					}					
+					}
 				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
@@ -1979,7 +2056,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					IsBurned = false;
 					if (GetNetMode() == NM_ListenServer)
 						OnRep_IsBurned();
-				}				
+				}
 			}
 		}
 		/* Paralysis */
@@ -2008,7 +2085,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					IsParalyzed = false;
 					if (GetNetMode() == NM_ListenServer)
 						OnRep_IsParalyzed();
-				}				
+				}
 			}
 		}
 		/* Knockback */
@@ -2038,7 +2115,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						IsHealing = false;
 						if (GetNetMode() == NM_ListenServer)
 							OnRep_IsHealing();
-					}					
+					}
 				}
 			}
 		}

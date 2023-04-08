@@ -353,8 +353,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UStaticMeshComponent* BubbleMesh;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectBubbleStart;
 	UPROPERTY(EditAnywhere, Category = "Effects")
@@ -390,6 +388,7 @@ public:
 	float Local_CurCameraArmLength;
 	float Local_MinCameraArmLength;
 	float Local_MaxCameraArmLength;
+	FVector FollowCameraRelativeRotationVector;
 
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
