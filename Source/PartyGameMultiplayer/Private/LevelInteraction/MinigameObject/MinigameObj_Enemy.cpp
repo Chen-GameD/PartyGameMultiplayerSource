@@ -10,6 +10,10 @@
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/ElementWeapon/WeaponFork.h"
+#include "Weapon/ElementWeapon/WeaponLighter.h"
+#include "Weapon/ElementWeapon/WeaponBlower.h"
+#include "Weapon/ElementWeapon/WeaponAlarm.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "UI/MinigameObjFollowWidget.h"
@@ -67,6 +71,16 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 
 	Server_CallGetHitEffects_MinInterval = 0.5f;
 	Server_LastTime_CallGetHitEffects = -1.0f;
+
+	GetHitAnimMinLastingTime = 0.25f;
+}
+
+
+void AMinigameObj_Enemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMinigameObj_Enemy, isAttacked);
 }
 
 
@@ -82,7 +96,6 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
-			SetActorEnableCollision(true);
 			IsRisingFromSand = false;
 
 			// Server
@@ -94,6 +107,19 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		}
 		SetActorLocation(TargetLocation);
 	}
+
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		// Reset crab's animation state to idle after not getting hit for GetHitAnimMinLastingTime seconds
+		if (isAttacked)
+		{
+			if (0 < Server_LastTime_CallGetHitEffects && GetHitAnimMinLastingTime < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
+			{
+				isAttacked = false;
+			}
+		}
+	}
 }
 
 
@@ -101,7 +127,7 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 {
 	if (!EventInstigator || !DamageCauser)
 		return 0.0f;
-	if (DamageTaken == 0 || CurrentHealth <= 0)
+	if (DamageTaken == 0 || CurrentHealth <= 0 || IsRisingFromSand)
 		return 0.0f;
 
 	// Adjust the damage according to the minigame damage ratio
@@ -137,7 +163,8 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		//NetMulticast_CallGetHitSfx();
 		
 		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
-		this->isAttacked = true;
+		isAttacked = true;
+
 		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
 	}
 
@@ -194,7 +221,20 @@ void AMinigameObj_Enemy::BeginPlay()
 		pFollowWidget->SetHealthByPercentage(1);
 		FollowWidget->SetVisibility(false);
 	}	
-	SetActorEnableCollision(false);
+
+	FName SocketName;
+	FString SocketName_str = "";
+	
+	if (SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
+		SocketName_str = "Fork";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
+		SocketName_str = "Lighter";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
+		SocketName_str = "Blower";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
+		SocketName_str = "Alarm";
+	SocketName = FName(*SocketName_str);
+	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
 }
@@ -244,14 +284,4 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
 		}		
 	}	
-}
-
-// Replicated Properties
-// =======================================================
-#pragma region Replicated Properties
-void AMinigameObj_Enemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
-	DOREPLIFETIME(AMinigameObj_Enemy, isAttacked);
 }

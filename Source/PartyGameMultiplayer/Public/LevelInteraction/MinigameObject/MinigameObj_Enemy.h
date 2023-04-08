@@ -14,7 +14,7 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Enemy : public AMinigameMainObjectiv
 
 public:
 	AMinigameObj_Enemy();
-	/** Property replication */
+
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
@@ -59,6 +59,7 @@ public:
 		class UNiagaraComponent* Explode_NC;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Shield_NC;
+	float GetHitAnimMinLastingTime;
 
 	// UI
 	// =============================

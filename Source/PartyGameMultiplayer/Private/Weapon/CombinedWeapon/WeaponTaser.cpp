@@ -99,23 +99,26 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{				
-				// change the transform of the TaserFork
-				if (Server_ActorBeingHit)
+			{								
+				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
 					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
 					// Rotation
-					FVector Server_ActorBeingHit_To_WeaponMesh_Now = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
-					float Angle = FMath::Acos(FVector::DotProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal())) * (180.0f / PI);
-					bool bNowVectorIsOnTheRight = 0 < FVector::DotProduct(FVector::UpVector, FVector::CrossProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal()));
-					FRotator CurRotation = TaserForkMesh->GetRelativeRotation();
-					CurRotation.Yaw = Server_TaserForkRotationYaw_WhenHit + (bNowVectorIsOnTheRight ? Angle : -Angle);
-					TaserForkMesh->SetWorldRotation(CurRotation);
-				}
-				
-				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
-				{
+					if (Server_ActorBeingHit)
+					{
+						FVector Server_ActorBeingHit_To_WeaponMesh_Now = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
+						float Angle = FMath::Acos(FVector::DotProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal())) * (180.0f / PI);
+						bool bNowVectorIsOnTheRight = 0 < FVector::DotProduct(FVector::UpVector, FVector::CrossProduct(Server_ActorBeingHit_To_WeaponMesh_WhenHit.GetSafeNormal(), Server_ActorBeingHit_To_WeaponMesh_Now.GetSafeNormal()));
+						FRotator CurRotation = TaserForkMesh->GetRelativeRotation();
+						CurRotation.Yaw = Server_TaserForkRotationYaw_WhenHit + (bNowVectorIsOnTheRight ? Angle : -Angle);
+						TaserForkMesh->SetWorldRotation(CurRotation);
+					}
+					// Server_ActorBeingHit can be set to null in overlapEnd after SetWorldLocation, which is an unintended situation, but must be dealt with
+					else
+					{
+						AttackStop();
+					}
 					// Apply paralysis buff(drag towards the attacker)
 					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacter, DeltaTime);
 					// Stop attack when the character is dead
@@ -316,8 +319,15 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				}
 				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
 				{
-					Server_ActorBeingHit_To_TaserFork_WhenHit = TaserForkMesh->GetComponentLocation() - Server_ActorBeingHit->GetActorLocation();
-					Server_ActorBeingHit_To_TaserFork_WhenHit *= 0.5f;
+					FVector CrabCenterToTaserFork = TaserForkMesh->GetComponentLocation() - pMiniGameObjectBeingHit->CrabCenterMesh->GetComponentLocation();
+					// Adjust location to get it closer to the crab
+					TaserForkMesh->SetWorldLocation(pMiniGameObjectBeingHit->CrabCenterMesh->GetComponentLocation() + CrabCenterToTaserFork * 0.5f);
+					// Server_ActorBeingHit can be set to null in overlapEnd after SetWorldLocation, which is an unintended situation, but must be dealt with
+					if (!Server_ActorBeingHit)
+					{
+						AttackStop();
+						return;
+					}
 				}
 				Server_ActorBeingHit_To_WeaponMesh_WhenHit = GetActorLocation() - Server_ActorBeingHit->GetActorLocation();
 				Server_TaserForkRotationYaw_WhenHit = TaserForkMesh->GetRelativeRotation().Yaw;
@@ -328,9 +338,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				bAttackOverlap = true;
 				// Listen server
 				if (GetNetMode() == NM_ListenServer)
-				{
 					OnRep_bAttackOverlap();
-				}
 
 				if (ApplyDamageCounter == 0 && HoldingController)
 				{
