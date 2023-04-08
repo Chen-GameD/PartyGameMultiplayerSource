@@ -353,6 +353,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UStaticMeshComponent* BubbleMesh;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleStart;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleOn;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleEnd;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectHeal;
 	UPROPERTY(EditAnywhere, Category = "Effects")
@@ -430,6 +438,7 @@ protected:
 
 	UPROPERTY(Replicated)
 	bool IsDead;
+	int Server_DeadTimes;
 
 	// Action
 	bool IsOnGround;
