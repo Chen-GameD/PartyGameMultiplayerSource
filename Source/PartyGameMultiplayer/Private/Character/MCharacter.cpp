@@ -1431,7 +1431,7 @@ void AMCharacter::OnRep_IsInvincible()
 		{
 			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
 			if (pMInGameHUD)
-				pMInGameHUD->InGame_ToggleShockBuffWidget(true);
+				pMInGameHUD->InGame_ToggleInvincibleUI(true);
 		}
 	}
 	else
@@ -1445,7 +1445,7 @@ void AMCharacter::OnRep_IsInvincible()
 		{
 			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
 			if (pMInGameHUD)
-				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
+				pMInGameHUD->InGame_ToggleInvincibleUI(false);
 		}
 		InvincibleTimer = 0;
 	}

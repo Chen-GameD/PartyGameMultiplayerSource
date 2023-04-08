@@ -341,17 +341,21 @@ void ABaseWeapon::BeginPlay()
 	// Assign some member variables(we want both the server and client have these values)
 	if (AWeaponDataHelper::DamageManagerDataAsset)
 	{
-		// CoolDown		
-		FString ParName = WeaponName + "_" + "CD_MaxEnergy";
+		// CoolDown	
+		FString ParName = "";
+		FString ThisWeaponName = WeaponName;
+		if (IsBigWeapon)
+			ThisWeaponName = "Big" + WeaponName;
+		ParName = ThisWeaponName + "_" + "CD_MaxEnergy";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_LeftEnergy = CD_MaxEnergy = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-		ParName = WeaponName + "_" + "CD_DropSpeed";
+		ParName = ThisWeaponName + "_" + "CD_DropSpeed";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_DropSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-		ParName = WeaponName + "_" + "CD_RecoverSpeed";
+		ParName = ThisWeaponName + "_" + "CD_RecoverSpeed";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
-		ParName = WeaponName + "_" + "CD_MinEnergyToAttak";
+		ParName = ThisWeaponName + "_" + "CD_MinEnergyToAttak";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 		{
 			// Even when it is constant attack type, do not set CD_MinEnergyToAttak as 0 in the table! 
