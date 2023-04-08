@@ -1453,7 +1453,11 @@ void AMCharacter::OnRep_IsInvincible()
 		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
 			{
 				if (EffectBubbleOn)
-					EffectBubbleStart->SetVisibility(true);
+				{
+					if(!EffectBubbleOn->IsActive())
+						EffectBubbleOn->Activate();
+					EffectBubbleOn->SetVisibility(true);
+				}					
 			}, 1.0, false);
 		
 
@@ -1472,7 +1476,7 @@ void AMCharacter::OnRep_IsInvincible()
 		if (EffectBubbleEnd)
 			EffectBubbleEnd->Activate();
 		if (EffectBubbleOn)
-			EffectBubbleStart->SetVisibility(false);
+			EffectBubbleOn->SetVisibility(false);
 		/*if (EffectBubbleStart && EffectBubbleStart->IsActive())
 		{
 			EffectBubbleStart->Deactivate();
