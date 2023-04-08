@@ -85,6 +85,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		{
 			if (Target)
 			{
+				this->AttachToComponent(Target->GetSkeletalMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TargetSocketName);
 				FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
 				this->SetActorLocation(SocketTransform.GetLocation());
 				this->SetActorRotation(SocketTransform.GetRotation());
