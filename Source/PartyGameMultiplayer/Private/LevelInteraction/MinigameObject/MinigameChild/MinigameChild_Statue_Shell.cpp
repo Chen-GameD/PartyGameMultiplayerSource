@@ -99,7 +99,6 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 			}
 			if (ShellInsert_NC && !ShellInsert_NC->IsActive())
 			{
-				ShellInsert_NC->SetWorldLocation(FVector::ZeroVector);
 				ShellInsert_NC->SetWorldRotation(FRotator::ZeroRotator);
 				ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
 				ShellInsert_NC->Activate();
