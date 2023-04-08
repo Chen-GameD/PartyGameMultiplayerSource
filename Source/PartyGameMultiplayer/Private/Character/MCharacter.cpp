@@ -1894,86 +1894,87 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
-		// Zoom
-		if (auto pPlayerController = Cast<APlayerController>(GetController()))
-		{
-			float mouse_x, mouse_y;
-			bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
-			int32 viewport_x, viewport_y;
-			pPlayerController->GetViewportSize(viewport_x, viewport_y);
-			if (success && 0 < viewport_x && 0 < viewport_y)
-			{
-				float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
+		//// Zoom
+		//if (auto pPlayerController = Cast<APlayerController>(GetController()))
+		//{
+		//	float mouse_x, mouse_y;
+		//	bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
+		//	int32 viewport_x, viewport_y;
+		//	pPlayerController->GetViewportSize(viewport_x, viewport_y);
+		//	if (success && 0 < viewport_x && 0 < viewport_y)
+		//	{
+		//		float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
 
-				float FinalX = -700.0f * 0.75f;
-				float FinalZ = -250.0f * 0.75f;
-				float FinalRoll = -8.0f * 0.75f;
-				/*
-				// Discrete
-				int GearCnt = 3;
-				float LevelRange = 1.0f / GearCnt;				
-				int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
-				if (lowerYRatio <= 0)
-					Gear = 0;					
-				float TargetX = FinalX * Gear * LevelRange;
-				float TargetZ = FinalZ * Gear * LevelRange;
-				float TargetRoll = FinalRoll * Gear * LevelRange;
-				*/
-				float TargetX = FinalX * lowerYRatio;
-				float TargetZ = FinalZ * lowerYRatio;
-				float TargetRoll = FinalRoll * lowerYRatio;
-				float TimeFromMinToMax = 0.5f;
-				if (lowerYRatio < 0.5f)
-				{
-					TargetX = TargetZ = TargetRoll = 0;
-					TimeFromMinToMax = 1.0f;
-				}					
-				
-				// Location
-				FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
-				if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
-				{
-					// Location X
-					if (CurRelativeLocation.X < TargetX)
-					{
-						CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
-						CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
-					}
-					else if (TargetX < CurRelativeLocation.X)
-					{
-						CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
-						CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
-					}
-					// Location Z
-					if (CurRelativeLocation.Z < TargetZ)
-					{
-						CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
-						CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
-					}
-					else if (TargetZ < CurRelativeLocation.Z)
-					{
-						CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
-						CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
-					}
-					FollowCamera->SetRelativeLocation(CurRelativeLocation);
-				}
-				// Rotation
-				if (FollowCameraRelativeRotationVector.X != TargetRoll)
-				{
-					if (FollowCameraRelativeRotationVector.X < TargetRoll)
-					{
-						FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
-						FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
-					}
-					else if (TargetRoll < FollowCameraRelativeRotationVector.X)
-					{
-						FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
-						FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
-					}
-					FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
-				}						
-			}
-		}
+		//		float FinalX = -700.0f * 0.75f;
+		//		float FinalZ = -250.0f * 0.75f;
+		//		float FinalRoll = -8.0f * 0.75f;
+		//		/*
+		//		// Discrete
+		//		int GearCnt = 3;
+		//		float LevelRange = 1.0f / GearCnt;				
+		//		int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
+		//		if (lowerYRatio <= 0)
+		//			Gear = 0;					
+		//		float TargetX = FinalX * Gear * LevelRange;
+		//		float TargetZ = FinalZ * Gear * LevelRange;
+		//		float TargetRoll = FinalRoll * Gear * LevelRange;
+		//		*/
+		//		float TargetX = FinalX * lowerYRatio;
+		//		float TargetZ = FinalZ * lowerYRatio;
+		//		float TargetRoll = FinalRoll * lowerYRatio;
+		//		float TimeFromMinToMax = 0.5f;
+		//		if (lowerYRatio < 0.5f)
+		//		{
+		//			TargetX = TargetZ = TargetRoll = 0;
+		//			TimeFromMinToMax = 1.0f;
+		//		}					
+		//		
+		//		// Location
+		//		FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
+		//		{
+		//			// Location X
+		//			if (CurRelativeLocation.X < TargetX)
+		//			{
+		//				CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
+		//			}
+		//			else if (TargetX < CurRelativeLocation.X)
+		//			{
+		//				CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
+		//			}
+		//			// Location Z
+		//			if (CurRelativeLocation.Z < TargetZ)
+		//			{
+		//				CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			else if (TargetZ < CurRelativeLocation.Z)
+		//			{
+		//				CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			FollowCamera->SetRelativeLocation(CurRelativeLocation);
+		//		}
+		//		// Rotation
+		//		if (FollowCameraRelativeRotationVector.X != TargetRoll)
+		//		{
+		//			if (FollowCameraRelativeRotationVector.X < TargetRoll)
+		//			{
+		//				FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			else if (TargetRoll < FollowCameraRelativeRotationVector.X)
+		//			{
+		//				FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
+		//		}						
+		//	}
+		//}
+
 
 		////float ZoomOutSpeed = 100.0f;
 		////float ZoomInSpeed = ZoomOutSpeed * 0.5f;
@@ -2012,7 +2013,7 @@ void AMCharacter::Tick(float DeltaTime)
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
@@ -2023,7 +2024,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			if (0.0f < BuffRemainedTime && 0 < CurrentHealth)
 			{
 				float BurningBuffDamagePerSecond = 0.0f;
 				FString ParName = "BurningDamagePerSecond";
@@ -2064,7 +2065,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
 				if (Server_CanMove)
 				{
@@ -2098,7 +2099,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
 				float Saltcure_RecoverSpeed = 2.0f;
 				//FString ParName = "BurningDamagePerSecond";
@@ -2124,7 +2125,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
 				float Shellheal_RecoverSpeed = 2.0f;
 				//FString ParName = "BurningDamagePerSecond";

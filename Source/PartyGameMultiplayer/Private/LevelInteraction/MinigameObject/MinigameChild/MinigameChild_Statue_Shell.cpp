@@ -49,7 +49,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (TargetSocketName != "None" && TartgetStatue && !bFinishInsert)
+	if (TargetSocketName != "None" && TartgetStatue)
 	{
 		// Update shell position
 		// TODO
@@ -66,6 +66,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		// 	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("Server: Shell Position Update"));
 		// 	this->SetActorLocation(FVector(1000, -1000, 100));
 		// }
+
 		AMinigameObj_Statue* Target = Cast<AMinigameObj_Statue>(TartgetStatue);
 		if (TimeElapsed < LerpDuration)
 		{
@@ -90,19 +91,23 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 				this->SetActorRotation(SocketTransform.GetRotation());
 				this->SetActorScale3D(SocketTransform.GetScale3D());
 			}
-			CallShellInsertSfx();
-			bFinishInsert = true;
-			if (ShellFly_NC && ShellFly_NC->IsActive())
+			if (!bFinishInsert)
 			{
-				ShellFly_NC->Deactivate();
-				//HaloEffect_NSComponent->SetVisibility(false);
+				CallShellInsertSfx();				
+				if (ShellFly_NC && ShellFly_NC->IsActive())
+				{
+					ShellFly_NC->Deactivate();
+					ShellFly_NC->SetVisibility(false);
+				}
+				if (ShellInsert_NC && !ShellInsert_NC->IsActive())
+				{
+					ShellInsert_NC->SetWorldRotation(FRotator::ZeroRotator);
+					ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
+					ShellInsert_NC->Activate();
+				}
+				bFinishInsert = true;
 			}
-			if (ShellInsert_NC && !ShellInsert_NC->IsActive())
-			{
-				ShellInsert_NC->SetWorldRotation(FRotator::ZeroRotator);
-				ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
-				ShellInsert_NC->Activate();
-			}
+			
 		}			
 	}
 
