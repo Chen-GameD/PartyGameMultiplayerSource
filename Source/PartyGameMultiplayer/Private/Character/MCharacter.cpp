@@ -96,6 +96,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnWeaponOverlapEnd);
 
 	IsDead = false;
+	Server_DeadTimes = 0;
 
 	IsAllowDash = true;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
@@ -107,6 +108,22 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	Client_LowSpeedWalkAccumulateTime = 0;
+	
+	BubbleMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BubbleMesh"));
+	BubbleMesh->SetupAttachment(RootComponent);
+	BubbleMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+	EffectBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleStart"));
+	EffectBubbleStart->SetupAttachment(RootComponent);
+	EffectBubbleStart->bAutoActivate = false;	
+
+	EffectBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleOn"));
+	EffectBubbleOn->SetupAttachment(RootComponent);
+	EffectBubbleOn->bAutoActivate = false;
+
+	EffectBubbleEnd = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleEnd"));
+	EffectBubbleEnd->SetupAttachment(RootComponent);
+	EffectBubbleEnd->bAutoActivate = false;
 
 	IsHealing = false;
 	EffectHeal = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHeal"));
@@ -1289,9 +1306,12 @@ void AMCharacter::ResetCharacterStatus()
 		CurrentHealth = MaxHealth;
 		OnHealthUpdate();
 		IsDead = false;
-		IsInvincible = true;
-		if (GetNetMode() == NM_ListenServer)
-			OnRep_IsInvincible();
+		if (0 < Server_DeadTimes)
+		{
+			IsInvincible = true;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_IsInvincible();
+		}		
 		NetMulticast_RespawnResult();
 	}
 }
@@ -1423,8 +1443,24 @@ void AMCharacter::OnRep_IsInvincible()
 	if (IsInvincible)
 	{
 		// Vfx
-		if (EffectBurn && !EffectBurn->IsActive())
-			EffectBurn->Activate();
+		if (EffectBubbleStart)
+		{
+			//EffectBubbleStart->ResetSystem();
+			EffectBubbleStart->Activate();
+			//EffectBubbleStart->SetVisibility(true);
+		}	
+		FTimerHandle ShowBubbleOnVfxTimerHandle;
+		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
+			{
+				if (EffectBubbleOn)
+				{
+					if(!EffectBubbleOn->IsActive())
+						EffectBubbleOn->Activate();
+					EffectBubbleOn->SetVisibility(true);
+				}					
+			}, 1.0, false);
+		
+
 		// Toggle On Character's Invincible buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
 		if (pMPlayerController)
@@ -1437,8 +1473,16 @@ void AMCharacter::OnRep_IsInvincible()
 	else
 	{
 		// Vfx
-		if (EffectBurn && EffectBurn->IsActive())
-			EffectBurn->Deactivate();
+		if (EffectBubbleEnd)
+			EffectBubbleEnd->Activate();
+		if (EffectBubbleOn)
+			EffectBubbleOn->SetVisibility(false);
+		/*if (EffectBubbleStart && EffectBubbleStart->IsActive())
+		{
+			EffectBubbleStart->Deactivate();
+			EffectBubbleStart->SetVisibility(false);
+		}*/			
+
 		// Toggle Off Character's Invincible buff UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
 		if (pMPlayerController)
@@ -1499,6 +1543,8 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
+
+			Server_DeadTimes++;
 
 			// Broadcast function
 			BroadcastToAllController(EventInstigator, false);
@@ -1741,7 +1787,7 @@ void AMCharacter::BeginPlay()
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
 
-		// Toggle off Character's buff UI
+		// Toggle off some of the Character's UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
 		if (pMPlayerController)
 		{
@@ -1750,6 +1796,7 @@ void AMCharacter::BeginPlay()
 			{
 				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
 				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
+				pMInGameHUD->InGame_ToggleInvincibleUI(false);
 			}
 		}
 	}	

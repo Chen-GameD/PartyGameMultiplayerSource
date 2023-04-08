@@ -220,9 +220,7 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	Origin = this->GetActorLocation();
 	HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
-	{
 		OnRep_HasExploded();
-	}
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, OtherActor->GetName());
 
 	// Direct Hit Damage
