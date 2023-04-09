@@ -27,6 +27,8 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();
 
+	void Server_WhenDead();
+
 protected:
 	// only is called on server
 	UFUNCTION(Category = "Weapon")

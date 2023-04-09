@@ -49,7 +49,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (TargetSocketName != "None" && TartgetStatue)
+	if (TargetSocketName != "None" && TartgetStatue && !bFinishInsert)
 	{
 		// Update shell position
 		// TODO
@@ -68,33 +68,30 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		// }
 
 		AMinigameObj_Statue* Target = Cast<AMinigameObj_Statue>(TartgetStatue);
-		if (TimeElapsed < LerpDuration)
+		if (Target)
 		{
-			if (Target)
+			bool IsCloseEnough = false;
+			FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
+			if (FVector::Dist(GetActorLocation(), SocketTransform.GetLocation()) < 10.0f)
+				IsCloseEnough = true;
+			if (TimeElapsed < LerpDuration && !IsCloseEnough)
 			{
-				FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
 				FVector NewPosition = FMath::Lerp(GetActorLocation(), SocketTransform.GetLocation(), TimeElapsed / LerpDuration);
-				this->SetActorLocation(NewPosition);
+				SetActorLocation(NewPosition);
 				FQuat NewRotation = FMath::Lerp(GetActorRotation().Quaternion(), SocketTransform.GetRotation(), TimeElapsed / LerpDuration);
-				this->SetActorRotation(NewRotation);
+				SetActorRotation(NewRotation);
 				FVector NewScale = FMath::Lerp(GetActorScale3D(), SocketTransform.GetScale3D(), TimeElapsed / LerpDuration);
-				this->SetActorScale3D(NewScale);
+				SetActorScale3D(NewScale);
 				TimeElapsed += DeltaTime;
 			}
-		}
-		else
-		{
-			if (Target)
+			else
 			{
-				this->AttachToComponent(Target->GetSkeletalMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TargetSocketName);
-				FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
-				this->SetActorLocation(SocketTransform.GetLocation());
-				this->SetActorRotation(SocketTransform.GetRotation());
-				this->SetActorScale3D(SocketTransform.GetScale3D());
-			}
-			if (!bFinishInsert)
-			{
-				CallShellInsertSfx();				
+				AttachToComponent(Target->GetSkeletalMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TargetSocketName);
+				SetActorLocation(SocketTransform.GetLocation());
+				SetActorRotation(SocketTransform.GetRotation());
+				SetActorScale3D(SocketTransform.GetScale3D());
+
+				// Vfx
 				if (ShellFly_NC && ShellFly_NC->IsActive())
 				{
 					ShellFly_NC->Deactivate();
@@ -106,10 +103,13 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 					ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
 					ShellInsert_NC->Activate();
 				}
+				// Sfx
+				CallShellInsertSfx();
+
 				bFinishInsert = true;
 			}
-			
-		}			
+		}
+				
 	}
 
 }
