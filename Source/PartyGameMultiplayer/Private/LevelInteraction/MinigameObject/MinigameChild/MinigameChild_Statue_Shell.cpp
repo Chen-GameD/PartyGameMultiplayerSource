@@ -72,7 +72,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		{
 			bool IsCloseEnough = false;
 			FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
-			if (FVector::Dist(GetActorLocation(), SocketTransform.GetLocation()) < 10.0f)
+			if (FVector::Dist(GetActorLocation(), SocketTransform.GetLocation()) < 5.0f)
 				IsCloseEnough = true;
 			if (TimeElapsed < LerpDuration && !IsCloseEnough)
 			{

@@ -121,12 +121,12 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 	}
 	else
 	{
-		GodRayExpandSpeed = 20.0f;
+		GodRayExpandSpeed = 30.0f;
 	}
 
 	// GodRay
 	FVector CurRelativeScale = GodRayMesh->GetRelativeScale3D();
-	if (CurRelativeScale.X < 150.0f)
+	if (CurRelativeScale.X < 250.0f)
 	{
 		CurRelativeScale.X += GodRayExpandSpeed * DeltaTime;
 		CurRelativeScale.Y += GodRayExpandSpeed * DeltaTime;
@@ -144,9 +144,17 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 {
 	if (OtherActor && !IsCompleteBuild)
 	{
-		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);
+		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);		
 		if (OverlapShell)
 		{
+			if (OverlapShell->IsPickedUp && OverlapShell->GetHoldingController())
+			{
+				if (auto pMCharacter = Cast<AMCharacter>(OverlapShell->GetHoldingController()->GetPawn()))
+				{
+					pMCharacter->Server_GiveShellToStatue(OverlapShell);
+				}
+			}
+
 			CurrentHealth--;
 			if (GetNetMode() == NM_ListenServer)
 				OnRep_CurrentHealth();
@@ -237,8 +245,11 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 			{
 				SetActorEnableCollision(false);
 				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-				if(FollowWidget)
-					FollowWidget->SetVisibility(false);
+				/*if(FollowWidget)
+					FollowWidget->SetVisibility(false);*/
+
+				// TODO: Add little crab sequencer
+
 			}, LittleCrabDelay, false);
 
 		// TODO

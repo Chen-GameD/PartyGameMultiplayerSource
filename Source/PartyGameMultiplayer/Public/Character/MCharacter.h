@@ -190,6 +190,9 @@ public:
 		void CallParalysisBuffStartSfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallParalysisBuffStopSfx();
+
+	void Server_GiveShellToStatue(class AWeaponShell* pShell);
+
 protected:
 
 	// Health
@@ -296,6 +299,8 @@ protected:
 	// When it not null anymore, start to Init all the pawn related information
 	UFUNCTION()
 	void CheckPlayerFollowWidgetTick();
+
+	void Server_CheckShellhealBuff();
 
 	// Broadcast function
 	UFUNCTION()

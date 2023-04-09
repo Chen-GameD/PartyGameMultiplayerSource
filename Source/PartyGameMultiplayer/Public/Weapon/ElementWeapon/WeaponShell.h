@@ -20,6 +20,9 @@ public:
 	AWeaponShell();
 
 	virtual void GetPickedUp(ACharacter* pCharacter) override;
+	virtual void GetThrewAway() override;
+	virtual void AttackStart(float AttackTargetDistance) override;
+	virtual void AttackStop() override;
 
 	UFUNCTION(BlueprintCallable)
 	AController* GetPreHoldingController();
@@ -37,6 +40,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Destroyed() override;
+	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
+
+public:
+	bool Server_bDetectedByStatue;
 	
 protected:
 	AController* PreHoldingController;

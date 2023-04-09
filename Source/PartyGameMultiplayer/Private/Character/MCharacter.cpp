@@ -20,6 +20,7 @@
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "Weapon/ElementWeapon/WeaponShell.h"
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
 #include "Character/animUtils.h"
@@ -696,30 +697,10 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	// =================================================================================
 	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+
 	// Add Shellheal buff if holding any shells
-	int CntShellHeld = 0;
-	if (!CombineWeapon)
-	{
-		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (0 < CntShellHeld)
-		{
-			// clear burning buff
-			if (CheckBuffMap(EnumAttackBuff::Burning))
-			{
-				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
-				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
-			}
-			// apply shellheal buff
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
-		}
-		else
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
-	}
+	Server_CheckShellhealBuff();
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -788,6 +769,11 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 			LeftWeapon->HasBeenCombined = false;
 		}
 	}
+	// Adjust the walking speed according to the holding weapon
+	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+
+	// Add Shellheal buff if holding any shells
+	Server_CheckShellhealBuff();
 }
 
 void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
@@ -2222,3 +2208,43 @@ void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("EffectGetHit is called"));
 }
 #pragma endregion Effects
+
+
+void AMCharacter::Server_GiveShellToStatue(AWeaponShell* pShell)
+{
+	if (LeftWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(true);
+	}
+	else if (RightWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(false);
+	}		
+}
+
+void AMCharacter::Server_CheckShellhealBuff()
+{
+	int CntShellHeld = 0;
+	if (!CombineWeapon)
+	{
+		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (0 < CntShellHeld)
+		{
+			// clear burning buff
+			if (CheckBuffMap(EnumAttackBuff::Burning))
+			{
+				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+			}
+			// apply shellheal buff
+			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
+		}
+		else
+			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
+	}
+}
