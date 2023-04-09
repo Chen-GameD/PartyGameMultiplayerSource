@@ -37,7 +37,7 @@ void AWeaponShell::BeginPlay()
 	if (pShellSpotLight)
 	{
 		//pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 1000.0f);
-		pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 380.0f);
+		pShellSpotLight->SourceLocation = FVector(20.0f, -400.0f, 800.0f);
 		pShellSpotLight->TargetActor = this;		
 	}
 }

@@ -43,7 +43,6 @@ protected:
 
 private:
 	float TimeElapsed = 0;
-	float TimeBubblePickup = 1.5f;
-	float LerpDuration = 6.0f;
+	float LerpDuration = 4.5f;
 	bool bFinishInsert;
 };

@@ -41,7 +41,6 @@ void AMinigameChild_Statue_Shell::GetLifetimeReplicatedProps(TArray<FLifetimePro
 void AMinigameChild_Statue_Shell::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -82,7 +81,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 				SetActorRotation(NewRotation);
 				FVector NewScale = FMath::Lerp(GetActorScale3D(), SocketTransform.GetScale3D(), TimeElapsed / LerpDuration);
 				SetActorScale3D(NewScale);
-				TimeElapsed += DeltaTime;
+
 			}
 			else
 			{
@@ -108,6 +107,7 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 
 				bFinishInsert = true;
 			}
+			TimeElapsed += DeltaTime;
 		}
 				
 	}
