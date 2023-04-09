@@ -19,6 +19,7 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Statue : public AMinigameMainObjecti
 public:
 	AMinigameObj_Statue();
 
+	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable)
@@ -43,6 +44,24 @@ public:
 	// =============================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
+
+	// Vfx
+	// =========================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Explode_NC;
+
+	bool IsDropping;
+	float DroppingTargetHeight;
+	float DroppingSpeed;
+
+	// Death related
+	// ===========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ExplodeDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float LittleCrabDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float RespawnDelay;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")

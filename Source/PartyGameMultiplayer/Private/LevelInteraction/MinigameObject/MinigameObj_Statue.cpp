@@ -4,6 +4,8 @@
 #include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 
 #include <string>
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
 #include "Character/MPlayerController.h"
@@ -30,10 +32,25 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
+
+	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
+	Explode_NC->SetupAttachment(SkeletalMesh);
+	Explode_NC->bAutoActivate = false;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
+	if (DefaultExplodeNS.Succeeded())
+		Explode_NC->SetAsset(DefaultExplodeNS.Object);
 	
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
 	CurrentSocketIndex = 0;
+
+	IsDropping = true;
+	DroppingTargetHeight = 100.0f;
+	DroppingSpeed = 0;
+
+	ExplodeDelay = 2.0f;
+	LittleCrabDelay = 4.25f;
+	RespawnDelay = 10.0f;
 }
 
 void AMinigameObj_Statue::BeginPlay()
@@ -67,6 +84,27 @@ void AMinigameObj_Statue::BeginPlay()
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(0);
 }
+
+void AMinigameObj_Statue::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (IsDropping && DroppingTargetHeight < GetActorLocation().Z)
+	{
+		float g = 980.0f;
+		DroppingSpeed += g * DeltaTime;
+		FVector TargetLocation = GetActorLocation() + FVector::DownVector * DroppingSpeed * DeltaTime;
+		// The End
+		if (TargetLocation.Z <= DroppingTargetHeight)
+		{
+			TargetLocation.Z = DroppingTargetHeight;
+			//FollowWidget->SetVisibility(true);
+			IsDropping = false;
+		}
+		SetActorLocation(TargetLocation);
+	}
+}
+
 
 USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
 {
@@ -138,10 +176,7 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 					}
 				}
 
-				// Consider respawn the shell
-				// Set timer and respawn this actor
-				FTimerHandle RespawnMinigameObjectTimerHandle;
-				GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, 5, false);
+				Server_WhenDead();
 			}
 
 			// Destroy Shell
@@ -159,7 +194,24 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 {
 	if (CurrentHealth <= 0)
 	{
-		// Destroy VFX & Effect
+		// Exlode Vfx
+		FTimerHandle ExplodeTimerHandle;
+		GetWorldTimerManager().SetTimer(ExplodeTimerHandle, [this]
+			{
+				if (Explode_NC)
+					Explode_NC->Activate();
+			}, ExplodeDelay, false);
+
+		// Hide Statue
+		FTimerHandle HideStatueTimerHandle;
+		GetWorldTimerManager().SetTimer(HideStatueTimerHandle, [this]
+			{
+				SetActorEnableCollision(false);
+				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+				if(FollowWidget)
+					FollowWidget->SetVisibility(false);
+			}, LittleCrabDelay, false);
+
 		// TODO
 		OnStatueFinishedEvent();
 
@@ -169,4 +221,11 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
+}
+
+void AMinigameObj_Statue::Server_WhenDead()
+{
+	// Respawn(Destroy)
+	FTimerHandle RespawnMinigameObjectTimerHandle;
+	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, RespawnDelay, false);
 }
