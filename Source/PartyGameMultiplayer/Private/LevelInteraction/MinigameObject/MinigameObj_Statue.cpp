@@ -23,6 +23,11 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	RootMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	RootMesh->SetupAttachment(RootComponent);
 
+	GodRayMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GodRayMesh"));
+	GodRayMesh->SetupAttachment(RootMesh);
+	GodRayMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+	GodRayMesh->SetRelativeScale3D(FVector(0.01f, 0.01f, 1.0f));
+
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootMesh);
 
@@ -80,6 +85,11 @@ void AMinigameObj_Statue::BeginPlay()
 		//SetActorEnableCollision(false);
 	}
 
+	GodRayMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	FVector GodRayMeshWorldLocation = GodRayMesh->GetComponentLocation();
+	GodRayMeshWorldLocation.Z = DroppingTargetHeight;
+	GodRayMesh->SetWorldLocation(GodRayMeshWorldLocation);
+
 	// UI
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(0);
@@ -89,8 +99,10 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	float GodRayExpandSpeed = 0;
 	if (IsDropping && DroppingTargetHeight < GetActorLocation().Z)
 	{
+		// Statue
 		float g = 980.0f;
 		DroppingSpeed += g * DeltaTime;
 		FVector TargetLocation = GetActorLocation() + FVector::DownVector * DroppingSpeed * DeltaTime;
@@ -99,10 +111,27 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 		{
 			TargetLocation.Z = DroppingTargetHeight;
 			//FollowWidget->SetVisibility(true);
+			GodRayMesh->SetCollisionProfileName(TEXT("NoCollision"));
+			GodRayMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			IsDropping = false;
 		}
 		SetActorLocation(TargetLocation);
+
+		GodRayExpandSpeed = 2.5f;		
 	}
+	else
+	{
+		GodRayExpandSpeed = 20.0f;
+	}
+
+	// GodRay
+	FVector CurRelativeScale = GodRayMesh->GetRelativeScale3D();
+	if (CurRelativeScale.X < 150.0f)
+	{
+		CurRelativeScale.X += GodRayExpandSpeed * DeltaTime;
+		CurRelativeScale.Y += GodRayExpandSpeed * DeltaTime;
+		GodRayMesh->SetRelativeScale3D(CurRelativeScale);
+	}	
 }
 
 

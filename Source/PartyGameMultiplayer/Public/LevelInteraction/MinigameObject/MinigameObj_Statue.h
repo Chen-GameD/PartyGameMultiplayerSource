@@ -65,13 +65,16 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
-	UStaticMeshComponent* RootMesh;
+		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USphereComponent* ShellOverlapComponent;
+		class USphereComponent* ShellOverlapComponent;
 	UPROPERTY(EditAnywhere, Category = "Components")
-	USkeletalMeshComponent* SkeletalMesh;
+		class USkeletalMeshComponent* SkeletalMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UStaticMeshComponent* GodRayMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ShellMeshRef")
-	TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+		class TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+	
 	UPROPERTY()
 	int CurrentSocketIndex;
 	UPROPERTY()
