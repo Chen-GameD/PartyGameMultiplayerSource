@@ -121,17 +121,25 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 	}
 	else
 	{
-		GodRayExpandSpeed = 30.0f;
+		FVector CurRelativeScale = GodRayMesh->GetRelativeScale3D();
+		if(CurRelativeScale.X < 200.0f)
+			GodRayExpandSpeed = 50.0f;
+		else
+			GodRayExpandSpeed = 100.0f;
 	}
 
 	// GodRay
 	FVector CurRelativeScale = GodRayMesh->GetRelativeScale3D();
-	if (CurRelativeScale.X < 250.0f)
+	if (GodRayMesh->IsVisible() && CurRelativeScale.X < 500.0f)
 	{
 		CurRelativeScale.X += GodRayExpandSpeed * DeltaTime;
 		CurRelativeScale.Y += GodRayExpandSpeed * DeltaTime;
 		GodRayMesh->SetRelativeScale3D(CurRelativeScale);
 	}	
+	else
+	{
+		GodRayMesh->SetVisibility(false);
+	}
 }
 
 

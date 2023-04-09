@@ -24,6 +24,7 @@
 #include "Weapon/ElementWeapon/WeaponShell.h"
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 #include "Character/animUtils.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "M_PlayerState.h"
@@ -129,6 +130,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	bHealingBubbleOn = false;
 	bDoubleHealingBubbleSize = false;
+	bHealingBubbleTouchingStatue = false;
 	
 	EffectBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleStart"));
 	EffectBubbleStart->SetupAttachment(RootComponent);
@@ -271,6 +273,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
 	DOREPLIFETIME(AMCharacter, IsInvincible);
+	//DOREPLIFETIME(AMCharacter, bHealingBubbleTouchingStatue);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -510,29 +513,23 @@ void AMCharacter::EnablebHealingBubble(bool bEnable)
 {
 	if (bEnable)
 	{
-		// Vfx
-		if (EffectHealingBubbleStart)
-		{
-			EffectHealingBubbleStart->Activate();
-		}
-		FTimerHandle ShowHealingBubbleTimerHandle;
-		GetWorldTimerManager().SetTimer(ShowHealingBubbleTimerHandle, [this]
-			{
-				EffectHealingBubbleOn->Activate();
-				EffectHealingBubbleOn->SetVisibility(true);
-				HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			}, 1.0, false);
+		//// Vfx
+		//if (EffectHealingBubbleStart)
+		//{
+		//	EffectHealingBubbleStart->Activate();
+		//}
+
+		if(!EffectHealingBubbleOn->IsActive())
+			EffectHealingBubbleOn->Activate();
+		EffectHealingBubbleOn->SetVisibility(true);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	}
 	else
 	{
-		if (EffectHealingBubbleEnd)
-			EffectHealingBubbleEnd->Activate();
-		if (EffectHealingBubbleOn)
-		{
-			EffectHealingBubbleOn->Deactivate();
-			EffectHealingBubbleOn->SetVisibility(false);
-			HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		}	
+		//EffectHealingBubbleOn->Deactivate();
+
+		EffectHealingBubbleOn->SetVisibility(false);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
 
@@ -1793,9 +1790,37 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		if (GetController())
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+		{
+			if (GetController())
+			{
+				AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+				AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
+				if (!MyPS || !TheOtherCharacterPS)
+					return;
+				if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				{
+					ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
+				}
+			}
+		}
+	}	
+	
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = true;
+	}
+}
+
+void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 		{
 			AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
 			AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
@@ -1803,24 +1828,14 @@ void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent*
 				return;
 			if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
 			{
-				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
+				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
 			}
-		}		
-	}
-}
-
-void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
-	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
-	{
-		AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-		AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
-		if (!MyPS || !TheOtherCharacterPS)
-			return;
-		if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-		{
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
 		}
+	}
+
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = false;
 	}
 }
 #pragma endregion Collision
@@ -1831,14 +1846,10 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Server
-	if (GetLocalRole() == ROLE_Authority)
+	if (HealingBubbleCollider)
 	{
-		if (HealingBubbleCollider)
-		{
-			HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
-			HealingBubbleCollider->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapEnd);
-		}
+		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
+		HealingBubbleCollider->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapEnd);
 	}
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
@@ -1908,11 +1919,36 @@ void AMCharacter::Tick(float DeltaTime)
 	}
 
 	// Adjust Bubble Size if needed
-	if (bHealingBubbleOn)
+	if (HealingBubbleCollider)
 	{
-		float TargetScale = bDoubleHealingBubbleSize ? 10.0f : 6.0f;
-		float SizeChangeSpeed = 1.2f;
+		// Preset parameters
+		float TargetScale = 0;
+		float SizeChangeSpeed = 0;
 		FVector NewRelativeScale = HealingBubbleCollider->GetRelativeScale3D();
+		if (bHealingBubbleOn)
+		{
+			if (!bHealingBubbleTouchingStatue)
+			{
+				float size1 = 6.0f;
+				float size2 = 10.0f;
+				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
+				if (NewRelativeScale.X < size1)
+					SizeChangeSpeed = 4.0f;
+				else if (NewRelativeScale.X <= size2) // must have =
+					SizeChangeSpeed = 2.0f;
+			}
+			else
+			{
+				TargetScale = 0;
+				SizeChangeSpeed = 5.0f;
+			}			
+		}
+		else
+		{
+			TargetScale = 0;
+			SizeChangeSpeed = 1000.0f;
+		}
+		// Change
 		if (NewRelativeScale.X < TargetScale)
 		{
 			NewRelativeScale += FVector::OneVector * DeltaTime * SizeChangeSpeed;
@@ -1928,7 +1964,7 @@ void AMCharacter::Tick(float DeltaTime)
 			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
 		}
 		HealingBubbleCollider->SetWorldRotation(FRotator::ZeroRotator);
-	}
+	}	
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)

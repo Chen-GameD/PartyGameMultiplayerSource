@@ -376,6 +376,8 @@ public:
 		class UNiagaraComponent* EffectHealingBubbleEnd;
 	bool bHealingBubbleOn;
 	bool bDoubleHealingBubbleSize;
+	//UPROPERTY(Replicated)
+		bool bHealingBubbleTouchingStatue;
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectBubbleStart;
