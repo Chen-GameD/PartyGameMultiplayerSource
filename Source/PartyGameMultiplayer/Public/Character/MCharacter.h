@@ -369,11 +369,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		class USphereComponent* HealingBubbleCollider;
 	UPROPERTY(EditAnywhere, Category = "Effects")
-		class UNiagaraComponent* EffectHealingBubbleStart;
-	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectHealingBubbleOn;
-	UPROPERTY(EditAnywhere, Category = "Effects")
-		class UNiagaraComponent* EffectHealingBubbleEnd;
 	bool bHealingBubbleOn;
 	bool bDoubleHealingBubbleSize;
 	//UPROPERTY(Replicated)

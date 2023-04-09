@@ -35,6 +35,8 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	ShellOverlapComponent->SetupAttachment(RootMesh);
 	ShellOverlapComponent->SetSphereRadius(300, true);
 
+	//EffectDarkBubbleOn
+
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
 

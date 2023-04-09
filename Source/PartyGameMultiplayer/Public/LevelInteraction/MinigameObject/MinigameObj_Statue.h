@@ -68,6 +68,8 @@ protected:
 		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* ShellOverlapComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectDarkBubbleOn;
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class USkeletalMeshComponent* SkeletalMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")

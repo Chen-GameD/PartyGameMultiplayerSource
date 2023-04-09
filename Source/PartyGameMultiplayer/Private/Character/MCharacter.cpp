@@ -116,17 +116,9 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	HealingBubbleCollider = CreateDefaultSubobject<USphereComponent>(TEXT("HealingBubbleCollider"));
 	HealingBubbleCollider->SetupAttachment(RootComponent);
 
-	EffectHealingBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHealingBubbleStart"));
-	EffectHealingBubbleStart->SetupAttachment(HealingBubbleCollider);
-	EffectHealingBubbleStart->bAutoActivate = false;
-
 	EffectHealingBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHealingBubbleOn"));
 	EffectHealingBubbleOn->SetupAttachment(HealingBubbleCollider);
 	EffectHealingBubbleOn->bAutoActivate = false;
-
-	EffectHealingBubbleEnd = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHealingBubbleEnd"));
-	EffectHealingBubbleEnd->SetupAttachment(HealingBubbleCollider);
-	EffectHealingBubbleEnd->bAutoActivate = false;
 
 	bHealingBubbleOn = false;
 	bDoubleHealingBubbleSize = false;
@@ -2248,7 +2240,10 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 			float& BuffPoints = BuffMap[buffType][0];
 			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Saltcure_RecoverSpeed = 2.0f;
+				float Saltcure_RecoverSpeed = 0;
+				FString ParName = "Saltcure_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Saltcure_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Saltcure_RecoverSpeed);
 				// clear burning buff
 				if (CheckBuffMap(EnumAttackBuff::Burning))
@@ -2277,7 +2272,14 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 			float& BuffPoints = BuffMap[buffType][0];
 			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Shellheal_RecoverSpeed = 2.0f;
+				float Shellheal_RecoverSpeed = 0;
+				FString ParName = "";
+				ParName = "Shellheal_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				ParName = "Shellheal_RecoverSpeed_OnDoubleShellHolder";
+				if(LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell && RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Shellheal_RecoverSpeed);
 				// clear burning buff
 				if (CheckBuffMap(EnumAttackBuff::Burning))
