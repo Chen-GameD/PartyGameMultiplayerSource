@@ -1903,6 +1903,8 @@ void AMCharacter::Tick(float DeltaTime)
 					OnRep_IsInvincible();
 			}
 		}
+		if (EffectBubbleOn && EffectBubbleOn->IsActive())
+			EffectBubbleOn->SetWorldRotation(FRotator::ZeroRotator);
 	}
 
 	// Adjust Bubble Size if needed
@@ -1925,6 +1927,7 @@ void AMCharacter::Tick(float DeltaTime)
 				NewRelativeScale = FVector(TargetScale, TargetScale, TargetScale);
 			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
 		}
+		HealingBubbleCollider->SetWorldRotation(FRotator::ZeroRotator);
 	}
 
 	// Server
