@@ -122,10 +122,13 @@ void AMPlayerController::BeginPlay()
 
 void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 {
-	UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
-	if(GameInstanceRef)
+	if(IsLocalPlayerController() && GetNetMode() == NM_Client)
 	{
-		GameInstanceRef->DestroySession();
+		UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
+		if(GameInstanceRef)
+		{
+			GameInstanceRef->DestroySession();
+		}
 	}
 	Super::OnNetCleanup(Connection);
 }

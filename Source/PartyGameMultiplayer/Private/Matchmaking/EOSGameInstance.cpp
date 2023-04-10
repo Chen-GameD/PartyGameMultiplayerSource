@@ -299,6 +299,7 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 		}
 	}
 	isLoading = false;
+	OnFindSessionsDelegate.Broadcast();
 }
 
 void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)

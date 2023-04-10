@@ -110,25 +110,18 @@ void AMGameMode::Logout(AController* Exiting)
 		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
 		{
 			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(NewPlayer->IsLocalController())
+			if(!NewPlayer->IsLocalController())
 			{
-				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
-				if(LocalPlayer)
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				if(IsValid(NetConnectionRef))
 				{
-					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
 				}
 				else
 				{
-					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-					check(IsValid(NetConnectionRef));
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
+					UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
 				}
-			}
-			else
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				check(IsValid(NetConnectionRef));
-				UniqueNetIdRepl = NetConnectionRef->PlayerId;
 			}
 		
 			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
