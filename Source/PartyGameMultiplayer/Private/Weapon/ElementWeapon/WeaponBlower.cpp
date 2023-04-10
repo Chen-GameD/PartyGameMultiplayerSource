@@ -105,7 +105,7 @@ void AWeaponBlower::AttackStart(float AttackTargetDistance)
 		OnRep_bAttackOn();
 	ApplyDamageCounter = 0;
 
-	float ApplyDamageAndKnockbackDelay = 0.25f;
+	float ApplyDamageAndKnockbackDelay = 0.15f;
 	FTimerHandle ApplyDamageAndKnockbackTimerHandle;
 	GetWorldTimerManager().SetTimer(ApplyDamageAndKnockbackTimerHandle, [this]
 		{

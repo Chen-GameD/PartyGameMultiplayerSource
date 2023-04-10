@@ -20,6 +20,7 @@
 #include "Weapon/DamageType/MeleeDamageType.h"
 #include "Character/MCharacter.h"
 #include "Character/MPlayerController.h"
+#include "M_PlayerState.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 
 
@@ -145,6 +146,17 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
 
+	// if it is the teammate
+	if (AttackBuff == EnumAttackBuff::Burning || AttackBuff == EnumAttackBuff::Paralysis)
+	{
+		AM_PlayerState* AttackerPS = AttackerController->GetPlayerState<AM_PlayerState>();
+		AM_PlayerState* DamagedCharacterPS = DamagedCharacter->GetPlayerState<AM_PlayerState>();
+		if (!AttackerPS || !DamagedCharacterPS)
+			return false;
+		if (AttackerPS->TeamIndex == DamagedCharacterPS->TeamIndex)
+			return false;
+	}
+
 	float& BuffPoints = DamagedCharacter->BuffMap[AttackBuff][0];
 	float& BuffRemainedTime = DamagedCharacter->BuffMap[AttackBuff][1];
 	float& BuffAccumulatedTime = DamagedCharacter->BuffMap[AttackBuff][2];
@@ -208,6 +220,15 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 {	
 	if (!DamagedCharacter || !DamagedCharacter->CheckBuffMap(AttackBuff) || DamagedCharacter->IsInvincible || !AttackerController || !AWeaponDataHelper::DamageManagerDataAsset)
 		return false;
+
+	// if it is the teammate
+	AM_PlayerState* AttackerPS = AttackerController->GetPlayerState<AM_PlayerState>();
+	AM_PlayerState* DamagedCharacterPS = DamagedCharacter->GetPlayerState<AM_PlayerState>();
+	if (!AttackerPS || !DamagedCharacterPS)
+		return false;
+	if (AttackerPS->TeamIndex == DamagedCharacterPS->TeamIndex)
+		return false;
+		
 
 	/* Knockback */
 	if (AttackBuff == EnumAttackBuff::Knockback && AttackerController->GetPawn())
