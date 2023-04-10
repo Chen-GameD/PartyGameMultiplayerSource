@@ -54,26 +54,23 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 	{
 		if (IsPickedUp)
 		{
-			if (!HasBeenCombined)
+			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 			{
-				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
+				for (auto& Elem : AttackObjectMap)
 				{
-					for (auto& Elem : AttackObjectMap)
+					// Apply knockback buff at a fixed frequency
+					Elem.Value += DeltaTime;
+					if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
 					{
-						// Apply knockback buff at a fixed frequency
-						Elem.Value += DeltaTime;
-						if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
-						{
-							ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
-							Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
-						}
-						// Add burning buff points
-						FString ParName = "Flamethrower_Burning_PointsToAdd_PerSec";
-						if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-						{
-							float buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-							ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(Elem.Key), buffPointsToAdd);
-						}
+						ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
+						Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
+					}
+					// Add burning buff points
+					FString ParName = "Flamethrower_Burning_PointsToAdd_PerSec";
+					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					{
+						float buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(Elem.Key), buffPointsToAdd);
 					}
 				}
 			}

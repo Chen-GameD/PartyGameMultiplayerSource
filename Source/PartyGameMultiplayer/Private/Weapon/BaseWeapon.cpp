@@ -531,11 +531,8 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				AttackObjectMap.Add(OtherActor);
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
-			// Listen server
 			if (GetNetMode() == NM_ListenServer)
-			{
 				OnRep_bAttackOverlap();
-			}
 
 			if (AttackType != EnumAttackType::Constant)
 			{
