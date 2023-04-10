@@ -194,6 +194,14 @@ void AMCharacter::OnRep_PlayerState()
 		SetPlayerNameUIInformation();
 		SetPlayerSkin();
 		InitFollowWidget();
+		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController && MyController->IsLocalPlayerController())
+			{
+				MyController->Client_SyncLobbyInformation_Implementation();
+			}
+		}
 	}
 	else
 	{
@@ -203,7 +211,16 @@ void AMCharacter::OnRep_PlayerState()
 	// AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 	// if (MyPlayerController)
 	// {
-	// 	MyPlayerController->UI_UpdateLobbyMenu();
+	// 	MyPlayerController->Client_SyncLobbyInformation_Implementation();
+	// }
+
+	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	// {
+	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+	// 	if (MyController && MyController->IsLocalPlayerController())
+	// 	{
+	// 		MyController->Client_SyncLobbyInformation_Implementation();
+	// 	}
 	// }
 }
 
@@ -216,6 +233,15 @@ void AMCharacter::CheckPlayerFollowWidgetTick()
 		InitFollowWidget();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer pawn's PlayerFollowWdiget is ready!"));
 		GetWorldTimerManager().ClearTimer(InitPlayerInformationTimer);
+
+		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController && MyController->IsLocalPlayerController())
+			{
+				MyController->Client_SyncLobbyInformation_Implementation();
+			}
+		}
 	}
 	else
 	{

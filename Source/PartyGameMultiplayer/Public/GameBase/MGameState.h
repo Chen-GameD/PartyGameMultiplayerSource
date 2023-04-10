@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "UI/PlayerUI/MLobbyWidget.h"
 #include "MGameState.generated.h"
 
 /**
@@ -40,6 +41,13 @@ public:
 	UFUNCTION()
 	void UpdateGameTime();
 
+	// UFUNCTION()
+	// void OnRep_UpdateTeam1Array();
+	// UFUNCTION()
+	// void OnRep_UpdateTeam2Array();
+	// UFUNCTION()
+	// void OnRep_UpdateUndecidedArray();
+
 	FTimerHandle GameStartTimerHandle;
 
 	// Team Score Section
@@ -51,6 +59,14 @@ public:
 	int Team_1_Score;
 	UPROPERTY(ReplicatedUsing=OnRep_Team_2_ScoreUpdate)
 	int Team_2_Score;
+
+	// Teams information
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateTeam1Array)
+	// TArray<FLobbyInformationStruct> Team1Array;
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateTeam2Array)
+	// TArray<FLobbyInformationStruct> Team2Array;
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateUndecidedArray)
+	// TArray<FLobbyInformationStruct> UndecidedArray;
 
 	// Minigame Hint Section
 	UFUNCTION(NetMulticast, Reliable)
