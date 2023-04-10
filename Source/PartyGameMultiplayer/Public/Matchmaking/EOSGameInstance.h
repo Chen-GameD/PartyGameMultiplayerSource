@@ -37,7 +37,7 @@ public:
 	FString GetPlayerUsername();
 
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
-	void CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections);
+	void CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections, bool IsPrivate, FString RoomName, int MapIndex);
 
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void FindSession();
@@ -85,7 +85,7 @@ public:
 	UUserWidget* WB_MainMenu;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	FString PlayerName = "CMY";
+	FString PlayerName = "player-name";
 
 	UPROPERTY(VisibleAnywhere)
 	int32 CurrentlyJoiningSessionIndex = -1;

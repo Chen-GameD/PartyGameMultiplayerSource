@@ -8,6 +8,7 @@
 #include "GameBase/MGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Matchmaking/EOSGameInstance.h"
+#include "EngineUtils.h"
 
 void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Name)
 {
@@ -18,6 +19,15 @@ void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Nam
 	if (GetNetMode() == NM_ListenServer)
 	{
 		OnRep_PlayerNameString();
+	}
+	
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+		if (MyController)
+		{
+			MyController->Client_SyncLobbyInformation();
+		}
 	}
 }
 
@@ -45,6 +55,7 @@ void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()
 void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
+	int PreTeamIndex = TeamIndex;
 	// Quit from current team
 	if (MyGameMode)
 	{
@@ -92,12 +103,7 @@ void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 			}
 		}
 	}
-
-	//OnRep_PlayerNameString();
-	// if (GetNetMode() == NM_ListenServer)
-	// {
-	// 	OnRep_PlayerNameString();
-	// }
+	
 	if (GetNetMode() == NM_ListenServer)
 	{
 		OnRep_UpdateTeamIndex();
@@ -148,6 +154,8 @@ void AM_PlayerState::OnRep_PlayerNameString()
 	{
 		MyPawn->SetPlayerNameUIInformation();
 	}
+
+	
 }
 
 void AM_PlayerState::OnRep_PlayerSkinInformation()
@@ -164,7 +172,7 @@ void AM_PlayerState::OnRep_UpdateTeamIndex()
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (MyLocalPlayerController)
 	{
-		MyLocalPlayerController->UI_UpdateLobbyMenu();
+		MyLocalPlayerController->UI_UpdateLobbyInformation();
 	}
 }
 
@@ -173,7 +181,7 @@ void AM_PlayerState::OnRep_UpdateReadyInformation()
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (MyLocalPlayerController)
 	{
-		MyLocalPlayerController->UI_UpdateLobbyMenu();
+		MyLocalPlayerController->UI_UpdateLobbyInformation();
 	}
 }
 

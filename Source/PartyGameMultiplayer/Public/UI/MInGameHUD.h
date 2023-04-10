@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "PlayerUI/MGameStatusWidget.h"
+#include "PlayerUI/MLobbyWidget.h"
 #include "PlayerUI/MPlayerStatusWidget.h"
 #include "PlayerUI/MPlayerWeaponInfoWidget.h"
 #include "MInGameHUD.generated.h"
@@ -79,6 +80,18 @@ public:
 	UFUNCTION()
 	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
 
+	// Show or Hide InGame_LobbyWidget
+	UFUNCTION()
+	void InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility);
+	UFUNCTION()
+	void InGame_UpdateLobbyInformation(TArray<FLobbyInformationStruct> i_Team1Arr, TArray<FLobbyInformationStruct> i_Team2Arr, TArray<FLobbyInformationStruct> i_UndecidedArr);
+	UFUNCTION()
+	void InGame_UpdateTeam1LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+
 protected:
 	// In Game UI Class Ref
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -90,6 +103,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> InGame_GameStatusWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> InGame_LobbyWidgetClass;
+
 private:
 	// In Game UI Widget
 	UPROPERTY()
@@ -100,4 +116,7 @@ private:
 
 	UPROPERTY()
 	UMGameStatusWidget* InGame_GameStatusWidget;
+
+	UPROPERTY()
+	UMLobbyWidget* InGame_LobbyWidget;
 };

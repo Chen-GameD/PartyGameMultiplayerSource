@@ -35,6 +35,85 @@ void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	//Replicate Action
 }
 
+void AMPlayerController::UI_UpdateLobbyInformation()
+{
+	TArray<FLobbyInformationStruct> arrTeam1;
+	TArray<FLobbyInformationStruct> arrTeam2;
+	TArray<FLobbyInformationStruct> arrUndecided;
+
+	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	{
+		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
+		AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
+		if (CurrentPawnPlayerState)
+		{
+			FLobbyInformationStruct newStruct;
+			newStruct.PlayerName = CurrentPawnPlayerState->PlayerNameString;
+			newStruct.TeamIndex = CurrentPawnPlayerState->TeamIndex;
+			newStruct.IsReady = CurrentPawnPlayerState->IsReady;
+			switch (newStruct.TeamIndex)
+			{
+			case 0:
+				arrUndecided.Add(newStruct);
+				break;
+			case 1:
+				arrTeam1.Add(newStruct);
+				break;
+			case 2:
+				arrTeam2.Add(newStruct);
+				break;
+				default:
+					break;
+			}
+		}
+	}
+
+	if (MyInGameHUD)
+		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
+	else
+	{
+		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
+		FTimerDelegate UpdateLobbyTimerDelegate;
+		UpdateLobbyTimerDelegate.BindUObject(this, &AMPlayerController::Timer_CheckUpdateLobby, arrTeam1, arrTeam2, arrUndecided);
+		GetWorldTimerManager().SetTimer(UpdateLobbyTimerHandle, UpdateLobbyTimerDelegate, 0.5, true);
+	}
+}
+
+void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided)
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
+		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
+	}
+}
+
+void AMPlayerController::Timer_CheckPlayerState()
+{
+	AM_PlayerState* MyPlayerstate = GetPlayerState<AM_PlayerState>();
+	if (MyPlayerstate)
+	{
+		UI_UpdateLobbyInformation();
+		GetWorldTimerManager().ClearTimer(UpdatePlayerStateHandle);
+	}
+}
+
+void AMPlayerController::Client_SyncLobbyInformation_Implementation()
+{
+	AM_PlayerState* MyPlayerstate = GetPlayerState<AM_PlayerState>();
+	if (MyPlayerstate)
+	{
+		UI_UpdateLobbyInformation();
+	}
+	else
+	{
+		GetWorldTimerManager().ClearTimer(UpdatePlayerStateHandle);
+		FTimerDelegate UpdatePlayerStateDelegate;
+		UpdatePlayerStateDelegate.BindUObject(this, &AMPlayerController::Timer_CheckPlayerState);
+		GetWorldTimerManager().SetTimer(UpdatePlayerStateHandle, UpdatePlayerStateDelegate, 0.5, true);
+	}
+}
+
 // void AMPlayerController::NetMulticast_LoginInit_Implementation()
 // {
 // 	if (GetNetMode() == NM_ListenServer)
@@ -61,7 +140,7 @@ void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 	}
 }
 
-void AMPlayerController::GetReadyButtonClick_Implementation()
+void AMPlayerController::Server_ReadyButtonClick_Implementation()
 {
 	AM_PlayerState* MyServerPlayerState = GetPlayerState<AM_PlayerState>();
 
@@ -114,9 +193,22 @@ void AMPlayerController::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		UI_ShowLobbyMenu();
+		//UI_ShowLobbyMenu();
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
 		check(MyInGameHUD);
+
+		if (MyInGameHUD)
+		{
+			// Set input mode
+			if (IsLocalPlayerController())
+			{
+				//FInputModeUIOnly inputMode;
+				FInputModeUIOnly inputMode;
+				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				this->SetInputMode(inputMode);
+				this->SetShowMouseCursor(true);
+			}
+		}
 	}
 }
 
@@ -191,16 +283,19 @@ void AMPlayerController::Client_RefreshWeaponUI_Implementation()
 void AMPlayerController::StartTheGame()
 {
 	// Hide the lobby menu
-	if (WB_LobbyMenu)
-	{
-		if (WB_LobbyMenu->IsVisible())
-		{
-			WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
-		}
-	}
+	// if (WB_LobbyMenu)
+	// {
+	// 	if (WB_LobbyMenu->IsVisible())
+	// 	{
+	// 		WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
+	// 	}
+	// }
 	
 	if (MyInGameHUD)
 	{
+		// Hide the lobby menu
+		MyInGameHUD->InGame_SetVisibilityLobbyWidget(ESlateVisibility::Hidden);
+		
 		// Show and Init Game Status UI
 		MyInGameHUD->InGame_InitGameStatusAndPlayerStatusWidgetContent();
 		
