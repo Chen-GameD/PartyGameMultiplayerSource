@@ -412,6 +412,10 @@ public:
 	float Local_MinCameraArmLength;
 	float Local_MaxCameraArmLength;
 	FVector FollowCameraRelativeRotationVector;
+	FVector FollowCameraOriginalRelativeLocation;
+	float CameraShakingTime;
+	float CameraShakingIntensity;
+	float TimePassedSinceShaking;
 
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime

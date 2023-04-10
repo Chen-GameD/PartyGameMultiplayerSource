@@ -36,6 +36,16 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void UpdateReadyState(bool IsAllReady);
 
+	UFUNCTION()
+	void UI_UpdateLobbyInformation();
+	UFUNCTION()
+	void Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided);
+	UFUNCTION()
+	void Timer_CheckPlayerState();
+
+	UFUNCTION(Client, Reliable)
+	void Client_SyncLobbyInformation();
+
 	// UFUNCTION()
 	// void InitCharacterFollowWidgetStatusAndInformation();
 
@@ -55,7 +65,7 @@ public:
 	void JoinATeam(int i_TeamIndex = 1);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void GetReadyButtonClick();
+	void Server_ReadyButtonClick();
 
 	UFUNCTION(Client, Reliable, BlueprintCallable)
 	void GetNotifyPlayerControllerUpdateReadyState(bool IsAllReady);
@@ -153,5 +163,7 @@ private:
 	//InGame HUD
 	AMInGameHUD* MyInGameHUD;
 
+	FTimerHandle UpdateLobbyTimerHandle;
+	FTimerHandle UpdatePlayerStateHandle;
 	
 };

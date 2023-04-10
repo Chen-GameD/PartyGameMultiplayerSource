@@ -37,9 +37,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* ShellFly_NC;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* ShellInsertEdge_NC;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* ShellInsertDust_NC;
+		class UNiagaraComponent* ShellInsert_NC;
 
 private:
 	float TimeElapsed = 0;

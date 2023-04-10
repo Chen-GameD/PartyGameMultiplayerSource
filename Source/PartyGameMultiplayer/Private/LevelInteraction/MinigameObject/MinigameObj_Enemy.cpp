@@ -47,12 +47,9 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	if (DefaultExplodeNS.Succeeded())
 		Explode_NC->SetAsset(DefaultExplodeNS.Object);
 
-	Shield_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShieldVfx"));
-	Shield_NC->SetupAttachment(CrabMesh);
-	Shield_NC->bAutoActivate = false;
-	/*static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
-	if (DefaultExplodeNS.Succeeded())
-		Explode_NC->SetAsset(DefaultExplodeNS.Object);*/
+	Rising_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("RisingVfx"));
+	Rising_NC->SetupAttachment(CrabMesh);
+	Rising_NC->bAutoActivate = true;
 
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
@@ -96,6 +93,8 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
+			if (Rising_NC && Rising_NC->IsActive())
+				Rising_NC->Deactivate();
 			IsRisingFromSand = false;
 
 			// Server
@@ -104,6 +103,12 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 				Server_SpawnBigWeaponLocation = BigWeaponMesh->GetComponentLocation() + FVector(0, -110.0f, 0);
 				Server_SpawnBigWeaponRotation = BigWeaponMesh->GetComponentRotation();
 			}
+		}
+		if (Rising_NC && Rising_NC->IsActive())
+		{
+			Rising_NC->SetWorldLocation(FVector(0, 0, 150.0));
+			Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
+			Rising_NC->SetWorldScale3D(FVector::OneVector);
 		}
 		SetActorLocation(TargetLocation);
 	}
@@ -237,6 +242,21 @@ void AMinigameObj_Enemy::BeginPlay()
 	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
+	if (Rising_NC && !Rising_NC->IsActive())
+	{
+		Rising_NC->Activate();		
+	}
+	// Shake localcontrolled character's camera
+	if (auto pController = GetWorld()->GetFirstPlayerController())
+	{
+		//if (auto pMCharacter = Cast<AMCharacter>(pController->GetPawn()))
+		//{
+		//	pMCharacter->CameraShakingTime = 0.7f;
+		//	pMCharacter->CameraShakingIntensity = 10.0f;
+		//}
+		if (auto pCamMg = pController->PlayerCameraManager)
+			pCamMg->StartCameraShake(CameraShakeTriggered);
+	}		
 }
 
 void AMinigameObj_Enemy::OnRep_CurrentHealth()

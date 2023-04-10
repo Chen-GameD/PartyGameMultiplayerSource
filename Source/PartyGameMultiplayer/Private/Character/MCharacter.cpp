@@ -86,6 +86,10 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CurFov = MinFov = 90.0f;
 	MaxFov = 108.0f;
 	FollowCameraRelativeRotationVector = FVector(0, 0, 0);
+	FollowCameraOriginalRelativeLocation = FollowCamera->GetRelativeLocation();
+	CameraShakingTime = 0;
+	CameraShakingIntensity = 0;
+	TimePassedSinceShaking = 0;
 
 	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -208,6 +212,14 @@ void AMCharacter::OnRep_PlayerState()
 		SetPlayerNameUIInformation();
 		SetPlayerSkin();
 		InitFollowWidget();
+		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController && MyController->IsLocalPlayerController())
+			{
+				MyController->Client_SyncLobbyInformation_Implementation();
+			}
+		}
 	}
 	else
 	{
@@ -217,7 +229,16 @@ void AMCharacter::OnRep_PlayerState()
 	// AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 	// if (MyPlayerController)
 	// {
-	// 	MyPlayerController->UI_UpdateLobbyMenu();
+	// 	MyPlayerController->Client_SyncLobbyInformation_Implementation();
+	// }
+
+	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	// {
+	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+	// 	if (MyController && MyController->IsLocalPlayerController())
+	// 	{
+	// 		MyController->Client_SyncLobbyInformation_Implementation();
+	// 	}
 	// }
 }
 
@@ -230,6 +251,15 @@ void AMCharacter::CheckPlayerFollowWidgetTick()
 		InitFollowWidget();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer pawn's PlayerFollowWdiget is ready!"));
 		GetWorldTimerManager().ClearTimer(InitPlayerInformationTimer);
+
+		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController && MyController->IsLocalPlayerController())
+			{
+				MyController->Client_SyncLobbyInformation_Implementation();
+			}
+		}
 	}
 	else
 	{
@@ -2034,6 +2064,32 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
+		//if (0 < CameraShakingTime)
+		//{
+		//	if (100.0f == CameraShakingIntensity)
+		//	{
+		//		FVector NewRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		float Y_Speed = 20.0f;
+		//		float Z_Speed = 10.0f;
+		//		float Y_Interval = 0.05f;
+		//		float Z_Interval = 0.3f;
+		//		bool Y_odd = ((int)(CameraShakingTime / Y_Interval) & 1) == 1;
+		//		bool Z_odd = ((int)(CameraShakingTime / Z_Interval) & 1) == 1;
+
+		//		NewRelativeLocation.Y += Y_Speed * (Y_odd ? 1 : -1);
+		//		//NewRelativeLocation.Z += Z_Speed * (Z_odd ? 1 : -1);
+		//		FollowCamera->SetRelativeLocation(NewRelativeLocation);
+		//		TimePassedSinceShaking += DeltaTime;
+		//		CameraShakingTime -= DeltaTime;
+		//		if (CameraShakingTime <= 0)
+		//		{
+		//			TimePassedSinceShaking = 0;
+		//			CameraShakingTime = 0;
+		//			FollowCamera->SetRelativeLocation(FollowCameraOriginalRelativeLocation);
+		//		}
+		//	}			
+		//}			
+
 		//// Zoom
 		//if (auto pPlayerController = Cast<APlayerController>(GetController()))
 		//{
