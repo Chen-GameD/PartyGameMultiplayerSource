@@ -104,9 +104,10 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 				Server_SpawnBigWeaponRotation = BigWeaponMesh->GetComponentRotation();
 			}
 		}
+		// Detach in Beginplay won't work somehow, so do the following instead
 		if (Rising_NC && Rising_NC->IsActive())
 		{
-			Rising_NC->SetWorldLocation(FVector(0, -120.0, 150.0));
+			Rising_NC->SetWorldLocation(FVector(0, -90.0, 130.0));
 			Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
 			Rising_NC->SetWorldScale3D(FVector::OneVector);
 		}
