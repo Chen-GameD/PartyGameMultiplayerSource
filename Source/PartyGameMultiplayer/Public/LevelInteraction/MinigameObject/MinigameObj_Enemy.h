@@ -42,6 +42,8 @@ public:
 		class UStaticMeshComponent* CollisionMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* BigWeaponMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* LittleCrabMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
