@@ -28,6 +28,8 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();
 
+	void NewShellHasBeenInserted();
+
 	void Server_WhenDead();
 
 protected:
@@ -54,6 +56,10 @@ public:
 	float DroppingTargetHeight;
 	float DroppingSpeed;
 
+	float ShellOverlapComponent_TargetScale;
+	float ShellOverlapComponent_MinScale;
+	float ShellOverlapComponent_MaxScale;
+
 	// Death related
 	// ===========================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -68,6 +74,8 @@ protected:
 		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* ShellOverlapComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectDarkBubbleOn;
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class USkeletalMeshComponent* SkeletalMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")

@@ -76,6 +76,12 @@ void AProjectileCannon::OnRep_HasExploded()
 {
 	if (HasExploded)
 	{
+		if (AttackOnEffect_NSComponent)
+		{
+			AttackOnEffect_NSComponent->Deactivate();
+			AttackOnEffect_NSComponent->SetVisibility(false);
+		}
+
 		StaticMesh->SetVisibility(false);
 		CannonMesh->SetVisibility(false);
 		ProjectileMovementComponent->StopMovementImmediately();

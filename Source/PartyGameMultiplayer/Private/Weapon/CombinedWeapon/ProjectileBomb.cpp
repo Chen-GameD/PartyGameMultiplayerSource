@@ -84,6 +84,12 @@ void AProjectileBomb::OnRep_HasExploded()
 {
 	if (HasExploded)
 	{
+		if (AttackOnEffect_NSComponent)
+		{
+			AttackOnEffect_NSComponent->Deactivate();
+			AttackOnEffect_NSComponent->SetVisibility(false);
+		}
+
 		ProjectileMovementComponent->StopMovementImmediately();  // will stop the original movement, but will still move the object(like a free fall)
 		ProjectileMovementComponent->SetUpdatedComponent(nullptr); // ProjectileMovementComponent will stop moving the object
 		StaticMesh->SetSimulatePhysics(false);

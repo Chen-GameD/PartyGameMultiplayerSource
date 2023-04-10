@@ -35,6 +35,10 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	ShellOverlapComponent->SetupAttachment(RootMesh);
 	ShellOverlapComponent->SetSphereRadius(300, true);
 
+	EffectDarkBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectDarkBubbleOn"));
+	EffectDarkBubbleOn->SetupAttachment(ShellOverlapComponent);
+	EffectDarkBubbleOn->bAutoActivate = true;
+
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
 
@@ -49,6 +53,10 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	CurrentHealth = MaxHealth;
 	CurrentSocketIndex = 0;
 
+	ShellOverlapComponent_TargetScale = 1.0f;
+	ShellOverlapComponent_MinScale = 0.6f;
+	ShellOverlapComponent_MaxScale = 1.0f;
+
 	IsDropping = true;
 	DroppingTargetHeight = 100.0f;
 	DroppingSpeed = 0;
@@ -58,11 +66,12 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	RespawnDelay = 10.0f;
 }
 
+
 void AMinigameObj_Statue::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Server: Register collision callback functions
+	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		//  Set DisplayCaseCollision to active
@@ -84,6 +93,8 @@ void AMinigameObj_Statue::BeginPlay()
 		// because the server would correct client's position during collsion happening on the server, causing shaking in client's end.
 		//SetActorEnableCollision(false);
 	}
+
+	ShellOverlapComponent->SetRelativeScale3D(FVector(0.01f, 0.01f, 0.01f));
 
 	GodRayMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 	FVector GodRayMeshWorldLocation = GodRayMesh->GetComponentLocation();
@@ -121,17 +132,65 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 	}
 	else
 	{
-		GodRayExpandSpeed = 30.0f;
+		FVector GodRayMesh_CurRelativeScale = GodRayMesh->GetRelativeScale3D();
+		if(GodRayMesh_CurRelativeScale.X < 200.0f)
+			GodRayExpandSpeed = 50.0f;
+		else
+			GodRayExpandSpeed = 100.0f;
 	}
 
-	// GodRay
-	FVector CurRelativeScale = GodRayMesh->GetRelativeScale3D();
-	if (CurRelativeScale.X < 250.0f)
+	// Dark bubble
+	if (!IsDropping)
 	{
-		CurRelativeScale.X += GodRayExpandSpeed * DeltaTime;
-		CurRelativeScale.Y += GodRayExpandSpeed * DeltaTime;
-		GodRayMesh->SetRelativeScale3D(CurRelativeScale);
+		FVector ShellOverlapComponent_CurRelativeScale = ShellOverlapComponent->GetRelativeScale3D();
+		if (ShellOverlapComponent_CurRelativeScale.X < ShellOverlapComponent_TargetScale)
+		{
+			// Scale Up
+			float ShellOverlapComponent_ExpandSpeed = 0.75f;
+			FVector NewRelativeScale = ShellOverlapComponent_CurRelativeScale + FVector::OneVector * DeltaTime * ShellOverlapComponent_ExpandSpeed;
+			if (ShellOverlapComponent_TargetScale < NewRelativeScale.X)
+				NewRelativeScale = FVector::OneVector * ShellOverlapComponent_TargetScale;
+			ShellOverlapComponent->SetRelativeScale3D(NewRelativeScale);
+			// Rotate
+			float RotateSpeed = 100.0f;
+			FRotator NewRotation = ShellOverlapComponent->GetComponentRotation();
+			NewRotation.Roll += DeltaTime * RotateSpeed;
+			//NewRotation.Pitch += DeltaTime * RotateSpeed;
+			NewRotation.Yaw += DeltaTime * RotateSpeed;
+			ShellOverlapComponent->SetWorldRotation(NewRotation);
+		}
+		else if (ShellOverlapComponent_TargetScale < ShellOverlapComponent_CurRelativeScale.X)
+		{
+			// Scale Down
+			float ShellOverlapComponent_ShrinkSpeed = (0 == ShellOverlapComponent_TargetScale) ? 1.0f : 0.25f;
+			FVector NewRelativeScale = ShellOverlapComponent_CurRelativeScale - FVector::OneVector * DeltaTime * ShellOverlapComponent_ShrinkSpeed;
+			if (NewRelativeScale.X < ShellOverlapComponent_TargetScale)
+				NewRelativeScale = FVector::OneVector * ShellOverlapComponent_TargetScale;
+			ShellOverlapComponent->SetRelativeScale3D(NewRelativeScale);
+			// Rotate
+			if (0 == ShellOverlapComponent_TargetScale)
+			{
+				float RotateSpeed = 300.0f;
+				FRotator NewRotation = ShellOverlapComponent->GetComponentRotation();
+				NewRotation.Roll -= DeltaTime * RotateSpeed;
+				//NewRotation.Pitch -= DeltaTime * RotateSpeed;
+				NewRotation.Yaw -= DeltaTime * RotateSpeed;
+				ShellOverlapComponent->SetWorldRotation(NewRotation);
+			}
+		}
+	}
+	// GodRay
+	FVector GodRayMesh_CurRelativeScale = GodRayMesh->GetRelativeScale3D();
+	if (GodRayMesh->IsVisible() && GodRayMesh_CurRelativeScale.X < 500.0f)
+	{
+		GodRayMesh_CurRelativeScale.X += GodRayExpandSpeed * DeltaTime;
+		GodRayMesh_CurRelativeScale.Y += GodRayExpandSpeed * DeltaTime;
+		GodRayMesh->SetRelativeScale3D(GodRayMesh_CurRelativeScale);
 	}	
+	else
+	{
+		GodRayMesh->SetVisibility(false);
+	}
 }
 
 
@@ -142,26 +201,64 @@ USkeletalMeshComponent* AMinigameObj_Statue::GetSkeletalMesh()
 
 void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor && !IsCompleteBuild)
+	if (AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor))
 	{
-		AWeaponShell* OverlapShell = Cast<AWeaponShell>(OtherActor);		
-		if (OverlapShell)
+		if (IsCompleteBuild || IsDropping)
+			return;
+
+		if (OverlapShell->IsPickedUp && OverlapShell->GetHoldingController())
 		{
-			if (OverlapShell->IsPickedUp && OverlapShell->GetHoldingController())
+			if (auto pMCharacter = Cast<AMCharacter>(OverlapShell->GetHoldingController()->GetPawn()))
 			{
-				if (auto pMCharacter = Cast<AMCharacter>(OverlapShell->GetHoldingController()->GetPawn()))
+				pMCharacter->Server_GiveShellToStatue(OverlapShell);
+			}
+		}
+
+		CurrentHealth--;
+		if (GetNetMode() == NM_ListenServer)
+			OnRep_CurrentHealth();
+		CurrentSocketIndex++;
+
+		// Detect which player drop the shell
+		// Add Score
+		if (OverlapShell->GetPreHoldingController())
+		{
+			AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
+			if (CurrentController)
+			{
+				AM_PlayerState* CurrentPS = CurrentController->GetPlayerState<AM_PlayerState>();
+				if (CurrentPS)
 				{
-					pMCharacter->Server_GiveShellToStatue(OverlapShell);
+					CurrentPS->addScore(OverlapShell->GetScoreCanGet());
 				}
 			}
+		}
 
-			CurrentHealth--;
-			if (GetNetMode() == NM_ListenServer)
-				OnRep_CurrentHealth();
-			CurrentSocketIndex++;
-			
-			// Detect which player drop the shell
-			// Add Score
+		// Spawn a shell mesh and attach to the socket
+		if (ShellMeshRef)
+		{
+			AMinigameChild_Statue_Shell* NewShellActor = GetWorld()->SpawnActor<AMinigameChild_Statue_Shell>(ShellMeshRef, OtherActor->GetActorLocation(), OtherActor->GetActorRotation());
+			if (NewShellActor)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("Shell Spawn Success!"));
+				NewShellActor->TartgetStatue = this;
+				FString SocketNameString = "Shell" + FString::FromInt(CurrentSocketIndex);
+				NewShellActor->TargetSocketName = FName(*SocketNameString);
+			}
+		}
+
+		// Respawn Sculpture
+		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
+		if (MyGameMode)
+		{
+			MyGameMode->Server_RespawnShellObject(OverlapShell->GetConfigIndex());
+		}
+
+		if (CurrentHealth <= 0)
+		{
+			IsCompleteBuild = true;
+
+			// Add Sculpture Complete Score
 			if (OverlapShell->GetPreHoldingController())
 			{
 				AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
@@ -170,61 +267,29 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 					AM_PlayerState* CurrentPS = CurrentController->GetPlayerState<AM_PlayerState>();
 					if (CurrentPS)
 					{
-						CurrentPS->addScore(OverlapShell->GetScoreCanGet());
+						CurrentPS->addScore(ScoreCanGet);
 					}
 				}
 			}
 
-			// Spawn a shell mesh and attach to the socket
-			if (ShellMeshRef)
-			{
-				AMinigameChild_Statue_Shell* NewShellActor = GetWorld()->SpawnActor<AMinigameChild_Statue_Shell>(ShellMeshRef, OtherActor->GetActorLocation(), OtherActor->GetActorRotation());
-				if (NewShellActor)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("Shell Spawn Success!"));
-					NewShellActor->TartgetStatue = this;
-					FString SocketNameString = "Shell" + FString::FromInt(CurrentSocketIndex);
-					NewShellActor->TargetSocketName = FName(*SocketNameString);
-				}
-			}
-			
-			// Respawn Sculpture
-			AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
-			if (MyGameMode)
-			{
-				MyGameMode->Server_RespawnShellObject(OverlapShell->GetConfigIndex());
-			}
-
-			if (CurrentHealth <= 0)
-			{
-				IsCompleteBuild = true;
-
-				// Add Sculpture Complete Score
-				if (OverlapShell->GetPreHoldingController())
-				{
-					AMPlayerController* CurrentController = Cast<AMPlayerController>(OverlapShell->GetPreHoldingController());
-					if (CurrentController)
-					{
-						AM_PlayerState* CurrentPS = CurrentController->GetPlayerState<AM_PlayerState>();
-						if (CurrentPS)
-						{
-							CurrentPS->addScore(ScoreCanGet);
-						}
-					}
-				}
-
-				Server_WhenDead();
-			}
-
-			// Destroy Shell
-			OtherActor->Destroy();
+			Server_WhenDead();
 		}
+
+		// Destroy Shell
+		OtherActor->Destroy();
+	}
+	else if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+	{
+		pMCharacter->Server_EnableEffectByCrabBubble(true);
 	}
 }
 
 void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	
+	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+	{
+		pMCharacter->Server_EnableEffectByCrabBubble(false);
+	}
 }
 
 void AMinigameObj_Statue::OnRep_CurrentHealth()
@@ -261,6 +326,22 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
+}
+
+void AMinigameObj_Statue::NewShellHasBeenInserted()
+{
+	ShellOverlapComponent_TargetScale = ShellOverlapComponent_MinScale +
+		(ShellOverlapComponent_MaxScale - ShellOverlapComponent_MinScale) * CurrentHealth / MaxHealth;
+
+	if (CurrentHealth <= 0)
+	{
+		FTimerHandle TimerHandle;
+		float TimeFromFinalShellInsertToStartShrinkToZero = 0.8f;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				ShellOverlapComponent_TargetScale = 0;
+			}, TimeFromFinalShellInsertToStartShrinkToZero, false);
+	}
 }
 
 void AMinigameObj_Statue::Server_WhenDead()
