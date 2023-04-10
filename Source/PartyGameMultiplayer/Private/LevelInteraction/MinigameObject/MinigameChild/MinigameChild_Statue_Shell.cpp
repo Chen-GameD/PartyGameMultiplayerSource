@@ -21,13 +21,9 @@ AMinigameChild_Statue_Shell::AMinigameChild_Statue_Shell()
 	ShellFly_NC->SetupAttachment(ShellMeshComponent);
 	ShellFly_NC->bAutoActivate = true;
 
-	ShellInsertEdge_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsertEdge_NC"));
-	ShellInsertEdge_NC->SetupAttachment(ShellMeshComponent);
-	ShellInsertEdge_NC->bAutoActivate = false;
-
-	ShellInsertDust_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsertDust_NC"));
-	ShellInsertDust_NC->SetupAttachment(ShellMeshComponent);
-	ShellInsertDust_NC->bAutoActivate = false;
+	ShellInsert_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsert_NC"));
+	ShellInsert_NC->SetupAttachment(ShellMeshComponent);
+	ShellInsert_NC->bAutoActivate = false;
 	
 	
 	bReplicates = true;
@@ -100,15 +96,10 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 					ShellFly_NC->Deactivate();
 					ShellFly_NC->SetVisibility(false);
 				}
-				if (ShellInsertEdge_NC && !ShellInsertEdge_NC->IsActive())
+				if (ShellInsert_NC && !ShellInsert_NC->IsActive())
 				{
-					ShellInsertEdge_NC->Activate();
-				}
-				if (ShellInsertDust_NC && !ShellInsertDust_NC->IsActive())
-				{
-					ShellInsertDust_NC->SetWorldRotation(FRotator::ZeroRotator);
-					ShellInsertDust_NC->SetWorldScale3D(FVector::OneVector);
-					ShellInsertDust_NC->Activate();
+					ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
+					ShellInsert_NC->Activate();
 				}
 				// Sfx
 				CallShellInsertSfx();
