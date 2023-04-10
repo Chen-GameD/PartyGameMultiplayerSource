@@ -1926,9 +1926,9 @@ void AMCharacter::Tick(float DeltaTime)
 				float size2 = 10.0f;
 				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
 				if (NewRelativeScale.X < size1)
-					SizeChangeSpeed = 4.0f;
+					SizeChangeSpeed = 5.0f;
 				else if (NewRelativeScale.X <= size2) // must have =
-					SizeChangeSpeed = 2.0f;
+					SizeChangeSpeed = 2.5f;
 			}
 			else
 			{
@@ -2302,6 +2302,15 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				}
 			}
 		}
+		// Crab Bubble Damage
+		if (IsAffectedByCrabBubble)
+		{
+			float CrabBubbleDamage = 0;
+			FString ParName = "CrabBubbleDamage";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				CrabBubbleDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * CrabBubbleDamage);
+		}
 	}
 }
 
@@ -2399,11 +2408,18 @@ void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
 	if (IsAffectedByCrabBubble != bEnable)
 	{
 		IsAffectedByCrabBubble = bEnable;
-		float NewWalkSpeedRatio = 1.0f;
-		FString ParName = "CrabBubble";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-			NewWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-		NetMulticast_AdjustMaxWalkSpeed(NewWalkSpeedRatio);
+		if (IsAffectedByCrabBubble)
+		{
+			float NewWalkSpeedRatio = 1.0f;
+			FString ParName = "CrabBubble";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				NewWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			NetMulticast_AdjustMaxWalkSpeed(NewWalkSpeedRatio);
+		}
+		else
+		{
+			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+		}		
 	}
 }
 

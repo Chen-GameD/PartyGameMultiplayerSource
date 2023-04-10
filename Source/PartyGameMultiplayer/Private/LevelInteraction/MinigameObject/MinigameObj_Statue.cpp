@@ -52,7 +52,6 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	MaxHealth = 7;
 	CurrentHealth = MaxHealth;
 	CurrentSocketIndex = 0;
-	CntShellInserted = 0;
 
 	ShellOverlapComponent_TargetScale = 1.0f;
 	ShellOverlapComponent_MinScale = 0.6f;
@@ -65,14 +64,6 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	ExplodeDelay = 2.0f;
 	LittleCrabDelay = 4.25f;
 	RespawnDelay = 10.0f;
-}
-
-
-void AMinigameObj_Statue::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(AMinigameObj_Statue, CntShellInserted);
 }
 
 
@@ -171,11 +162,21 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 		else if (ShellOverlapComponent_TargetScale < ShellOverlapComponent_CurRelativeScale.X)
 		{
 			// Scale Down
-			float ShellOverlapComponent_ShrinkSpeed = 0.25f;
+			float ShellOverlapComponent_ShrinkSpeed = (0 == ShellOverlapComponent_TargetScale) ? 1.0f : 0.25f;
 			FVector NewRelativeScale = ShellOverlapComponent_CurRelativeScale - FVector::OneVector * DeltaTime * ShellOverlapComponent_ShrinkSpeed;
 			if (NewRelativeScale.X < ShellOverlapComponent_TargetScale)
 				NewRelativeScale = FVector::OneVector * ShellOverlapComponent_TargetScale;
 			ShellOverlapComponent->SetRelativeScale3D(NewRelativeScale);
+			// Rotate
+			if (0 == ShellOverlapComponent_TargetScale)
+			{
+				float RotateSpeed = 300.0f;
+				FRotator NewRotation = ShellOverlapComponent->GetComponentRotation();
+				NewRotation.Roll -= DeltaTime * RotateSpeed;
+				//NewRotation.Pitch -= DeltaTime * RotateSpeed;
+				NewRotation.Yaw -= DeltaTime * RotateSpeed;
+				ShellOverlapComponent->SetWorldRotation(NewRotation);
+			}
 		}
 	}
 	// GodRay
@@ -279,7 +280,7 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 	}
 	else if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 	{
-		//Server_EnableEffectByCrabBubble(true);
+		pMCharacter->Server_EnableEffectByCrabBubble(true);
 	}
 }
 
@@ -287,7 +288,7 @@ void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp,
 {
 	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 	{
-		//Server_EnableEffectByCrabBubble(false);
+		pMCharacter->Server_EnableEffectByCrabBubble(false);
 	}
 }
 
@@ -327,10 +328,20 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
 }
 
-void AMinigameObj_Statue::OnRep_CntShellInserted()
+void AMinigameObj_Statue::NewShellHasBeenInserted()
 {
 	ShellOverlapComponent_TargetScale = ShellOverlapComponent_MinScale +
-		(ShellOverlapComponent_MaxScale - ShellOverlapComponent_MinScale) * (MaxHealth - CntShellInserted) / MaxHealth;
+		(ShellOverlapComponent_MaxScale - ShellOverlapComponent_MinScale) * CurrentHealth / MaxHealth;
+
+	if (CurrentHealth <= 0)
+	{
+		FTimerHandle TimerHandle;
+		float TimeFromFinalShellInsertToStartShrinkToZero = 0.8f;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				ShellOverlapComponent_TargetScale = 0;
+			}, TimeFromFinalShellInsertToStartShrinkToZero, false);
+	}
 }
 
 void AMinigameObj_Statue::Server_WhenDead()

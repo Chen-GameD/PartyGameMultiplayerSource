@@ -19,8 +19,6 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Statue : public AMinigameMainObjecti
 public:
 	AMinigameObj_Statue();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 
@@ -29,6 +27,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();
+
+	void NewShellHasBeenInserted();
 
 	void Server_WhenDead();
 
@@ -40,8 +40,6 @@ protected:
 	virtual void OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	virtual void OnRep_CurrentHealth() override;
-	UFUNCTION()
-		virtual void OnRep_CntShellInserted();
 
 public:
 	// UI
@@ -70,8 +68,6 @@ public:
 		float LittleCrabDelay;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float RespawnDelay;
-	UPROPERTY(ReplicatedUsing = OnRep_CntShellInserted)
-		int CntShellInserted;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
