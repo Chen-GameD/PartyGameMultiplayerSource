@@ -52,6 +52,9 @@ public:
 	// =============================
 	float CallGetHitSfxVfx_MinInterval;
 	float LastTime_CallGetHitSfxVfx;
+	UPROPERTY(EditAnywhere)
+		TSubclassOf<class UCameraShakeBase> CameraShakeTriggered;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Health")
 	float MaxHealth;

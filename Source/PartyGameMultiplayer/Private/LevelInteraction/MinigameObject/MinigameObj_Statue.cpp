@@ -42,6 +42,10 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
 
+	Landing_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Landing_NC"));
+	Landing_NC->SetupAttachment(SkeletalMesh);
+	Landing_NC->bAutoActivate = false;
+
 	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
 	Explode_NC->SetupAttachment(SkeletalMesh);
 	Explode_NC->bAutoActivate = false;
@@ -125,6 +129,21 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 			GodRayMesh->SetCollisionProfileName(TEXT("NoCollision"));
 			GodRayMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			IsDropping = false;
+
+			// Vfx
+			if (Landing_NC && !Landing_NC->IsActive())
+				Landing_NC->Activate();
+			// Shake localcontrolled character's camera
+			if (auto pController = GetWorld()->GetFirstPlayerController())
+			{
+				//if (auto pMCharacter = Cast<AMCharacter>(pController->GetPawn()))
+				//{
+				//	pMCharacter->CameraShakingTime = 0.7f;
+				//	pMCharacter->CameraShakingIntensity = 10.0f;
+				//}
+				if (auto pCamMg = pController->PlayerCameraManager)
+					pCamMg->StartCameraShake(CameraShakeTriggered);
+			}
 		}
 		SetActorLocation(TargetLocation);
 

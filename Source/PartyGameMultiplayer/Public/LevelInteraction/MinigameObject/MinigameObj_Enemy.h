@@ -62,9 +62,8 @@ public:
 	// =========================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Explode_NC;
-	// Deprecated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* Shield_NC;
+		class UNiagaraComponent* Rising_NC;
 	float GetHitAnimMinLastingTime;
 
 	// UI

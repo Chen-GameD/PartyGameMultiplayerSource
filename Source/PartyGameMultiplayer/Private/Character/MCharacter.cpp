@@ -86,6 +86,10 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	CurFov = MinFov = 90.0f;
 	MaxFov = 108.0f;
 	FollowCameraRelativeRotationVector = FVector(0, 0, 0);
+	FollowCameraOriginalRelativeLocation = FollowCamera->GetRelativeLocation();
+	CameraShakingTime = 0;
+	CameraShakingIntensity = 0;
+	TimePassedSinceShaking = 0;
 
 	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -2034,6 +2038,32 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
+		//if (0 < CameraShakingTime)
+		//{
+		//	if (100.0f == CameraShakingIntensity)
+		//	{
+		//		FVector NewRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		float Y_Speed = 20.0f;
+		//		float Z_Speed = 10.0f;
+		//		float Y_Interval = 0.05f;
+		//		float Z_Interval = 0.3f;
+		//		bool Y_odd = ((int)(CameraShakingTime / Y_Interval) & 1) == 1;
+		//		bool Z_odd = ((int)(CameraShakingTime / Z_Interval) & 1) == 1;
+
+		//		NewRelativeLocation.Y += Y_Speed * (Y_odd ? 1 : -1);
+		//		//NewRelativeLocation.Z += Z_Speed * (Z_odd ? 1 : -1);
+		//		FollowCamera->SetRelativeLocation(NewRelativeLocation);
+		//		TimePassedSinceShaking += DeltaTime;
+		//		CameraShakingTime -= DeltaTime;
+		//		if (CameraShakingTime <= 0)
+		//		{
+		//			TimePassedSinceShaking = 0;
+		//			CameraShakingTime = 0;
+		//			FollowCamera->SetRelativeLocation(FollowCameraOriginalRelativeLocation);
+		//		}
+		//	}			
+		//}			
+
 		//// Zoom
 		//if (auto pPlayerController = Cast<APlayerController>(GetController()))
 		//{

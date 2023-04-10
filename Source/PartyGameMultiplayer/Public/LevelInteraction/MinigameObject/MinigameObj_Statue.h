@@ -51,6 +51,8 @@ public:
 	// =========================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Explode_NC;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Landing_NC;
 
 	bool IsDropping;
 	float DroppingTargetHeight;
@@ -74,7 +76,7 @@ protected:
 		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class USphereComponent* ShellOverlapComponent;
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectDarkBubbleOn;
 	UPROPERTY(EditAnywhere, Category = "Components")
 		class USkeletalMeshComponent* SkeletalMesh;
