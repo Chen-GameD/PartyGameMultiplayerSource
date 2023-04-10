@@ -192,6 +192,7 @@ public:
 		void CallParalysisBuffStopSfx();
 
 	void Server_GiveShellToStatue(class AWeaponShell* pShell);
+	void Server_EnableEffectByCrabBubble(bool bEnable);
 
 protected:
 
@@ -429,6 +430,8 @@ public:
 		bool IsParalyzed;
 	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
 		bool IsInvincible;
+	UPROPERTY(Replicated)
+		bool IsAffectedByCrabBubble;
 	float InvincibleTimer;
 	float InvincibleMaxTime;
 	

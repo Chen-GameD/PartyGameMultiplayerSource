@@ -1529,6 +1529,7 @@ void AMCharacter::OnRep_IsInvincible()
 	}
 }
 
+
 void AMCharacter::SetCurrentHealth(float healthValue)
 {
 	if (GetLocalRole() == ROLE_Authority)
@@ -2391,6 +2392,19 @@ void AMCharacter::Server_GiveShellToStatue(AWeaponShell* pShell)
 		pShell->Server_bDetectedByStatue = true;
 		DropOffWeapon(false);
 	}		
+}
+
+void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
+{
+	if (IsAffectedByCrabBubble != bEnable)
+	{
+		IsAffectedByCrabBubble = bEnable;
+		float NewWalkSpeedRatio = 1.0f;
+		FString ParName = "CrabBubble";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+			NewWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+		NetMulticast_AdjustMaxWalkSpeed(NewWalkSpeedRatio);
+	}
 }
 
 void AMCharacter::Server_CheckBubble()

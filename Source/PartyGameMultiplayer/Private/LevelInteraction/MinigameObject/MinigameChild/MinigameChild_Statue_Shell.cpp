@@ -65,7 +65,6 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		// 	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("Server: Shell Position Update"));
 		// 	this->SetActorLocation(FVector(1000, -1000, 100));
 		// }
-
 		AMinigameObj_Statue* Target = Cast<AMinigameObj_Statue>(TartgetStatue);
 		if (Target)
 		{
@@ -81,7 +80,6 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 				SetActorRotation(NewRotation);
 				FVector NewScale = FMath::Lerp(GetActorScale3D(), SocketTransform.GetScale3D(), TimeElapsed / LerpDuration);
 				SetActorScale3D(NewScale);
-
 			}
 			else
 			{
@@ -109,7 +107,8 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 			}
 			TimeElapsed += DeltaTime;
 		}
-				
+		if(bFinishInsert)
+			Target->CntShellInserted++;
 	}
 
 }
