@@ -106,7 +106,7 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		}
 		if (Rising_NC && Rising_NC->IsActive())
 		{
-			Rising_NC->SetWorldLocation(FVector(0, 0, 150.0));
+			Rising_NC->SetWorldLocation(FVector(0, -120.0, 150.0));
 			Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
 			Rising_NC->SetWorldScale3D(FVector::OneVector);
 		}
@@ -121,6 +121,7 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		{
 			if (0 < Server_LastTime_CallGetHitEffects && GetHitAnimMinLastingTime < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
 			{
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = false"));
 				isAttacked = false;
 			}
 		}
@@ -167,7 +168,8 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	{
 		//NetMulticast_CallGetHitSfx();
 		
-		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
+		// Call crab get hit animation
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = true"));
 		isAttacked = true;
 
 		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
