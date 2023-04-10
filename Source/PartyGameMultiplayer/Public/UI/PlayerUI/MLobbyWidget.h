@@ -79,6 +79,12 @@ protected:
 	TMap<int, UTextBlock*> Team2TextContainer;
 	UPROPERTY()
 	TMap<int, UTextBlock*> UndecidedTextContainer;
+
+	// Game Start Condition
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TB_ReadyCondition;
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* TB_EqualCondition;
 	///////////////////////////////////////////////////////////////
 
 	// Button
