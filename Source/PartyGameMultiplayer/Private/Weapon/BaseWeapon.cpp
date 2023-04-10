@@ -222,6 +222,8 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
 	IsPickedUp = true;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 	if (!pCharacter)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::GetPickedUp"));
@@ -237,20 +239,15 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	SetOwner(pCharacter);
 
 	SetActorEnableCollision(false);
-	//  Set DisplayCaseCollision to inactive
 	DisplayCaseCollisionSetActive(false);
-
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_IsPickedUp();
-	}
 }
 
 
 void ABaseWeapon::GetThrewAway()
 {
 	IsPickedUp = false;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 	HasBeenCombined = false;
 	HoldingController = nullptr;
 	SetInstigator(nullptr);
@@ -259,12 +256,6 @@ void ABaseWeapon::GetThrewAway()
 	SetActorEnableCollision(true);
 	//  Set DisplayCaseCollision to active
 	DisplayCaseCollisionSetActive(true);
-
-	// Listen server
-	if (GetNetMode() == NM_ListenServer)
-	{
-		OnRep_IsPickedUp();
-	}
 }
 
 

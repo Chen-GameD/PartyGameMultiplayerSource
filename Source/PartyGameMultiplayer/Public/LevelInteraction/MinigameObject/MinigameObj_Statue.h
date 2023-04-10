@@ -19,6 +19,7 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Statue : public AMinigameMainObjecti
 public:
 	AMinigameObj_Statue();
 
+	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable)
@@ -26,6 +27,10 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();
+
+	void NewShellHasBeenInserted();
+
+	void Server_WhenDead();
 
 protected:
 	// only is called on server
@@ -42,15 +47,42 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
 
+	// Vfx
+	// =========================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Explode_NC;
+
+	bool IsDropping;
+	float DroppingTargetHeight;
+	float DroppingSpeed;
+
+	float ShellOverlapComponent_TargetScale;
+	float ShellOverlapComponent_MinScale;
+	float ShellOverlapComponent_MaxScale;
+
+	// Death related
+	// ===========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ExplodeDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float LittleCrabDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float RespawnDelay;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
-	UStaticMeshComponent* RootMesh;
+		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USphereComponent* ShellOverlapComponent;
+		class USphereComponent* ShellOverlapComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectDarkBubbleOn;
 	UPROPERTY(EditAnywhere, Category = "Components")
-	USkeletalMeshComponent* SkeletalMesh;
+		class USkeletalMeshComponent* SkeletalMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UStaticMeshComponent* GodRayMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ShellMeshRef")
-	TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+		class TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+	
 	UPROPERTY()
 	int CurrentSocketIndex;
 	UPROPERTY()

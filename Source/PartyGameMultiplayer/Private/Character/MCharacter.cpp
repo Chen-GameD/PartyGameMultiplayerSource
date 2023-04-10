@@ -7,6 +7,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -20,8 +21,10 @@
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "Weapon/ElementWeapon/WeaponShell.h"
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 #include "Character/animUtils.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "M_PlayerState.h"
@@ -110,6 +113,17 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	Client_LowSpeedWalkAccumulateTime = 0;
 
+	HealingBubbleCollider = CreateDefaultSubobject<USphereComponent>(TEXT("HealingBubbleCollider"));
+	HealingBubbleCollider->SetupAttachment(RootComponent);
+
+	EffectHealingBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHealingBubbleOn"));
+	EffectHealingBubbleOn->SetupAttachment(HealingBubbleCollider);
+	EffectHealingBubbleOn->bAutoActivate = false;
+
+	bHealingBubbleOn = false;
+	bDoubleHealingBubbleSize = false;
+	bHealingBubbleTouchingStatue = false;
+	
 	EffectBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleStart"));
 	EffectBubbleStart->SetupAttachment(RootComponent);
 	EffectBubbleStart->bAutoActivate = false;
@@ -277,6 +291,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
 	DOREPLIFETIME(AMCharacter, IsInvincible);
+	//DOREPLIFETIME(AMCharacter, bHealingBubbleTouchingStatue);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -499,6 +514,42 @@ void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSp
 	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
 }
 
+void AMCharacter::NetMulticast_SetHealingBubbleStatus_Implementation(bool i_bBubbleOn, bool i_bDoubleSize)
+{
+	if (bHealingBubbleOn != i_bBubbleOn)
+	{
+		bHealingBubbleOn = i_bBubbleOn;
+		EnablebHealingBubble(i_bBubbleOn);
+	}
+	if (bDoubleHealingBubbleSize != i_bDoubleSize)
+	{
+		bDoubleHealingBubbleSize = i_bDoubleSize;
+	}	
+}
+
+void AMCharacter::EnablebHealingBubble(bool bEnable)
+{
+	if (bEnable)
+	{
+		//// Vfx
+		//if (EffectHealingBubbleStart)
+		//{
+		//	EffectHealingBubbleStart->Activate();
+		//}
+
+		if(!EffectHealingBubbleOn->IsActive())
+			EffectHealingBubbleOn->Activate();
+		EffectHealingBubbleOn->SetVisibility(true);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
+	else
+	{
+		//EffectHealingBubbleOn->Deactivate();
+
+		EffectHealingBubbleOn->SetVisibility(false);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
 
 void AMCharacter::PickUp_Implementation(bool isLeft)
 {
@@ -722,30 +773,10 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	// =================================================================================
 	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
-	// Add Shellheal buff if holding any shells
-	int CntShellHeld = 0;
-	if (!CombineWeapon)
-	{
-		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (0 < CntShellHeld)
-		{
-			// clear burning buff
-			if (CheckBuffMap(EnumAttackBuff::Burning))
-			{
-				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
-				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
-			}
-			// apply shellheal buff
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
-		}
-		else
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
-	}
+
+	// Check Shellheal buff if holding any shells
+	Server_CheckBubble();
 }
 
 void AMCharacter::DropOffWeapon(bool isLeft)
@@ -814,6 +845,11 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 			LeftWeapon->HasBeenCombined = false;
 		}
 	}
+	// Adjust the walking speed according to the holding weapon
+	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+
+	// Check Shellheal buff if holding any shells
+	Server_CheckBubble();
 }
 
 void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
@@ -898,21 +934,21 @@ void AMCharacter::Zoom(bool bZoomOut)
 }
 
 void AMCharacter::Dash()
-{
-	// Update UI
+{	
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
+		// Update UI
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
+		// Call Server Dash
+		Server_Dash();
 	}
-
-	// Call Server Dash
-	Server_Dash();
 }
 
 void AMCharacter::Server_Dash_Implementation()
 {
-	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
+	//if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
+	if (true)
 	{
 		IsAllowDash = false;
 		if (GetNetMode() == NM_ListenServer)
@@ -920,6 +956,7 @@ void AMCharacter::Server_Dash_Implementation()
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
+		DashSpeed *= GetCharacterMovement()->MaxWalkSpeed / OriginalMaxWalkSpeed;
 		NetMulticast_AdjustMaxWalkSpeed(DashSpeed / OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
@@ -1518,6 +1555,7 @@ void AMCharacter::OnRep_IsInvincible()
 	}
 }
 
+
 void AMCharacter::SetCurrentHealth(float healthValue)
 {
 	if (GetLocalRole() == ROLE_Authority)
@@ -1690,12 +1728,6 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 		if (Cast<ASaltcureArea>(OtherActor))
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor enters the SaltcureArea"));
-			// clear burning buff
-			if (CheckBuffMap(EnumAttackBuff::Burning))
-			{
-				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
-				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
-			}
 			// apply saltcure buff
 			if (CheckBuffMap(EnumAttackBuff::Saltcure))
 			{
@@ -1773,6 +1805,58 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 		SetTipUI(false);
 	}
 }
+
+void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+		{
+			if (GetController())
+			{
+				AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+				AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
+				if (!MyPS || !TheOtherCharacterPS)
+					return;
+				if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				{
+					ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
+				}
+			}
+		}
+	}	
+	
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = true;
+	}
+}
+
+void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+		{
+			AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+			AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
+			if (!MyPS || !TheOtherCharacterPS)
+				return;
+			if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+			{
+				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
+			}
+		}
+	}
+
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = false;
+	}
+}
 #pragma endregion Collision
 
 #pragma region Engine life cycle function
@@ -1780,6 +1864,12 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HealingBubbleCollider)
+	{
+		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
+		HealingBubbleCollider->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapEnd);
+	}
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -1843,7 +1933,57 @@ void AMCharacter::Tick(float DeltaTime)
 					OnRep_IsInvincible();
 			}
 		}
+		if (EffectBubbleOn && EffectBubbleOn->IsActive())
+			EffectBubbleOn->SetWorldRotation(FRotator::ZeroRotator);
 	}
+
+	// Adjust Bubble Size if needed
+	if (HealingBubbleCollider)
+	{
+		// Preset parameters
+		float TargetScale = 0;
+		float SizeChangeSpeed = 0;
+		FVector NewRelativeScale = HealingBubbleCollider->GetRelativeScale3D();
+		if (bHealingBubbleOn)
+		{
+			if (!bHealingBubbleTouchingStatue)
+			{
+				float size1 = 6.0f;
+				float size2 = 10.0f;
+				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
+				if (NewRelativeScale.X < size1)
+					SizeChangeSpeed = 5.0f;
+				else if (NewRelativeScale.X <= size2) // must have =
+					SizeChangeSpeed = 2.5f;
+			}
+			else
+			{
+				TargetScale = 0;
+				SizeChangeSpeed = 5.0f;
+			}			
+		}
+		else
+		{
+			TargetScale = 0;
+			SizeChangeSpeed = 1000.0f;
+		}
+		// Change
+		if (NewRelativeScale.X < TargetScale)
+		{
+			NewRelativeScale += FVector::OneVector * DeltaTime * SizeChangeSpeed;
+			if (TargetScale < NewRelativeScale.X)
+				NewRelativeScale = FVector(TargetScale, TargetScale, TargetScale);
+			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
+		}
+		else if (TargetScale < NewRelativeScale.X)
+		{
+			NewRelativeScale -= FVector::OneVector * DeltaTime * SizeChangeSpeed;
+			if (NewRelativeScale.X < TargetScale)
+				NewRelativeScale = FVector(TargetScale, TargetScale, TargetScale);
+			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
+		}
+		HealingBubbleCollider->SetWorldRotation(FRotator::ZeroRotator);
+	}	
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
@@ -1920,86 +2060,87 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
-		// Zoom
-		if (auto pPlayerController = Cast<APlayerController>(GetController()))
-		{
-			float mouse_x, mouse_y;
-			bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
-			int32 viewport_x, viewport_y;
-			pPlayerController->GetViewportSize(viewport_x, viewport_y);
-			if (success && 0 < viewport_x && 0 < viewport_y)
-			{
-				float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
+		//// Zoom
+		//if (auto pPlayerController = Cast<APlayerController>(GetController()))
+		//{
+		//	float mouse_x, mouse_y;
+		//	bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
+		//	int32 viewport_x, viewport_y;
+		//	pPlayerController->GetViewportSize(viewport_x, viewport_y);
+		//	if (success && 0 < viewport_x && 0 < viewport_y)
+		//	{
+		//		float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
 
-				float FinalX = -700.0f * 0.75f;
-				float FinalZ = -250.0f * 0.75f;
-				float FinalRoll = -8.0f * 0.75f;
-				/*
-				// Discrete
-				int GearCnt = 3;
-				float LevelRange = 1.0f / GearCnt;				
-				int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
-				if (lowerYRatio <= 0)
-					Gear = 0;					
-				float TargetX = FinalX * Gear * LevelRange;
-				float TargetZ = FinalZ * Gear * LevelRange;
-				float TargetRoll = FinalRoll * Gear * LevelRange;
-				*/
-				float TargetX = FinalX * lowerYRatio;
-				float TargetZ = FinalZ * lowerYRatio;
-				float TargetRoll = FinalRoll * lowerYRatio;
-				float TimeFromMinToMax = 0.5f;
-				if (lowerYRatio < 0.5f)
-				{
-					TargetX = TargetZ = TargetRoll = 0;
-					TimeFromMinToMax = 1.0f;
-				}					
-				
-				// Location
-				FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
-				if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
-				{
-					// Location X
-					if (CurRelativeLocation.X < TargetX)
-					{
-						CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
-						CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
-					}
-					else if (TargetX < CurRelativeLocation.X)
-					{
-						CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
-						CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
-					}
-					// Location Z
-					if (CurRelativeLocation.Z < TargetZ)
-					{
-						CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
-						CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
-					}
-					else if (TargetZ < CurRelativeLocation.Z)
-					{
-						CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
-						CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
-					}
-					FollowCamera->SetRelativeLocation(CurRelativeLocation);
-				}
-				// Rotation
-				if (FollowCameraRelativeRotationVector.X != TargetRoll)
-				{
-					if (FollowCameraRelativeRotationVector.X < TargetRoll)
-					{
-						FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
-						FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
-					}
-					else if (TargetRoll < FollowCameraRelativeRotationVector.X)
-					{
-						FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
-						FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
-					}
-					FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
-				}						
-			}
-		}
+		//		float FinalX = -700.0f * 0.75f;
+		//		float FinalZ = -250.0f * 0.75f;
+		//		float FinalRoll = -8.0f * 0.75f;
+		//		/*
+		//		// Discrete
+		//		int GearCnt = 3;
+		//		float LevelRange = 1.0f / GearCnt;				
+		//		int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
+		//		if (lowerYRatio <= 0)
+		//			Gear = 0;					
+		//		float TargetX = FinalX * Gear * LevelRange;
+		//		float TargetZ = FinalZ * Gear * LevelRange;
+		//		float TargetRoll = FinalRoll * Gear * LevelRange;
+		//		*/
+		//		float TargetX = FinalX * lowerYRatio;
+		//		float TargetZ = FinalZ * lowerYRatio;
+		//		float TargetRoll = FinalRoll * lowerYRatio;
+		//		float TimeFromMinToMax = 0.5f;
+		//		if (lowerYRatio < 0.5f)
+		//		{
+		//			TargetX = TargetZ = TargetRoll = 0;
+		//			TimeFromMinToMax = 1.0f;
+		//		}					
+		//		
+		//		// Location
+		//		FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
+		//		{
+		//			// Location X
+		//			if (CurRelativeLocation.X < TargetX)
+		//			{
+		//				CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
+		//			}
+		//			else if (TargetX < CurRelativeLocation.X)
+		//			{
+		//				CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
+		//			}
+		//			// Location Z
+		//			if (CurRelativeLocation.Z < TargetZ)
+		//			{
+		//				CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			else if (TargetZ < CurRelativeLocation.Z)
+		//			{
+		//				CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			FollowCamera->SetRelativeLocation(CurRelativeLocation);
+		//		}
+		//		// Rotation
+		//		if (FollowCameraRelativeRotationVector.X != TargetRoll)
+		//		{
+		//			if (FollowCameraRelativeRotationVector.X < TargetRoll)
+		//			{
+		//				FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			else if (TargetRoll < FollowCameraRelativeRotationVector.X)
+		//			{
+		//				FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
+		//		}						
+		//	}
+		//}
+
 
 		////float ZoomOutSpeed = 100.0f;
 		////float ZoomInSpeed = ZoomOutSpeed * 0.5f;
@@ -2038,7 +2179,7 @@ void AMCharacter::Tick(float DeltaTime)
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
@@ -2049,7 +2190,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			if (0.0f < BuffRemainedTime && 0 < CurrentHealth)
 			{
 				float BurningBuffDamagePerSecond = 0.0f;
 				FString ParName = "BurningDamagePerSecond";
@@ -2090,7 +2231,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
 				if (Server_CanMove)
 				{
@@ -2124,13 +2265,19 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Saltcure_RecoverSpeed = 2.0f;
-				//FString ParName = "BurningDamagePerSecond";
-				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				float Saltcure_RecoverSpeed = 0;
+				FString ParName = "Saltcure_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Saltcure_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Saltcure_RecoverSpeed);
+				// clear burning buff
+				if (CheckBuffMap(EnumAttackBuff::Burning))
+				{
+					BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+					BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+				}
 			}
 			else
 			{
@@ -2150,13 +2297,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Shellheal_RecoverSpeed = 2.0f;
-				//FString ParName = "BurningDamagePerSecond";
-				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				float Shellheal_RecoverSpeed = 0;
+				FString ParName = "";
+				ParName = "Shellheal_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				ParName = "Shellheal_RecoverSpeed_OnDoubleShellHolder";
+				if(LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell && RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Shellheal_RecoverSpeed);
+				// clear burning buff
+				if (CheckBuffMap(EnumAttackBuff::Burning))
+				{
+					BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+					BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+				}
 			}
 			else
 			{
@@ -2170,6 +2327,15 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					}
 				}
 			}
+		}
+		// Crab Bubble Damage
+		if (IsAffectedByCrabBubble)
+		{
+			float CrabBubbleDamage = 0;
+			FString ParName = "CrabBubbleDamage";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				CrabBubbleDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * CrabBubbleDamage);
 		}
 	}
 }
@@ -2247,3 +2413,58 @@ void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("EffectGetHit is called"));
 }
 #pragma endregion Effects
+
+
+void AMCharacter::Server_GiveShellToStatue(AWeaponShell* pShell)
+{
+	if (LeftWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(true);
+	}
+	else if (RightWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(false);
+	}		
+}
+
+void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
+{
+	if (IsAffectedByCrabBubble != bEnable)
+	{
+		IsAffectedByCrabBubble = bEnable;
+		if (IsAffectedByCrabBubble)
+		{
+			float NewWalkSpeedRatio = 1.0f;
+			FString ParName = "CrabBubble";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				NewWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			NetMulticast_AdjustMaxWalkSpeed(NewWalkSpeedRatio);
+		}
+		else
+		{
+			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+		}		
+	}
+}
+
+void AMCharacter::Server_CheckBubble()
+{
+	int CntShellHeld = 0;
+	if (!CombineWeapon)
+	{
+		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (0 < CntShellHeld)
+		{
+			NetMulticast_SetHealingBubbleStatus(true, CntShellHeld == 2);
+		}
+		else
+		{
+			NetMulticast_SetHealingBubbleStatus(false, CntShellHeld == 2);
+		}
+	}
+}

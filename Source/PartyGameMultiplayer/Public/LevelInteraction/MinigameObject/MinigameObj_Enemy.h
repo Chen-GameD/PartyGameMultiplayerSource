@@ -47,9 +47,11 @@ public:
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificNoDamageHintActorClass;
+	// Deprecated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificLittleCrabClass;
 
+	// For animation
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 		bool isAttacked = false;
 
@@ -60,6 +62,7 @@ public:
 	// =========================================================
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Explode_NC;
+	// Deprecated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Shield_NC;
 	float GetHitAnimMinLastingTime;

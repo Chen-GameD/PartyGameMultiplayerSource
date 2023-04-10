@@ -190,6 +190,10 @@ public:
 		void CallParalysisBuffStartSfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallParalysisBuffStopSfx();
+
+	void Server_GiveShellToStatue(class AWeaponShell* pShell);
+	void Server_EnableEffectByCrabBubble(bool bEnable);
+
 protected:
 
 	// Health
@@ -255,7 +259,9 @@ protected:
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -280,10 +286,15 @@ protected:
 
 	// Collision
 	UFUNCTION(Category = "Weapon")
-	void OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		void OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION(Category = "Weapon")
-	void OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+		void OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION(Category = "Weapon")
+		void OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION(Category = "Weapon")
+		void OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -296,6 +307,9 @@ protected:
 	// When it not null anymore, start to Init all the pawn related information
 	UFUNCTION()
 	void CheckPlayerFollowWidgetTick();
+
+	void Server_CheckBubble();
+	void EnablebHealingBubble(bool bEnable);
 
 	// Broadcast function
 	UFUNCTION()
@@ -353,6 +367,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class USphereComponent* HealingBubbleCollider;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectHealingBubbleOn;
+	bool bHealingBubbleOn;
+	bool bDoubleHealingBubbleSize;
+	//UPROPERTY(Replicated)
+		bool bHealingBubbleTouchingStatue;
+
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectBubbleStart;
 	UPROPERTY(EditAnywhere, Category = "Effects")
@@ -407,6 +430,8 @@ public:
 		bool IsParalyzed;
 	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
 		bool IsInvincible;
+	UPROPERTY(Replicated)
+		bool IsAffectedByCrabBubble;
 	float InvincibleTimer;
 	float InvincibleMaxTime;
 	

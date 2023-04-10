@@ -24,8 +24,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-
-
 public:
 	UPROPERTY(Replicated)
 	FName TargetSocketName = "None";
@@ -39,10 +37,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* ShellFly_NC;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* ShellInsert_NC;
+		class UNiagaraComponent* ShellInsertEdge_NC;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* ShellInsertDust_NC;
 
 private:
 	float TimeElapsed = 0;
-	float LerpDuration = 4;
+	float LerpDuration = 4.5f;
 	bool bFinishInsert;
 };
