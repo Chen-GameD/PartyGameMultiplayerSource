@@ -15,7 +15,7 @@ void UEOSGameInstance::Init()
 {
 	Super::Init();
 	
-	//Login("", "", "accountportal");
+	Login("", "", "accountportal");
 }
 
 void UEOSGameInstance::Login(FString ID, FString Token, FString LoginType)
@@ -53,7 +53,8 @@ FString UEOSGameInstance::GetPlayerUsername()
 	return PlayerName;
 }
 
-void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections)
+void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections,
+	bool IsPrivate = false, FString RoomName = FString(""), int32 MapReference = -1)
 {
 	isLoading = true;
 	if(bIsLoggedIn)
@@ -64,15 +65,20 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 			{
 				FOnlineSessionSettings SessionSettings;
 				SessionSettings.bIsDedicated = IsDedicatedServer;
+				SessionSettings.bUsesPresence = true;
 				SessionSettings.bAllowInvites = true;
 				SessionSettings.bIsLANMatch = IsLanServer;
-				SessionSettings.NumPublicConnections = NumberOfPublicConnections;
-				SessionSettings.bUsesPresence = true;
-				SessionSettings.bAllowJoinViaPresence = true;
+				SessionSettings.NumPublicConnections = IsPrivate ? 0 : NumberOfPublicConnections;
+				SessionSettings.NumPrivateConnections = !IsPrivate ? 0 : NumberOfPublicConnections;
+				SessionSettings.bAllowJoinViaPresence = !IsPrivate;
+				SessionSettings.bAllowJoinViaPresenceFriendsOnly = IsPrivate;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				// SessionSettings.Set(SETTING_MAPNAME, FString("/Game/Level/SessionTest"), EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings.bAllowJoinInProgress = false;
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings.Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings.Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
+				DebugLevelSelect = MapReference;
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
 				SessionPtr->CreateSession(0, SESSION_NAME, SessionSettings);
@@ -97,7 +103,6 @@ void UEOSGameInstance::FindSession()
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
-				//SearchSettings->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
 				SearchSettings->MaxSearchResults = 100;
@@ -209,7 +214,7 @@ void UEOSGameInstance::JoinSession(int32 index)
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
 					SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
 					UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *SearchSettings->SearchResults[index].Session.OwningUserName);
-					CurrentlyJoiningSessionIndex = index;
+					CurrentlyJoiningSessionIndex = index;  //set index of search result to join
 					SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[index]);
 				}
 				else
@@ -315,15 +320,20 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
 					if(!JoinURL.IsEmpty())
 					{
-						//JoinURL.Append("/Game/Level/SessionTest");
 						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_MAPNAME))
 						{
 							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_MAPNAME);
-							UE_LOG(LogTemp, Warning, TEXT("strMapKeys : %s"), *val->ToString());
-							//JoinURL.Append(val->ToString());
+							int32 mapIndex = -999;
+							val->Data.GetValue(mapIndex);
+							UE_LOG(LogTemp, Warning, TEXT("index MapKeys : %d"), mapIndex);
+						}
+						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_SESSIONKEY))
+						{
+							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_SESSIONKEY);
+							UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *val->ToString());
 						}
 						PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
-						CurrentlyJoiningSessionIndex = -1;
+						CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 					}
 				}
 			}
