@@ -136,7 +136,8 @@ void AMGameMode::Logout(AController* Exiting)
 				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
 			}
 		}
-
+	}
+	
 	//	CurrentPlayerNum--;
 
 	//	if (CurrentPlayerNum <= 0)
