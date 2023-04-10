@@ -104,6 +104,12 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 				Server_SpawnBigWeaponRotation = BigWeaponMesh->GetComponentRotation();
 			}
 		}
+		if (Rising_NC && Rising_NC->IsActive())
+		{
+			Rising_NC->SetWorldLocation(FVector(0, 0, 150.0));
+			Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
+			Rising_NC->SetWorldScale3D(FVector::OneVector);
+		}
 		SetActorLocation(TargetLocation);
 	}
 
@@ -238,11 +244,7 @@ void AMinigameObj_Enemy::BeginPlay()
 	IsRisingFromSand = true; 
 	if (Rising_NC && !Rising_NC->IsActive())
 	{
-		Rising_NC->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-		Rising_NC->Activate();
-		Rising_NC->SetWorldLocation(FVector(0, 0, 150.0));
-		Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
-		Rising_NC->SetWorldScale3D(FVector::OneVector);
+		Rising_NC->Activate();		
 	}
 	// Shake localcontrolled character's camera
 	if (auto pController = GetWorld()->GetFirstPlayerController())
