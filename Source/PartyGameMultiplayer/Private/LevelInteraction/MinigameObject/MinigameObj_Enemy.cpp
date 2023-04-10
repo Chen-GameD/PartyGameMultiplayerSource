@@ -40,6 +40,11 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	BigWeaponMesh->SetupAttachment(CrabMesh);
 	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
+	LittleCrabMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LittleCrabMesh"));
+	LittleCrabMesh->SetupAttachment(CrabMesh);
+	LittleCrabMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	
+
 	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
 	Explode_NC->SetupAttachment(CrabMesh);
 	Explode_NC->bAutoActivate = false;
@@ -243,6 +248,9 @@ void AMinigameObj_Enemy::BeginPlay()
 		SocketName_str = "Alarm";
 	SocketName = FName(*SocketName_str);
 	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	SocketName_str = "LittleCrab";
+	SocketName = FName(*SocketName_str);
+	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
 	if (Rising_NC && !Rising_NC->IsActive())
