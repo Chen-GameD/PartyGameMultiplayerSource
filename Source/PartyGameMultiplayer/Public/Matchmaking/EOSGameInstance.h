@@ -16,6 +16,9 @@
 /**
  * 
  */
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFindSessionResultsStored);
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 {
@@ -25,6 +28,9 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 
 
 public:
+	UPROPERTY(BlueprintAssignable)
+	FOnFindSessionResultsStored OnFindSessionsDelegate;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool isLoading = false;
 
