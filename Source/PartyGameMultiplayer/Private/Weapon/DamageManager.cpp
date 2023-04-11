@@ -234,8 +234,9 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 	if (AttackBuff == EnumAttackBuff::Knockback && AttackerController->GetPawn())
 	{
 		FVector AttackingDirection = AttackerController->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+		AttackingDirection.Z = 0.0f;
 		AttackingDirection.Normalize();
-		DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection;
+		DamagedCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection; // Deprecated
 		float Knockback_MoveSpeed = 0.0f;
 		FString ParName = "";
 		ParName = "Knockback_MoveSpeed";
@@ -244,7 +245,6 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_Knockback_MoveSpeed";
 		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 			Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		AttackingDirection.Z = 0.0f;
 		AttackingDirection *= Knockback_MoveSpeed;
 		DamagedCharacter->LaunchCharacter(AttackingDirection, true, false);
 	}

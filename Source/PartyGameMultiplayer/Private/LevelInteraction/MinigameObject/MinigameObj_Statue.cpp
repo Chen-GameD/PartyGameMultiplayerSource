@@ -25,11 +25,15 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 
 	GodRayMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("GodRayMesh"));
 	GodRayMesh->SetupAttachment(RootMesh);
-	GodRayMesh->SetCollisionProfileName(TEXT("BlockAllDynamic"));
+	GodRayMesh->SetCollisionProfileName(TEXT("Trigger"));
 	GodRayMesh->SetRelativeScale3D(FVector(0.01f, 0.01f, 1.0f));
 
 	SkeletalMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMesh->SetupAttachment(RootMesh);
+
+	CrabCenterMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CrabCenterMesh"));
+	CrabCenterMesh->SetupAttachment(SkeletalMesh);
+	CrabCenterMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
 	ShellOverlapComponent = CreateDefaultSubobject<USphereComponent>(TEXT("ShellOverlapSphere"));
 	ShellOverlapComponent->SetupAttachment(RootMesh);
@@ -88,6 +92,8 @@ void AMinigameObj_Statue::BeginPlay()
 
 			ShellOverlapComponent->OnComponentBeginOverlap.AddDynamic(this, &AMinigameObj_Statue::OnShellOverlapBegin);
 			ShellOverlapComponent->OnComponentEndOverlap.AddDynamic(this, &AMinigameObj_Statue::OnShellOverlapEnd);
+
+			GodRayMesh->OnComponentBeginOverlap.AddDynamic(this, &AMinigameObj_Statue::OnGodRayOverlapBegin);
 		}
 	}
 	// Client
@@ -195,6 +201,13 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 				//NewRotation.Pitch -= DeltaTime * RotateSpeed;
 				NewRotation.Yaw -= DeltaTime * RotateSpeed;
 				ShellOverlapComponent->SetWorldRotation(NewRotation);
+			}
+			// Transform
+			if (0 == ShellOverlapComponent_TargetScale)
+			{
+				float LerpValue = 1.0f / ShellOverlapComponent_MinScale * FMath::Clamp(ShellOverlapComponent_MinScale - NewRelativeScale.X, 0.0f, ShellOverlapComponent_MinScale);
+				FVector NewWorldLocation = FMath::Lerp(ShellOverlapComponent->GetComponentLocation(), CrabCenterMesh->GetComponentLocation(), LerpValue);
+				ShellOverlapComponent->SetWorldLocation(NewWorldLocation);
 			}
 		}
 	}
@@ -308,6 +321,19 @@ void AMinigameObj_Statue::OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp,
 	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 	{
 		pMCharacter->Server_EnableEffectByCrabBubble(false);
+	}
+}
+
+void AMinigameObj_Statue::OnGodRayOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+	{
+		FVector MCharacterLocation = pMCharacter->GetActorLocation();
+		FVector SourceLocation = FVector(0, -400.0f, 180.0f);
+		SourceLocation.Z = MCharacterLocation.Z;
+		FVector PushDirection = MCharacterLocation - SourceLocation;
+		PushDirection.Normalize();
+		pMCharacter->LaunchCharacter(PushDirection * 800.0f, true, false);
 	}
 }
 
