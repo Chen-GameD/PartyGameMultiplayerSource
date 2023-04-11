@@ -576,6 +576,9 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	// ===========================================================================================================================
 	// TO DO
 
+	if (IsParalyzed)
+		return;
+
 	// Drop left/right weapon
 	if (CurrentTouchedWeapon.IsEmpty())
 	{
@@ -1657,6 +1660,9 @@ void AMCharacter::SetIsDead(bool n_IsDead)
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTouchWeapon)
 {
+	if (IsParalyzed)
+		return;
+
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
