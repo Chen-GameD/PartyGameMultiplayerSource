@@ -48,7 +48,7 @@ public:
 	void Server_RespawnPlayer(APlayerController* PlayerController);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnMinigameObject();
+	void Server_RespawnMinigameObject(bool bFirstTimeSpawn = false);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_RespawnShellObject(int AdditionalInformationIndex);

@@ -192,16 +192,36 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 	}
 }
 
-void AMGameMode::Server_RespawnMinigameObject_Implementation()
+void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpawn)
 {
 	if (MinigameDataAsset)
-	{
-		// Spawn the minigame object
-		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-		FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-		if(spawnActor && MinigameDataAsset)
-			spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+	{		
+		if (bFirstTimeSpawn)
+		{
+			// SpawnMinigameObject with a certain delay after the game starts
+			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 7.0f;
+			FTimerHandle TimerHandle;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+				{
+					// Spawn the minigame object
+					CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+					FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+					AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+					if (spawnActor && MinigameDataAsset)
+						spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+
+				}, DelaySpawnMinigameObjectAtStart, false);
+		}
+		else
+		{
+			// Spawn the minigame object
+			CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+			FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+			AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+			if (spawnActor && MinigameDataAsset)
+				spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+		}
+		
 
 		// Special rules
 		switch (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameType)
@@ -213,7 +233,7 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		default:
 			break;
 		}
-		
+
 		// Update Minigame Hint
 		AMGameState* MyGameState = GetGameState<AMGameState>();
 		if (MyGameState)
@@ -295,7 +315,7 @@ void AMGameMode::StartTheGame()
 		MyGameState->Server_StartGame();
 	}
 
-	Server_RespawnMinigameObject();
+	Server_RespawnMinigameObject(true);
 }
 
 void AMGameMode::TestRestartLevel()
