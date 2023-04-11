@@ -64,6 +64,13 @@ ABaseWeapon::ABaseWeapon()
 	if (DefaultHaloEffect.Succeeded())
 		HaloEffect_NSComponent->SetAsset(DefaultHaloEffect.Object);
 
+	ShowUpEffect_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShowUpVfx"));
+	ShowUpEffect_NC->SetupAttachment(WeaponMesh);
+	ShowUpEffect_NC->bAutoActivate = false;
+	static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultShowUpEffect(TEXT("/Game/ArtAssets/Niagara/NS_Confetti.NS_Confetti"));
+	if (DefaultShowUpEffect.Succeeded())
+		ShowUpEffect_NC->SetAsset(DefaultShowUpEffect.Object);
+
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
 	//DamageGenerationCounter = 0;
@@ -630,4 +637,11 @@ void ABaseWeapon::NetMulticast_CallThrewAwaySfx_Implementation()
 {
 	CallThrewAwaySfx();
 }
+
+void ABaseWeapon::NetMulticast_CallShowUpVfx_Implementation()
+{
+	if (ShowUpEffect_NC && !ShowUpEffect_NC->IsActive())
+		ShowUpEffect_NC->Activate();
+}
+
 #pragma endregion Effects

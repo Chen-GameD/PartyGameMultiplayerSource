@@ -66,7 +66,7 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	RisingTargetHeight = 100.0f;
 
 	DropWeaponDelay = 2.25f;
-	RespawnDelay = 5.0f;
+	RespawnDelay = 6.5f;
 
 	Local_ShowNoDamageHint_Interval = 1.0f;
 	Local_ShowNoDamageHint_LastTime = -1.0f;

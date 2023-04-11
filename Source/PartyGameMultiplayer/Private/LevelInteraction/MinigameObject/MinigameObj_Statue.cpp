@@ -71,7 +71,7 @@ AMinigameObj_Statue::AMinigameObj_Statue()
 
 	ExplodeDelay = 2.0f;
 	LittleCrabDelay = 4.25f;
-	RespawnDelay = 10.0f;
+	RespawnDelay = 7.5f;
 }
 
 

@@ -52,6 +52,8 @@ public:
 		void NetMulticast_CallThrewAwaySfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallThrewAwaySfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallShowUpVfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -197,7 +199,7 @@ protected:
 			UPrimitiveComponent->UShapeComponent->USphereComponent
 		This could be the same as StaticMesh and also could be something different that is defined in an child class
 		(for instance, the collision of wind/fire released by the weapon) */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
 		class UPrimitiveComponent* AttackDetectComponent;
 
 	// Movement component that may be necessary
@@ -206,6 +208,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* HaloEffect_NSComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* ShowUpEffect_NC;
 
 	// Particle System that may be necessary(for instance, wind/fire released by the weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
