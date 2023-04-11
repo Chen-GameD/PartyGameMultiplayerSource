@@ -69,7 +69,50 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 	}
 
 	if (MyInGameHUD)
+	{
 		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
+		MyInGameHUD->InGame_UpdateReadyButtonState(GetPlayerState<AM_PlayerState>()->IsReady);
+
+		// Update Equal State
+		if (arrTeam1.Num() == arrTeam2.Num() && arrTeam1.Num() != 0)
+		{
+			MyInGameHUD->InGame_UpdateEqualConditionState(true);
+		}
+		else
+		{
+			MyInGameHUD->InGame_UpdateEqualConditionState(false);
+		}
+
+		// Update Ready State
+		if (arrUndecided.Num() > 0)
+		{
+			MyInGameHUD->InGame_UpdateReadyConditionState(false);
+		}
+		else
+		{
+			bool isReady = true;
+			for (int i = 0; i < arrTeam1.Num(); i++)
+			{
+				if (!arrTeam1[i].IsReady)
+				{
+					isReady = false;
+					break;
+				}
+			}
+			if (isReady)
+			{
+				for (int i = 0; i < arrTeam2.Num(); i++)
+				{
+					if (!arrTeam2[i].IsReady)
+					{
+						isReady = false;
+						break;
+					}
+				}
+			}
+			MyInGameHUD->InGame_UpdateReadyConditionState(isReady);
+		}
+	}
 	else
 	{
 		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
@@ -85,6 +128,48 @@ void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> 
 	{
 		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
 		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
+
+		MyInGameHUD->InGame_UpdateReadyButtonState(GetPlayerState<AM_PlayerState>()->IsReady);
+
+		// Update Equal State
+		if (arrTeam1.Num() == arrTeam2.Num() && arrTeam1.Num() != 0)
+		{
+			MyInGameHUD->InGame_UpdateEqualConditionState(true);
+		}
+		else
+		{
+			MyInGameHUD->InGame_UpdateEqualConditionState(false);
+		}
+
+		// Update Ready State
+		if (arrUndecided.Num() > 0)
+		{
+			MyInGameHUD->InGame_UpdateReadyConditionState(false);
+		}
+		else
+		{
+			bool isReady = true;
+			for (int i = 0; i < arrTeam1.Num(); i++)
+			{
+				if (!arrTeam1[i].IsReady)
+				{
+					isReady = false;
+					break;
+				}
+			}
+			if (isReady)
+			{
+				for (int i = 0; i < arrTeam2.Num(); i++)
+				{
+					if (!arrTeam2[i].IsReady)
+					{
+						isReady = false;
+						break;
+					}
+				}
+			}
+			MyInGameHUD->InGame_UpdateReadyConditionState(isReady);
+		}
 	}
 }
 

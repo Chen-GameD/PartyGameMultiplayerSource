@@ -62,7 +62,7 @@ public:
 	//void UpdateLobbyMenu();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void JoinATeam(int i_TeamIndex = 1);
+	void JoinATeam(int i_TeamIndex);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void Server_ReadyButtonClick();

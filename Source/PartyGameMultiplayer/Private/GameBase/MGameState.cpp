@@ -63,6 +63,7 @@ void AMGameState::OnRep_IsGameStart()
 		{
 			MyLocalPlayerController->StartTheGame();
 			MyLocalPlayerController->AddWeaponUI();
+			BPF_GameStartBGM(true);
 		}
 	}
 	else
@@ -70,6 +71,7 @@ void AMGameState::OnRep_IsGameStart()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->EndTheGame();
+			BPF_GameStartBGM(false);
 		}
 	}
 }

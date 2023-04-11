@@ -337,3 +337,37 @@ void AMInGameHUD::InGame_UpdateUndecidedLobbyInformation(TArray<FLobbyInformatio
 		}
 	}
 }
+
+void AMInGameHUD::InGame_UpdateReadyButtonState(bool isReady)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateReadyButtonState(isReady);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateEqualConditionState(bool isEqual)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateEqualConditionState(isEqual);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateReadyConditionState(bool isReady)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateReadyConditionState(isReady);
+	}
+}
+
+UMLobbyWidget* AMInGameHUD::InGame_GetLobbyWidget()
+{
+	if (InGame_LobbyWidget)
+	{
+		return InGame_LobbyWidget;
+	}
+
+	return nullptr;
+}

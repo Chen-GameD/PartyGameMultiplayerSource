@@ -113,3 +113,27 @@ void UMLobbyWidget::UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStru
 		}
 	}
 }
+
+void UMLobbyWidget::UpdateReadyButtonState(bool isReady)
+{
+	if (isReady)
+	{
+		Btn_Cancel->SetVisibility(ESlateVisibility::Visible);
+		Btn_Ready->SetVisibility(ESlateVisibility::Hidden);
+	}
+	else
+	{
+		Btn_Cancel->SetVisibility(ESlateVisibility::Hidden);
+		Btn_Ready->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UMLobbyWidget::UpdateEqualConditionState(bool isEqual)
+{
+	IM_EqualCondition->SetVisibility(isEqual ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void UMLobbyWidget::UpdateReadyConditionState(bool isReady)
+{
+	IM_ReadyCondition->SetVisibility(isReady ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}

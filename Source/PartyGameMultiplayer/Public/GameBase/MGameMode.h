@@ -80,7 +80,7 @@ public:
 	int TeamTwoPlayerNum = 0;
 
 	UPROPERTY()
-	int MaxTeamPlayers = 4;
+	int MaxTeamPlayers = 3;
 
 	UPROPERTY()
 	int CurrentPlayerNum = 0;

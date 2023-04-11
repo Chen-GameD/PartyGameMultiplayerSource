@@ -56,55 +56,49 @@ void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 	int PreTeamIndex = TeamIndex;
-	// Quit from current team
-	if (MyGameMode)
-	{
-		if (TeamIndex != 0)
-		{
-			if (TeamIndex == 1)
-			{
-				MyGameMode->TeamOnePlayerNum--;
-			}
-			else
-			{
-				MyGameMode->TeamTwoPlayerNum--;
-			}
-		}
-	}
-	
-	TeamIndex = i_TeamIndex == 0 ? 1 : i_TeamIndex;
+
+	if (PreTeamIndex == i_TeamIndex)
+		return;
 	
 	// Add to new team
 	if (MyGameMode)
 	{
 		// on server
-		if (TeamIndex == 1)
+		if (i_TeamIndex == 1)
 		{
 			if (MyGameMode->TeamOnePlayerNum < MyGameMode->MaxTeamPlayers)
 			{
+				TeamIndex = i_TeamIndex;
 				MyGameMode->TeamOnePlayerNum++;
+
+				if (PreTeamIndex == 2)
+				{
+					MyGameMode->TeamTwoPlayerNum--;
+				}
 			}
-			else
+		}
+		else if (i_TeamIndex == 2)
+		{
+			if (MyGameMode->TeamTwoPlayerNum < MyGameMode->MaxTeamPlayers)
 			{
-				TeamIndex = 2;
+				TeamIndex = i_TeamIndex;
 				MyGameMode->TeamTwoPlayerNum++;
+				
+				if (PreTeamIndex == 1)
+				{
+					MyGameMode->TeamOnePlayerNum--;
+				}
 			}
 		}
 		else
 		{
-			if (MyGameMode->TeamTwoPlayerNum < MyGameMode->MaxTeamPlayers)
-			{
-				MyGameMode->TeamTwoPlayerNum++;
-			}
-			else
-			{
-				TeamIndex = 1;
-				MyGameMode->TeamOnePlayerNum++;
-			}
+			// i_TeamIndex == 0
+			TeamIndex = i_TeamIndex;
+			PreTeamIndex == 1 ? MyGameMode->TeamOnePlayerNum-- : MyGameMode->TeamTwoPlayerNum--;
 		}
 	}
 	
-	if (GetNetMode() == NM_ListenServer)
+	if (GetNetMode() == NM_ListenServer && TeamIndex != PreTeamIndex)
 	{
 		OnRep_UpdateTeamIndex();
 	}

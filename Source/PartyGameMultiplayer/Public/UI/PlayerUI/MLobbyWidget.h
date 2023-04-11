@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "MLobbyWidget.generated.h"
 
@@ -39,6 +40,12 @@ public:
 	void UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
 	UFUNCTION()
 	void UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void UpdateReadyButtonState(bool isReady);
+	UFUNCTION()
+	void UpdateEqualConditionState(bool isEqual);
+	UFUNCTION()
+	void UpdateReadyConditionState(bool isReady);
 protected:
 	// Team Information Element
 	////////////////////////////////////////////////////
@@ -82,9 +89,9 @@ protected:
 
 	// Game Start Condition
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* TB_ReadyCondition;
+	UImage* IM_ReadyCondition;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* TB_EqualCondition;
+	UImage* IM_EqualCondition;
 	///////////////////////////////////////////////////////////////
 
 	// Button
@@ -92,9 +99,15 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_JoinTeam_1;
 	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_CancelTeam_1;
+	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_JoinTeam_2;
 	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_CancelTeam_2;
+	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Ready;
+	UPROPERTY(meta = (BindWidget))
+	UButton* Btn_Cancel;
 	UPROPERTY(meta = (BindWidget))
 	UButton* Btn_Invite;
 	UPROPERTY(meta = (BindWidget))

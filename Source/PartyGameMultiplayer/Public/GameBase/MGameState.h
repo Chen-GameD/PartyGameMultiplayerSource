@@ -32,6 +32,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_GameStartBGM(bool isBroadcast);
+
 	UFUNCTION()
 	void OnRep_IsGameStart();
 

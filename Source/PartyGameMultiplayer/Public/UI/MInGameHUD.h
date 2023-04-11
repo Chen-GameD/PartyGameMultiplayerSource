@@ -91,6 +91,14 @@ public:
 	void InGame_UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
 	UFUNCTION()
 	void InGame_UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateReadyButtonState(bool isReady);
+	UFUNCTION()
+	void InGame_UpdateEqualConditionState(bool isEqual);
+	UFUNCTION()
+	void InGame_UpdateReadyConditionState(bool isReady);
+	UFUNCTION(BlueprintCallable)
+	UMLobbyWidget* InGame_GetLobbyWidget();
 
 protected:
 	// In Game UI Class Ref
