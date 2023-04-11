@@ -45,13 +45,16 @@ public:
 	// =================================================================================================================
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnPlayer(APlayerController* PlayerController);
+		void Server_RespawnPlayer(APlayerController* PlayerController);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnMinigameObject(bool bFirstTimeSpawn = false);
+		void Server_RespawnMinigameObject(bool bFirstTimeSpawn = false);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnShellObject(int AdditionalInformationIndex);
+		void Server_RespawnShellObject(int AdditionalInformationIndex);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+		void Server_RearrangeWeapons();
 
 	UFUNCTION()
 	void CheckGameStart();
@@ -114,6 +117,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	int CurrentMinigameIndex;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponAlarm> WeaponAlarmSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponBlower> WeaponBlowerSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponFork> WeaponForkSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponLighter> WeaponLighterSubClass;
 
 private:
 	bool IsGameInitialized = false;

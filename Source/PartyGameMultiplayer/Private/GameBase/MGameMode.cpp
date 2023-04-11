@@ -18,6 +18,11 @@
 #include "Matchmaking/EOSGameInstance.h"
 #include "Weapon/JsonFactory.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
+#include "Kismet/GameplayStatics.h"
+#include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/ElementWeapon/WeaponBlower.h"
+#include "Weapon/ElementWeapon/WeaponFork.h"
+#include "Weapon/ElementWeapon/WeaponLighter.h"
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
@@ -243,6 +248,62 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 	}
 }
 
+void AMGameMode::Server_RearrangeWeapons_Implementation()
+{
+	TArray<FTransform> Arr_SpawnTransform;
+	TArray<EnumWeaponType> Arr_WeaponTypeCanBeSpawned;
+	TMap<EnumWeaponType, unsigned int> Map_WeaponTypeCnt;
+
+	TSubclassOf<ABaseWeapon> ActorClass = ABaseWeapon::StaticClass();
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+	for (size_t i = 0; i < OutActors.Num(); i++)
+	{
+		if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
+		{
+			if (pWeapon->WeaponType != EnumWeaponType::Shell)
+			{
+				Arr_SpawnTransform.Add(pWeapon->GetTransform());
+				EnumWeaponType ThisWeaponType = pWeapon->WeaponType;
+				pWeapon->Destroy();
+				
+				if (!Map_WeaponTypeCnt.Contains(ThisWeaponType))
+				{
+					Arr_WeaponTypeCanBeSpawned.Add(ThisWeaponType);
+					Map_WeaponTypeCnt.Add(ThisWeaponType);
+					Map_WeaponTypeCnt[ThisWeaponType] = 0;
+				}
+				Map_WeaponTypeCnt[ThisWeaponType]++;
+			}
+		}
+	}
+
+	for (size_t i = 0; i < Arr_SpawnTransform.Num(); i++)
+	{
+		int SizeOf_Arr_WeaponTypeCanBeSpawned = Arr_WeaponTypeCanBeSpawned.Num();
+		if (SizeOf_Arr_WeaponTypeCanBeSpawned <= 0)
+			break;
+		
+		EnumWeaponType SpawnWeaponType = Arr_WeaponTypeCanBeSpawned[FMath::RandRange(0, SizeOf_Arr_WeaponTypeCanBeSpawned-1)];
+		FTransform SpawnTransform = Arr_SpawnTransform[i];
+		if (--Map_WeaponTypeCnt[SpawnWeaponType] <= 0)
+			Arr_WeaponTypeCanBeSpawned.Remove(SpawnWeaponType);
+
+		ABaseWeapon* NewlySpawnWeapon = nullptr;
+		if (SpawnWeaponType == EnumWeaponType::Alarm)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponAlarm>(WeaponAlarmSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Blower)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponBlower>(WeaponBlowerSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Fork)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponFork>(WeaponForkSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Lighter)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponLighter>(WeaponLighterSubClass, SpawnTransform);
+
+		if (NewlySpawnWeapon)
+			NewlySpawnWeapon->NetMulticast_CallShowUpVfx();
+	}
+}
+
 void AMGameMode::CheckGameStart()
 {
 	int const PlayerNum = UGameplayStatics::GetNumPlayerStates(GetWorld());
@@ -315,6 +376,7 @@ void AMGameMode::StartTheGame()
 		MyGameState->Server_StartGame();
 	}
 
+	Server_RearrangeWeapons();
 	Server_RespawnMinigameObject(true);
 }
 

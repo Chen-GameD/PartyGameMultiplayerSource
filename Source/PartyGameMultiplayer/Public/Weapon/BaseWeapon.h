@@ -52,6 +52,8 @@ public:
 		void NetMulticast_CallThrewAwaySfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallThrewAwaySfx();
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallShowUpVfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -206,6 +208,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* HaloEffect_NSComponent;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* ShowUpEffect_NC;
 
 	// Particle System that may be necessary(for instance, wind/fire released by the weapon)
 	UPROPERTY(EditAnywhere, Category = "Effects")
