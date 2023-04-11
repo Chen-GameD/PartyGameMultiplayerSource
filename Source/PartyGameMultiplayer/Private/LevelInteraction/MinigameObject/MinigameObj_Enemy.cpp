@@ -68,7 +68,7 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	DropWeaponDelay = 2.25f;
 	RespawnDelay = 6.5f;
 
-	Local_ShowNoDamageHint_Interval = 1.0f;
+	Local_ShowNoDamageHint_Interval = 0.25f;
 	Local_ShowNoDamageHint_LastTime = -1.0f;
 
 	Server_CallGetHitEffects_MinInterval = 0.5f;
@@ -309,11 +309,12 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 			AActor* NoDamageHintActor = GetWorld()->SpawnActor<AActor>(SpecificNoDamageHintActorClass, spawnLocation, spawnRotation);
 			FTimerHandle TimerHandle;
 			float NoDamageHintActor_LifeTime = Local_ShowNoDamageHint_Interval;
+			float NoDamageHintAnimTime = 1.0f;
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NoDamageHintActor]()
 				{
 					if (NoDamageHintActor)
 						NoDamageHintActor->Destroy();
-				}, NoDamageHintActor_LifeTime, false);
+				}, NoDamageHintAnimTime, false);
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
 		}		
 	}	
