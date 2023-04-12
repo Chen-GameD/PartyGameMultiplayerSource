@@ -25,9 +25,11 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// should only be called on server
-	virtual void GetPickedUp(ACharacter* pCharacter);
+	UFUNCTION(BlueprintCallable)
+		virtual void GetPickedUp(ACharacter* pCharacter);
 	// should only be called on server
-	virtual void GetThrewAway();
+	UFUNCTION(BlueprintCallable)
+		virtual void GetThrewAway();
 	// should only be called on server
 	virtual void AttackStart(float AttackTargetDistance);
 	// should only be called on server

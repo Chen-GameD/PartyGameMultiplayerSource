@@ -587,7 +587,6 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (LeftWeapon)
 			{
-				LeftWeapon->NetMulticast_CallThrewAwaySfx();
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -626,7 +625,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (LeftWeapon)
 			{
 				// Drop off left weapon
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft, true);
 			}
 
 			LeftWeapon = CurrentTouchedWeapon[0];
@@ -646,7 +645,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Pick up left big weapon and drop right weapon and/or combine weapon
 			if (LeftWeapon->IsBigWeapon)
 			{
-				DropOffWeapon(false);
+				DropOffWeapon(false, true);
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -663,7 +662,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				{
 					if (RightWeapon->IsBigWeapon)
 					{
-						DropOffWeapon(false);
+						DropOffWeapon(false, true);
 					}
 					else
 					{
@@ -692,7 +691,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (RightWeapon)
 			{
 				// Drop off left weapon
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft, true);
 			}
 
 			RightWeapon = CurrentTouchedWeapon[0];
@@ -712,7 +711,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			// Pick up right big weapon and drop left weapon and/or combine weapon
 			if (RightWeapon->IsBigWeapon)
 			{
-				DropOffWeapon(true);
+				DropOffWeapon(true, true);
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -729,7 +728,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				{
 					if (LeftWeapon->IsBigWeapon)
 					{
-						DropOffWeapon(true);
+						DropOffWeapon(true, true);
 					}
 					else
 					{
@@ -786,10 +785,14 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	Server_CheckBubble();
 }
 
-void AMCharacter::DropOffWeapon(bool isLeft)
+void AMCharacter::DropOffWeapon(bool isLeft, bool bDropToReplace)
 {
 	if (isLeft && LeftWeapon)
 	{
+		// Sfx
+		if (!bDropToReplace)
+			LeftWeapon->NetMulticast_CallThrewAwaySfx();
+
 		LeftWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		// Call detach function in ABaseWeapon
 		// TO DO
@@ -822,6 +825,10 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 	}
 	else if (!isLeft && RightWeapon)
 	{
+		// Sfx
+		if (!bDropToReplace)
+			RightWeapon->NetMulticast_CallThrewAwaySfx();
+
 		RightWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		// Call detach function in ABaseWeapon
 		// TO DO

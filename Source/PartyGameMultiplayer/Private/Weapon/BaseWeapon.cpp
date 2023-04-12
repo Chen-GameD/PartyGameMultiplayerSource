@@ -252,6 +252,8 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 
 void ABaseWeapon::GetThrewAway()
 {
+	AttackStop();
+
 	IsPickedUp = false;
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_IsPickedUp();
