@@ -644,4 +644,10 @@ void ABaseWeapon::NetMulticast_CallShowUpVfx_Implementation()
 		ShowUpEffect_NC->Activate();
 }
 
+void ABaseWeapon::CallShowUpVfx()
+{
+	if (ShowUpEffect_NC && !ShowUpEffect_NC->IsActive())
+		ShowUpEffect_NC->Activate();
+}
+
 #pragma endregion Effects

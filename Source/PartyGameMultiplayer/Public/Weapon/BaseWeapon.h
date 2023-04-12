@@ -54,6 +54,7 @@ public:
 		void CallThrewAwaySfx();
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_CallShowUpVfx();
+	void CallShowUpVfx();
 
 protected:
 	virtual void BeginPlay() override;

@@ -34,6 +34,8 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("GameMode Init JsonObject_1 failed"));*/
 
 	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
+
+	Server_RearrangeWeapons();
 }
 
 void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -293,8 +295,8 @@ void AMGameMode::Server_RearrangeWeapons_Implementation()
 		else if (SpawnWeaponType == EnumWeaponType::Lighter)
 			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponLighter>(WeaponLighterSubClass, SpawnTransform);
 
-		if (NewlySpawnWeapon)
-			NewlySpawnWeapon->NetMulticast_CallShowUpVfx();
+		/*if (NewlySpawnWeapon)
+			NewlySpawnWeapon->NetMulticast_CallShowUpVfx();*/
 	}
 }
 
@@ -370,7 +372,7 @@ void AMGameMode::StartTheGame()
 		MyGameState->Server_StartGame();
 	}
 
-	Server_RearrangeWeapons();
+	//Server_RearrangeWeapons();
 	Server_RespawnMinigameObject(true);
 }
 

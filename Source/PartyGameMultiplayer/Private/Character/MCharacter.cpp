@@ -1922,6 +1922,20 @@ void AMCharacter::BeginPlay()
 				pMInGameHUD->InGame_ToggleInvincibleUI(false);
 			}
 		}
+
+		// Show Weapon ShowUp Vfx(Confetti)
+		TArray<FTransform> Arr_SpawnTransform;
+		TArray<EnumWeaponType> Arr_WeaponTypeCanBeSpawned;
+		TMap<EnumWeaponType, unsigned int> Map_WeaponTypeCnt;
+
+		TSubclassOf<ABaseWeapon> ActorClass = ABaseWeapon::StaticClass();
+		TArray<AActor*> OutActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+		for (size_t i = 0; i < OutActors.Num(); i++)
+		{
+			if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
+				pWeapon->CallShowUpVfx();
+		}
 	}
 }
 
