@@ -252,6 +252,8 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 
 void ABaseWeapon::GetThrewAway()
 {
+	AttackStop();
+
 	IsPickedUp = false;
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_IsPickedUp();
@@ -639,6 +641,12 @@ void ABaseWeapon::NetMulticast_CallThrewAwaySfx_Implementation()
 }
 
 void ABaseWeapon::NetMulticast_CallShowUpVfx_Implementation()
+{
+	if (ShowUpEffect_NC && !ShowUpEffect_NC->IsActive())
+		ShowUpEffect_NC->Activate();
+}
+
+void ABaseWeapon::CallShowUpVfx()
 {
 	if (ShowUpEffect_NC && !ShowUpEffect_NC->IsActive())
 		ShowUpEffect_NC->Activate();

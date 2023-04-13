@@ -269,7 +269,7 @@ protected:
 	void PickUp(bool isLeft);
 
 	UFUNCTION()
-	void DropOffWeapon(bool isLeft);
+	void DropOffWeapon(bool isLeft, bool bDropToReplace = false);
 
 	UFUNCTION()
 	void OnCombineWeapon(bool bJustPickedLeft);
