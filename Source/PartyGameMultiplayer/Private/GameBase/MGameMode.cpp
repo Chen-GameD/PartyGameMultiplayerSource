@@ -97,6 +97,13 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				MyPawn->OnRep_PlayerState();
 			}
 		}
+
+		// Sync Level Index
+		AMGameState* MyGameState = GetGameState<AMGameState>();
+		if (MyGameState)
+		{
+			MyGameState->LevelIndex = LevelIndex;
+		}
 	}
 }
 
@@ -143,7 +150,19 @@ void AMGameMode::Logout(AController* Exiting)
 		}
 	}
 	
-	//	CurrentPlayerNum--;
+	CurrentPlayerNum--;
+
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		if (*ControllerItr != Exiting)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController)
+			{
+				MyController->Client_SyncLobbyInformation();
+			}
+		}
+	}
 
 	//	if (CurrentPlayerNum <= 0)
 	//	{

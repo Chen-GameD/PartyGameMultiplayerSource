@@ -106,8 +106,9 @@ void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 
 void AM_PlayerState::Client_SetPlayerNameFromGameInstance_Implementation()
 {
-	PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
-	Server_UpdatePlayerName(PlayerNameString);
+	FString TempPlayerName = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	//PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	Server_UpdatePlayerName(TempPlayerName);
 }
 
 void AM_PlayerState::Client_SetPlayerSkinFromGameInstance_Implementation()
@@ -152,7 +153,7 @@ void AM_PlayerState::OnRep_PlayerNameString()
 	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
 	{
 		AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-		if (MyController)
+		if (MyController && MyController->IsLocalPlayerController())
 		{
 			MyController->Client_SyncLobbyInformation_Implementation();
 		}
