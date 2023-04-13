@@ -15,24 +15,24 @@ public:
 	AInteractable();
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	virtual void BeginPlay() override;
 
-	UFUNCTION()
-		virtual void OnRep_Transform();
+	/*UFUNCTION()*/
+		//virtual void OnRep_Transform();
 private:
 	
 
 public:
 protected:
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootLocation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FRotator RootRotation;
-	UPROPERTY(ReplicatedUsing = OnRep_Transform)
-		FVector RootScale;
+	//UPROPERTY(ReplicatedUsing = OnRep_Transform)
+	//	FVector RootLocation;
+	//UPROPERTY(ReplicatedUsing = OnRep_Transform)
+	//	FRotator RootRotation;
+	//UPROPERTY(ReplicatedUsing = OnRep_Transform)
+	//	FVector RootScale;
 private:
 
 };

@@ -261,7 +261,7 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 				DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 
 			//DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
-			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
+			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio * DeltaTime * 40);
 		}
 	}
 	return true;

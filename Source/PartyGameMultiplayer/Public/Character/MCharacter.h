@@ -259,7 +259,7 @@ protected:
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
 	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio = -1);
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
@@ -436,6 +436,8 @@ public:
 		bool IsInvincible;
 	UPROPERTY(Replicated)
 		bool IsAffectedByCrabBubble;
+	UPROPERTY(Replicated)
+		bool IsSaltCure;
 	float InvincibleTimer;
 	float InvincibleMaxTime;
 	

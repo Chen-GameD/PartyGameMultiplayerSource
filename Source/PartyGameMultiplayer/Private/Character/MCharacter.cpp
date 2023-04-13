@@ -141,6 +141,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	EffectBubbleEnd->bAutoActivate = false;
 
 	IsHealing = false;
+	IsSaltCure = false;
 	EffectHeal = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHeal"));
 	EffectHeal->SetupAttachment(RootComponent);
 	EffectHeal->bAutoActivate = false;
@@ -514,7 +515,34 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 
 void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
 {
-	Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	if(0 < MaxWalkSpeedRatio)
+		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	else
+	{
+		float MaxWalkSpeedRatioByWeapon = 1.0f;
+		float MaxWalkSpeedRatioBySaltCure = 1.0f;		
+		float MaxWalkSpeedRatioByCrabBubble = 1.0f;
+		// Weapon Effect
+		MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
+		MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
+		// Sea Effect
+		if (IsSaltCure)
+		{
+			FString ParName = "Saltcure";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
+		}		
+		// Crab Bubble Effect
+		if (IsAffectedByCrabBubble)
+		{
+			FString ParName = "CrabBubble";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			MaxWalkSpeedRatio = MaxWalkSpeedRatioByCrabBubble;
+		}	
+		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	}
 	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
 }
 
@@ -628,7 +656,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				DropOffWeapon(isLeft, true);
 			}
 
-			LeftWeapon = CurrentTouchedWeapon[0];
+			if(!CurrentTouchedWeapon.IsEmpty() && CurrentTouchedWeapon[0])
+				LeftWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
@@ -638,6 +667,9 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			LeftWeapon->GetPickedUp(this);
 			LeftWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+
+			if (CurrentTouchedWeapon.Contains(LeftWeapon))
+				CurrentTouchedWeapon.Remove(LeftWeapon);
 
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
@@ -694,7 +726,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				DropOffWeapon(isLeft, true);
 			}
 
-			RightWeapon = CurrentTouchedWeapon[0];
+			if (!CurrentTouchedWeapon.IsEmpty() && CurrentTouchedWeapon[0])
+				RightWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Right, RightWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
@@ -704,6 +737,9 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			SocketName = FName(*temp);
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
+
+			if (CurrentTouchedWeapon.Contains(RightWeapon))
+				CurrentTouchedWeapon.Remove(RightWeapon);
 
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
@@ -779,7 +815,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+	NetMulticast_AdjustMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -860,7 +896,7 @@ void AMCharacter::DropOffWeapon(bool isLeft, bool bDropToReplace)
 		}
 	}
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+	NetMulticast_AdjustMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -992,7 +1028,7 @@ void AMCharacter::RefreshDash()
 	FTimerHandle tempHandle;
 	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
 
-	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+	NetMulticast_AdjustMaxWalkSpeed();
 }
 
 void AMCharacter::SetDash()
@@ -1098,6 +1134,8 @@ void AMCharacter::OnHealthUpdate()
 
 		if (CurrentHealth <= 0)
 		{
+			SetTextureInUI();
+
 			// Death
 			// to do
 			// Force respawn
@@ -1126,6 +1164,8 @@ void AMCharacter::OnHealthUpdate()
 			{
 				DropOffWeapon(false);
 			}
+
+			CurrentTouchedWeapon.Empty();
 		}
 	}
 
@@ -1749,8 +1789,9 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 			if (CheckBuffMap(EnumAttackBuff::Saltcure))
 			{
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, 1.0f);
+				IsSaltCure = true;
 			}
-			NetMulticast_AdjustMaxWalkSpeed(0.75f);
+			NetMulticast_AdjustMaxWalkSpeed();
 		}
 	}
 
@@ -1800,8 +1841,9 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 			if (CheckBuffMap(EnumAttackBuff::Saltcure))
 			{
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, -1.0f);
+				IsSaltCure = false;
 			}
-			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+			NetMulticast_AdjustMaxWalkSpeed();
 		}
 	}
 
@@ -2511,15 +2553,11 @@ void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
 		IsAffectedByCrabBubble = bEnable;
 		if (IsAffectedByCrabBubble)
 		{
-			float NewWalkSpeedRatio = 1.0f;
-			FString ParName = "CrabBubble";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-				NewWalkSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-			NetMulticast_AdjustMaxWalkSpeed(NewWalkSpeedRatio);
+			NetMulticast_AdjustMaxWalkSpeed();
 		}
 		else
 		{
-			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+			NetMulticast_AdjustMaxWalkSpeed();
 		}		
 	}
 }
