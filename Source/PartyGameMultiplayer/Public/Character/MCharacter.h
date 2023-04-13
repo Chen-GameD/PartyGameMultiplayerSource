@@ -244,8 +244,8 @@ protected:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
-	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
-	void Zoom(bool bZoomOut);
+	DECLARE_DELEGATE_OneParam(FIsZooming, bool);
+	void Zoom(bool bZooming);
 
 	/* Called for Server_Dash input */
 	UFUNCTION()
@@ -404,7 +404,7 @@ public:
 	float Server_MaxWalkSpeed;
 	float Client_LowSpeedWalkAccumulateTime;
 
-	bool bShouldZoomOut;
+	bool bZooming;
 	float CurFov;
 	float MinFov;
 	float MaxFov;	

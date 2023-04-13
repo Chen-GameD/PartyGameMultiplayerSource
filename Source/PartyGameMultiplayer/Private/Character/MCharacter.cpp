@@ -331,8 +331,8 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMCharacter::Dash);
 
-	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
-	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
+	PlayerInputComponent->BindAction<FIsZooming>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
+	PlayerInputComponent->BindAction<FIsZooming>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMCharacter::TouchStarted);
@@ -942,9 +942,9 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 	StopJumping();
 }
 
-void AMCharacter::Zoom(bool bZoomOut)
+void AMCharacter::Zoom(bool i_bZooming)
 {
-	//bShouldZoomOut = bZoomOut;
+	bZooming = i_bZooming;
 }
 
 void AMCharacter::Dash()
@@ -2148,31 +2148,49 @@ void AMCharacter::Tick(float DeltaTime)
 		//	pPlayerController->GetViewportSize(viewport_x, viewport_y);
 		//	if (success && 0 < viewport_x && 0 < viewport_y)
 		//	{
-		//		float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0);
+		//		float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0); // [0, 1]
 
-		//		float FinalX = -700.0f * 0.75f;
-		//		float FinalZ = -250.0f * 0.75f;
-		//		float FinalRoll = -8.0f * 0.75f;
-		//		/*
-		//		// Discrete
-		//		int GearCnt = 3;
-		//		float LevelRange = 1.0f / GearCnt;				
-		//		int Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
-		//		if (lowerYRatio <= 0)
-		//			Gear = 0;					
-		//		float TargetX = FinalX * Gear * LevelRange;
-		//		float TargetZ = FinalZ * Gear * LevelRange;
-		//		float TargetRoll = FinalRoll * Gear * LevelRange;
-		//		*/
-		//		float TargetX = FinalX * lowerYRatio;
-		//		float TargetZ = FinalZ * lowerYRatio;
-		//		float TargetRoll = FinalRoll * lowerYRatio;
-		//		float TimeFromMinToMax = 0.5f;
-		//		if (lowerYRatio < 0.5f)
+		//		float FinalX = -500.0f * 1.0f;
+		//		float FinalZ = 0.0f * 1.0f;
+		//		float FinalRoll = -15.0f * 1.0f;
+
+		//		float TargetX = 0;
+		//		float TargetZ = 0;
+		//		float TargetRoll = 0;
+		//		int Gear = 0;
+		//		float TimeFromMinToMax = 0;
+		//		
+		//		//// Discrete
+		//		//int GearCnt = 3;
+		//		//float LevelRange = 1.0f / GearCnt;				
+		//		//Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
+		//		//if (lowerYRatio <= 0)
+		//		//	Gear = 0;					
+		//		//TargetX = FinalX * Gear * LevelRange;
+		//		//TargetZ = FinalZ * Gear * LevelRange;
+		//		//TargetRoll = FinalRoll * Gear * LevelRange;
+		//		
+		//		// Continuous
+		//		//TargetX = FinalX * lowerYRatio;
+		//		//TargetZ = FinalZ * lowerYRatio;
+		//		//TargetRoll = FinalRoll * lowerYRatio;
+
+		//		// Only one gear in one area
+		//		
+		//		if (0.7f <= lowerYRatio && bZooming)
 		//		{
-		//			TargetX = TargetZ = TargetRoll = 0;
-		//			TimeFromMinToMax = 1.0f;
+		//			Gear = 1;
+		//			TimeFromMinToMax = 0.000004f;
 		//		}					
+		//		else
+		//		{
+		//			Gear = 0;
+		//			TimeFromMinToMax = 0.0000065f;
+		//		}					
+		//		TargetX = FinalX * Gear;
+		//		TargetZ = FinalZ * Gear;
+		//		TargetRoll = FinalRoll * Gear;
+		//		
 		//		
 		//		// Location
 		//		FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
