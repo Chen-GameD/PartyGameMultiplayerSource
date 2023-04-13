@@ -29,6 +29,9 @@ public:
 	UPROPERTY(ReplicatedUsing=UpdateGameStartTimerUI, BlueprintReadWrite)
 	int GameTime = 300;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int LevelIndex = -1;
+
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 

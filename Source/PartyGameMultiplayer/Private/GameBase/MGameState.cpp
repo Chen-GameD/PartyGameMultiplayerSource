@@ -26,6 +26,7 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, GameTime);
 	DOREPLIFETIME(AMGameState, Team_1_Score);
 	DOREPLIFETIME(AMGameState, Team_2_Score);
+	DOREPLIFETIME(AMGameState, LevelIndex);
 	// DOREPLIFETIME(AMGameState, Team1Array);
 	// DOREPLIFETIME(AMGameState, Team2Array);
 	// DOREPLIFETIME(AMGameState, UndecidedArray);
