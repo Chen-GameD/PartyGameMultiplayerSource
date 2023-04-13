@@ -97,6 +97,8 @@ public:
 	void InGame_UpdateEqualConditionState(bool isEqual);
 	UFUNCTION()
 	void InGame_UpdateReadyConditionState(bool isReady);
+	UFUNCTION()
+	void InGame_UpdateHintPageInformation(int levelIndex);
 	UFUNCTION(BlueprintCallable)
 	UMLobbyWidget* InGame_GetLobbyWidget();
 

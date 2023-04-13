@@ -100,12 +100,11 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 
-		// Sync Level Index
-		AMGameState* MyGameState = GetGameState<AMGameState>();
-		if (MyGameState)
-		{
-			MyGameState->LevelIndex = LevelIndex;
-		}
+		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		// if (MyGameState)
+		// {
+		// 	MyGameState->LevelIndex = LevelIndex;
+		// }
 	}
 }
 
@@ -398,6 +397,19 @@ void AMGameMode::StartTheGame()
 void AMGameMode::TestRestartLevel()
 {
 	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+}
+
+void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
+{
+	if (i_LevelIndex != LevelIndex)
+	{
+		LevelIndex = i_LevelIndex;
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState)
+		{
+			MyGameState->LevelIndex = LevelIndex;
+		}
+	}
 }
 
 void AMGameMode::InitMinigame_ShellObject()
