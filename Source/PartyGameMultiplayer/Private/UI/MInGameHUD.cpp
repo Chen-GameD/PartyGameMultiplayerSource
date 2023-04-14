@@ -362,6 +362,14 @@ void AMInGameHUD::InGame_UpdateReadyConditionState(bool isReady)
 	}
 }
 
+void AMInGameHUD::InGame_UpdateHintPageInformation(int levelIndex)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateHintPageInformation(levelIndex);
+	}
+}
+
 UMLobbyWidget* AMInGameHUD::InGame_GetLobbyWidget()
 {
 	if (InGame_LobbyWidget)

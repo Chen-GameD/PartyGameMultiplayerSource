@@ -99,6 +99,12 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				MyPawn->OnRep_PlayerState();
 			}
 		}
+
+		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		// if (MyGameState)
+		// {
+		// 	MyGameState->LevelIndex = LevelIndex;
+		// }
 	}
 }
 
@@ -145,7 +151,19 @@ void AMGameMode::Logout(AController* Exiting)
 		}
 	}
 	
-	//	CurrentPlayerNum--;
+	CurrentPlayerNum--;
+
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		if (*ControllerItr != Exiting)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController)
+			{
+				MyController->Client_SyncLobbyInformation();
+			}
+		}
+	}
 
 	//	if (CurrentPlayerNum <= 0)
 	//	{
@@ -379,6 +397,19 @@ void AMGameMode::StartTheGame()
 void AMGameMode::TestRestartLevel()
 {
 	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+}
+
+void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
+{
+	if (i_LevelIndex != LevelIndex)
+	{
+		LevelIndex = i_LevelIndex;
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState)
+		{
+			MyGameState->LevelIndex = LevelIndex;
+		}
+	}
 }
 
 void AMGameMode::InitMinigame_ShellObject()

@@ -17,7 +17,15 @@ class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 
 public:
 
+	virtual bool HasBegunPlay() const override;
+	
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void GameHasBeenPlayed();
+
+	UFUNCTION(Server, Reliable)
+	void Server_StartSyncForNewPlayer();
 
 	/** Property replication */
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -28,6 +36,9 @@ public:
 	// 300 sec by default
 	UPROPERTY(ReplicatedUsing=UpdateGameStartTimerUI, BlueprintReadWrite)
 	int GameTime = 300;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int LevelIndex = -1;
 
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
@@ -74,4 +85,7 @@ public:
 	// Minigame Hint Section
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_UpdateMinigameHint(const FString& i_Hint, UTexture2D* i_HintImage);
+
+	// Has Been Played Timer Handler
+	FTimerHandle HasBeenPlayedTimerHandle;
 };

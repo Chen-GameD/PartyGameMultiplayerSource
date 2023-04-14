@@ -46,6 +46,8 @@ public:
 	void UpdateEqualConditionState(bool isEqual);
 	UFUNCTION()
 	void UpdateReadyConditionState(bool isReady);
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateHintPageInformation(int levelIndex);
 protected:
 	// Team Information Element
 	////////////////////////////////////////////////////
