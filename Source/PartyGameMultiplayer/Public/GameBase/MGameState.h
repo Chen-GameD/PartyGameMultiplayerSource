@@ -24,6 +24,8 @@ public:
 	UFUNCTION()
 	void GameHasBeenPlayed();
 
+	
+
 	UFUNCTION(Server, Reliable)
 	void Server_StartSyncForNewPlayer();
 

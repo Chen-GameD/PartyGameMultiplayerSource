@@ -152,6 +152,24 @@ void AMGameMode::Logout(AController* Exiting)
 	}
 	
 	CurrentPlayerNum--;
+	AM_PlayerState* PS = Exiting->GetPlayerState<AM_PlayerState>();
+	if (PS)
+	{
+		switch (PS->TeamIndex)
+		{
+		case 1:
+			TeamOnePlayerNum--;
+			break;
+		case 2:
+			TeamTwoPlayerNum--;
+		case 0:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Log out when Player teamindex is 0!"));
+			break;
+		default:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Log out when Player teamindex is invaild!"));
+			break;
+		}
+	}
 
 	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
 	{
@@ -164,13 +182,6 @@ void AMGameMode::Logout(AController* Exiting)
 			}
 		}
 	}
-
-	//	if (CurrentPlayerNum <= 0)
-	//	{
-	//		// Need to restart the server level
-	//		//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
-	//	}
-	//}
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
