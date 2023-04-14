@@ -16,16 +16,16 @@ class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-
+	
 	virtual bool HasBegunPlay() const override;
 	
 	virtual void BeginPlay() override;
 
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
 	UFUNCTION()
 	void GameHasBeenPlayed();
-
 	
-
 	UFUNCTION(Server, Reliable)
 	void Server_StartSyncForNewPlayer();
 

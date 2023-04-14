@@ -161,8 +161,9 @@ public:
 // ==============================================================
 private:
 	//InGame HUD
+	UPROPERTY()
 	AMInGameHUD* MyInGameHUD;
-
+	
 	FTimerHandle UpdateLobbyTimerHandle;
 	FTimerHandle UpdatePlayerStateHandle;
 	

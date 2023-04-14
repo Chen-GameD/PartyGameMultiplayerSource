@@ -41,32 +41,62 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 	TArray<FLobbyInformationStruct> arrTeam2;
 	TArray<FLobbyInformationStruct> arrUndecided;
 
-	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState)
 	{
-		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
-		AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
-		if (CurrentPawnPlayerState)
+		TArray<TObjectPtr<APlayerState>> PlayerArray = MyGameState->PlayerArray;
+		for (TObjectPtr<APlayerState> CurrentPlayer : PlayerArray)
 		{
-			FLobbyInformationStruct newStruct;
-			newStruct.PlayerName = CurrentPawnPlayerState->PlayerNameString;
-			newStruct.TeamIndex = CurrentPawnPlayerState->TeamIndex;
-			newStruct.IsReady = CurrentPawnPlayerState->IsReady;
-			switch (newStruct.TeamIndex)
+			AM_PlayerState* CurrentPlayerState = Cast<AM_PlayerState>(CurrentPlayer);
+			if (CurrentPlayerState)
 			{
-			case 0:
-				arrUndecided.Add(newStruct);
-				break;
-			case 1:
-				arrTeam1.Add(newStruct);
-				break;
-			case 2:
-				arrTeam2.Add(newStruct);
-				break;
+				FLobbyInformationStruct newStruct;
+				newStruct.PlayerName = CurrentPlayerState->PlayerNameString;
+				newStruct.TeamIndex = CurrentPlayerState->TeamIndex;
+				newStruct.IsReady = CurrentPlayerState->IsReady;
+				switch (newStruct.TeamIndex)
+				{
+				case 0:
+					arrUndecided.Add(newStruct);
+					break;
+				case 1:
+					arrTeam1.Add(newStruct);
+					break;
+				case 2:
+					arrTeam2.Add(newStruct);
+					break;
 				default:
 					break;
+				}
 			}
 		}
 	}
+	// for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	// {
+	// 	AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
+	// 	AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
+	// 	if (CurrentPawnPlayerState)
+	// 	{
+	// 		FLobbyInformationStruct newStruct;
+	// 		newStruct.PlayerName = CurrentPawnPlayerState->PlayerNameString;
+	// 		newStruct.TeamIndex = CurrentPawnPlayerState->TeamIndex;
+	// 		newStruct.IsReady = CurrentPawnPlayerState->IsReady;
+	// 		switch (newStruct.TeamIndex)
+	// 		{
+	// 		case 0:
+	// 			arrUndecided.Add(newStruct);
+	// 			break;
+	// 		case 1:
+	// 			arrTeam1.Add(newStruct);
+	// 			break;
+	// 		case 2:
+	// 			arrTeam2.Add(newStruct);
+	// 			break;
+	// 			default:
+	// 				break;
+	// 		}
+	// 	}
+	// }
 	
 	GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
 	FTimerDelegate UpdateLobbyTimerDelegate;
@@ -169,23 +199,6 @@ void AMPlayerController::Client_SyncLobbyInformation_Implementation()
 		GetWorldTimerManager().SetTimer(UpdatePlayerStateHandle, UpdatePlayerStateDelegate, 0.5, true);
 	}
 }
-
-// void AMPlayerController::NetMulticast_LoginInit_Implementation()
-// {
-// 	if (GetNetMode() == NM_ListenServer)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("ListenServer"));
-// 	}
-// 	else if (GetNetMode() == NM_Client)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("Client"));
-// 	}
-// 	if (IsLocalPlayerController())
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("UpdateUI"));
-// 		UI_UpdateLobbyMenu();
-// 	}
-// }
 
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
