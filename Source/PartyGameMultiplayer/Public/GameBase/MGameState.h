@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "UI/PlayerUI/MLobbyWidget.h"
 #include "MGameState.generated.h"
 
 /**
@@ -16,7 +17,15 @@ class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 
 public:
 
+	virtual bool HasBegunPlay() const override;
+	
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void GameHasBeenPlayed();
+
+	UFUNCTION(Server, Reliable)
+	void Server_StartSyncForNewPlayer();
 
 	/** Property replication */
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -28,8 +37,14 @@ public:
 	UPROPERTY(ReplicatedUsing=UpdateGameStartTimerUI, BlueprintReadWrite)
 	int GameTime = 300;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int LevelIndex = -1;
+
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_GameStartBGM(bool isBroadcast);
 
 	UFUNCTION()
 	void OnRep_IsGameStart();
@@ -39,6 +54,13 @@ public:
 
 	UFUNCTION()
 	void UpdateGameTime();
+
+	// UFUNCTION()
+	// void OnRep_UpdateTeam1Array();
+	// UFUNCTION()
+	// void OnRep_UpdateTeam2Array();
+	// UFUNCTION()
+	// void OnRep_UpdateUndecidedArray();
 
 	FTimerHandle GameStartTimerHandle;
 
@@ -52,7 +74,18 @@ public:
 	UPROPERTY(ReplicatedUsing=OnRep_Team_2_ScoreUpdate)
 	int Team_2_Score;
 
+	// Teams information
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateTeam1Array)
+	// TArray<FLobbyInformationStruct> Team1Array;
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateTeam2Array)
+	// TArray<FLobbyInformationStruct> Team2Array;
+	// UPROPERTY(ReplicatedUsing=OnRep_UpdateUndecidedArray)
+	// TArray<FLobbyInformationStruct> UndecidedArray;
+
 	// Minigame Hint Section
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_UpdateMinigameHint(const FString& i_Hint, UTexture2D* i_HintImage);
+
+	// Has Been Played Timer Handler
+	FTimerHandle HasBeenPlayedTimerHandle;
 };

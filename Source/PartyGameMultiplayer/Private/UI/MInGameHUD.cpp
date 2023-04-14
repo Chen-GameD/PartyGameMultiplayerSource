@@ -55,6 +55,18 @@ void AMInGameHUD::BeginPlay()
 			}
 		}
 	}
+	if (InGame_LobbyWidgetClass)
+	{
+		if (!InGame_LobbyWidget)
+		{
+			InGame_LobbyWidget = CreateWidget<UMLobbyWidget>(GetWorld(), InGame_LobbyWidgetClass, "LobbyWidget");
+			if (InGame_LobbyWidget)
+			{
+				InGame_LobbyWidget->AddToViewport();
+				InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+			}
+		}
+	}
 }
 
 void AMInGameHUD::Tick(float DeltaSeconds)
@@ -104,6 +116,14 @@ void AMInGameHUD::InGame_UpdatePlayerHealth(float percentage)
 	}
 }
 
+void AMInGameHUD::InGame_ToggleInvincibleUI(bool isShowing)
+{
+	if (InGame_PlayerStatusWidget)
+	{
+		InGame_PlayerStatusWidget->ToggleInvincibleUI(isShowing);
+	}
+}
+
 void AMInGameHUD::InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime)
 {
 	if (InGame_PlayerStatusWidget)
@@ -120,19 +140,19 @@ void AMInGameHUD::InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percenta
 	}
 }
 
-void AMInGameHUD::InGame_ToggleFireBuffWidget(bool IsShowing)
+void AMInGameHUD::InGame_ToggleFireBuffWidget(bool isShowing)
 {
 	if (InGame_PlayerStatusWidget)
 	{
-		InGame_PlayerStatusWidget->ToggleFireBuffUI(IsShowing);
+		InGame_PlayerStatusWidget->ToggleFireBuffUI(isShowing);
 	}
 }
 
-void AMInGameHUD::InGame_ToggleShockBuffWidget(bool IsShowing)
+void AMInGameHUD::InGame_ToggleShockBuffWidget(bool isShowing)
 {
 	if (InGame_PlayerStatusWidget)
 	{
-		InGame_PlayerStatusWidget->ToggleShockBuffUI(IsShowing);
+		InGame_PlayerStatusWidget->ToggleShockBuffUI(isShowing);
 	}
 }
 
@@ -212,4 +232,150 @@ void AMInGameHUD::InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedT
 	{
 		InGame_GameStatusWidget->UpdateAndShowBroadcastingInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 	}
+}
+
+void AMInGameHUD::InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->SetVisibility(n_Visibility);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateLobbyInformation(TArray<FLobbyInformationStruct> i_Team1Arr, TArray<FLobbyInformationStruct> i_Team2Arr, TArray<FLobbyInformationStruct> i_UndecidedArr)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateLobbyInformation(i_Team1Arr, i_Team2Arr, i_UndecidedArr);
+	}
+	else
+	{
+		if (InGame_LobbyWidgetClass)
+		{
+			if (!InGame_LobbyWidget)
+			{
+				InGame_LobbyWidget = CreateWidget<UMLobbyWidget>(GetWorld(), InGame_LobbyWidgetClass, "LobbyWidget");
+				if (InGame_LobbyWidget)
+				{
+					InGame_LobbyWidget->AddToViewport();
+					InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+					InGame_LobbyWidget->UpdateLobbyInformation(i_Team1Arr, i_Team2Arr, i_UndecidedArr);
+				}
+			}
+		}
+	}
+}
+
+void AMInGameHUD::InGame_UpdateTeam1LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateTeam1LobbyInformation(i_TeamArr);
+	}
+	else
+	{
+		if (InGame_LobbyWidgetClass)
+		{
+			if (!InGame_LobbyWidget)
+			{
+				InGame_LobbyWidget = CreateWidget<UMLobbyWidget>(GetWorld(), InGame_LobbyWidgetClass, "LobbyWidget");
+				if (InGame_LobbyWidget)
+				{
+					InGame_LobbyWidget->AddToViewport();
+					InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+					InGame_LobbyWidget->UpdateTeam1LobbyInformation(i_TeamArr);
+				}
+			}
+		}
+	}
+}
+
+void AMInGameHUD::InGame_UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateTeam2LobbyInformation(i_TeamArr);
+	}
+	else
+	{
+		if (InGame_LobbyWidgetClass)
+		{
+			if (!InGame_LobbyWidget)
+			{
+				InGame_LobbyWidget = CreateWidget<UMLobbyWidget>(GetWorld(), InGame_LobbyWidgetClass, "LobbyWidget");
+				if (InGame_LobbyWidget)
+				{
+					InGame_LobbyWidget->AddToViewport();
+					InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+					InGame_LobbyWidget->UpdateTeam2LobbyInformation(i_TeamArr);
+				}
+			}
+		}
+	}
+}
+
+void AMInGameHUD::InGame_UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateUndecidedLobbyInformation(i_TeamArr);
+	}
+	else
+	{
+		if (InGame_LobbyWidgetClass)
+		{
+			if (!InGame_LobbyWidget)
+			{
+				InGame_LobbyWidget = CreateWidget<UMLobbyWidget>(GetWorld(), InGame_LobbyWidgetClass, "LobbyWidget");
+				if (InGame_LobbyWidget)
+				{
+					InGame_LobbyWidget->AddToViewport();
+					InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+					InGame_LobbyWidget->UpdateUndecidedLobbyInformation(i_TeamArr);
+				}
+			}
+		}
+	}
+}
+
+void AMInGameHUD::InGame_UpdateReadyButtonState(bool isReady)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateReadyButtonState(isReady);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateEqualConditionState(bool isEqual)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateEqualConditionState(isEqual);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateReadyConditionState(bool isReady)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateReadyConditionState(isReady);
+	}
+}
+
+void AMInGameHUD::InGame_UpdateHintPageInformation(int levelIndex)
+{
+	if (InGame_LobbyWidget)
+	{
+		InGame_LobbyWidget->UpdateHintPageInformation(levelIndex);
+	}
+}
+
+UMLobbyWidget* AMInGameHUD::InGame_GetLobbyWidget()
+{
+	if (InGame_LobbyWidget)
+	{
+		return InGame_LobbyWidget;
+	}
+
+	return nullptr;
 }

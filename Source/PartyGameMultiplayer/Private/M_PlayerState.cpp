@@ -8,6 +8,7 @@
 #include "GameBase/MGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Matchmaking/EOSGameInstance.h"
+#include "EngineUtils.h"
 
 void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Name)
 {
@@ -19,6 +20,15 @@ void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Nam
 	{
 		OnRep_PlayerNameString();
 	}
+	
+	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	// {
+	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+	// 	if (MyController)
+	// 	{
+	// 		MyController->Client_SyncLobbyInformation();
+	// 	}
+	// }
 }
 
 void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()
@@ -45,60 +55,50 @@ void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()
 void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
-	// Quit from current team
-	if (MyGameMode)
-	{
-		if (TeamIndex != 0)
-		{
-			if (TeamIndex == 1)
-			{
-				MyGameMode->TeamOnePlayerNum--;
-			}
-			else
-			{
-				MyGameMode->TeamTwoPlayerNum--;
-			}
-		}
-	}
-	
-	TeamIndex = i_TeamIndex == 0 ? 1 : i_TeamIndex;
+	int PreTeamIndex = TeamIndex;
+
+	if (PreTeamIndex == i_TeamIndex)
+		return;
 	
 	// Add to new team
 	if (MyGameMode)
 	{
 		// on server
-		if (TeamIndex == 1)
+		if (i_TeamIndex == 1)
 		{
 			if (MyGameMode->TeamOnePlayerNum < MyGameMode->MaxTeamPlayers)
 			{
+				TeamIndex = i_TeamIndex;
 				MyGameMode->TeamOnePlayerNum++;
+
+				if (PreTeamIndex == 2)
+				{
+					MyGameMode->TeamTwoPlayerNum--;
+				}
 			}
-			else
+		}
+		else if (i_TeamIndex == 2)
+		{
+			if (MyGameMode->TeamTwoPlayerNum < MyGameMode->MaxTeamPlayers)
 			{
-				TeamIndex = 2;
+				TeamIndex = i_TeamIndex;
 				MyGameMode->TeamTwoPlayerNum++;
+				
+				if (PreTeamIndex == 1)
+				{
+					MyGameMode->TeamOnePlayerNum--;
+				}
 			}
 		}
 		else
 		{
-			if (MyGameMode->TeamTwoPlayerNum < MyGameMode->MaxTeamPlayers)
-			{
-				MyGameMode->TeamTwoPlayerNum++;
-			}
-			else
-			{
-				TeamIndex = 1;
-				MyGameMode->TeamOnePlayerNum++;
-			}
+			// i_TeamIndex == 0
+			TeamIndex = i_TeamIndex;
+			PreTeamIndex == 1 ? MyGameMode->TeamOnePlayerNum-- : MyGameMode->TeamTwoPlayerNum--;
 		}
 	}
-
-	//OnRep_PlayerNameString();
-	// if (GetNetMode() == NM_ListenServer)
-	// {
-	// 	OnRep_PlayerNameString();
-	// }
-	if (GetNetMode() == NM_ListenServer)
+	
+	if (GetNetMode() == NM_ListenServer && TeamIndex != PreTeamIndex)
 	{
 		OnRep_UpdateTeamIndex();
 	}
@@ -106,8 +106,9 @@ void AM_PlayerState::Server_UpdateTeamIndex_Implementation(int i_TeamIndex)
 
 void AM_PlayerState::Client_SetPlayerNameFromGameInstance_Implementation()
 {
-	PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
-	Server_UpdatePlayerName(PlayerNameString);
+	FString TempPlayerName = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	//PlayerNameString = Cast<UEOSGameInstance>(UGameplayStatics::GetGameInstance(GetWorld()))->GetPlayerUsername();
+	Server_UpdatePlayerName(TempPlayerName);
 }
 
 void AM_PlayerState::Client_SetPlayerSkinFromGameInstance_Implementation()
@@ -148,6 +149,15 @@ void AM_PlayerState::OnRep_PlayerNameString()
 	{
 		MyPawn->SetPlayerNameUIInformation();
 	}
+
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+		if (MyController && MyController->IsLocalPlayerController())
+		{
+			MyController->Client_SyncLobbyInformation_Implementation();
+		}
+	}
 }
 
 void AM_PlayerState::OnRep_PlayerSkinInformation()
@@ -164,7 +174,7 @@ void AM_PlayerState::OnRep_UpdateTeamIndex()
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (MyLocalPlayerController)
 	{
-		MyLocalPlayerController->UI_UpdateLobbyMenu();
+		MyLocalPlayerController->UI_UpdateLobbyInformation();
 	}
 }
 
@@ -173,7 +183,7 @@ void AM_PlayerState::OnRep_UpdateReadyInformation()
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	if (MyLocalPlayerController)
 	{
-		MyLocalPlayerController->UI_UpdateLobbyMenu();
+		MyLocalPlayerController->UI_UpdateLobbyInformation();
 	}
 }
 

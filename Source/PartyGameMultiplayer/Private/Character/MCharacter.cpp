@@ -7,6 +7,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -20,8 +21,10 @@
 #include "Weapon/WeaponConfig.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
+#include "Weapon/ElementWeapon/WeaponShell.h"
 #include "WaterBodyActor.h"
 #include "LevelInteraction/SaltcureArea.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
 #include "Character/animUtils.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "M_PlayerState.h"
@@ -82,6 +85,11 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 	CurFov = MinFov = 90.0f;
 	MaxFov = 108.0f;
+	FollowCameraRelativeRotationVector = FVector(0, 0, 0);
+	FollowCameraOriginalRelativeLocation = FollowCamera->GetRelativeLocation();
+	CameraShakingTime = 0;
+	CameraShakingIntensity = 0;
+	TimePassedSinceShaking = 0;
 
 	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
@@ -96,6 +104,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnWeaponOverlapEnd);
 
 	IsDead = false;
+	Server_DeadTimes = 0;
 
 	IsAllowDash = true;
 	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
@@ -108,7 +117,31 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Client_MaxHeightDuringLastTimeOffGround = TNumericLimits<float>::Min();
 	Client_LowSpeedWalkAccumulateTime = 0;
 
+	HealingBubbleCollider = CreateDefaultSubobject<USphereComponent>(TEXT("HealingBubbleCollider"));
+	HealingBubbleCollider->SetupAttachment(RootComponent);
+
+	EffectHealingBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHealingBubbleOn"));
+	EffectHealingBubbleOn->SetupAttachment(HealingBubbleCollider);
+	EffectHealingBubbleOn->bAutoActivate = false;
+
+	bHealingBubbleOn = false;
+	bDoubleHealingBubbleSize = false;
+	bHealingBubbleTouchingStatue = false;
+	
+	EffectBubbleStart = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleStart"));
+	EffectBubbleStart->SetupAttachment(RootComponent);
+	EffectBubbleStart->bAutoActivate = false;
+
+	EffectBubbleOn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleOn"));
+	EffectBubbleOn->SetupAttachment(RootComponent);
+	EffectBubbleOn->bAutoActivate = false;
+
+	EffectBubbleEnd = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBubbleEnd"));
+	EffectBubbleEnd->SetupAttachment(RootComponent);
+	EffectBubbleEnd->bAutoActivate = false;
+
 	IsHealing = false;
+	IsSaltCure = false;
 	EffectHeal = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectHeal"));
 	EffectHeal->SetupAttachment(RootComponent);
 	EffectHeal->bAutoActivate = false;
@@ -164,33 +197,8 @@ void AMCharacter::Restart()
 void AMCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-
-	// This will call one time when a new client join a server.
-	if (GetNetMode() == NM_Client)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Client Playerstate Rep!"));
-	}
-	else if (GetNetMode() == NM_ListenServer)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer Playerstate Rep!"));
-	}
-
-	if (PlayerFollowWidget->GetUserWidgetObject())
-	{
-		SetPlayerNameUIInformation();
-		SetPlayerSkin();
-		InitFollowWidget();
-	}
-	else
-	{
-		GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
-	}
-
-	// AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	// if (MyPlayerController)
-	// {
-	// 	MyPlayerController->UI_UpdateLobbyMenu();
-	// }
+	
+	GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
 }
 
 void AMCharacter::CheckPlayerFollowWidgetTick()
@@ -202,6 +210,15 @@ void AMCharacter::CheckPlayerFollowWidgetTick()
 		InitFollowWidget();
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer pawn's PlayerFollowWdiget is ready!"));
 		GetWorldTimerManager().ClearTimer(InitPlayerInformationTimer);
+
+		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+		{
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController && MyController->IsLocalPlayerController())
+			{
+				MyController->Client_SyncLobbyInformation_Implementation();
+			}
+		}
 	}
 	else
 	{
@@ -237,6 +254,7 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, IsBurned);
 	DOREPLIFETIME(AMCharacter, IsParalyzed);
 	DOREPLIFETIME(AMCharacter, IsInvincible);
+	//DOREPLIFETIME(AMCharacter, bHealingBubbleTouchingStatue);
 
 	//Replicate animation var
 	DOREPLIFETIME(AMCharacter, isAttacking);
@@ -272,8 +290,8 @@ void AMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &AMCharacter::Dash);
 
-	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
-	PlayerInputComponent->BindAction<FIsZoomOut>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
+	PlayerInputComponent->BindAction<FIsZooming>("Zoom", IE_Pressed, this, &AMCharacter::Zoom, true);
+	PlayerInputComponent->BindAction<FIsZooming>("Zoom", IE_Released, this, &AMCharacter::Zoom, false);
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMCharacter::TouchStarted);
@@ -327,9 +345,9 @@ void AMCharacter::Attack_Implementation(float AttackTargetDistance)
 			return;
 		// Can't Attack when holding only shells
 		bool HasWeaponOtherThanShells = false;
-		if ( (LeftWeapon && LeftWeapon->WeaponType != EnumWeaponType::Shell) || 
+		if ((LeftWeapon && LeftWeapon->WeaponType != EnumWeaponType::Shell) ||
 			(RightWeapon && RightWeapon->WeaponType != EnumWeaponType::Shell) ||
-			CombineWeapon )
+			CombineWeapon)
 			HasWeaponOtherThanShells = true;
 		if (!HasWeaponOtherThanShells)
 			return;
@@ -455,10 +473,73 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 
 void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
 {
-	Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	if(0 < MaxWalkSpeedRatio)
+		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	else
+	{
+		float MaxWalkSpeedRatioByWeapon = 1.0f;
+		float MaxWalkSpeedRatioBySaltCure = 1.0f;		
+		float MaxWalkSpeedRatioByCrabBubble = 1.0f;
+		// Weapon Effect
+		MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
+		MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
+		// Sea Effect
+		if (IsSaltCure)
+		{
+			FString ParName = "Saltcure";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
+		}		
+		// Crab Bubble Effect
+		if (IsAffectedByCrabBubble)
+		{
+			FString ParName = "CrabBubble";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+				MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+			MaxWalkSpeedRatio = MaxWalkSpeedRatioByCrabBubble;
+		}	
+		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
+	}
 	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
 }
 
+void AMCharacter::NetMulticast_SetHealingBubbleStatus_Implementation(bool i_bBubbleOn, bool i_bDoubleSize)
+{
+	if (bHealingBubbleOn != i_bBubbleOn)
+	{
+		bHealingBubbleOn = i_bBubbleOn;
+		EnablebHealingBubble(i_bBubbleOn);
+	}
+	if (bDoubleHealingBubbleSize != i_bDoubleSize)
+	{
+		bDoubleHealingBubbleSize = i_bDoubleSize;
+	}	
+}
+
+void AMCharacter::EnablebHealingBubble(bool bEnable)
+{
+	if (bEnable)
+	{
+		//// Vfx
+		//if (EffectHealingBubbleStart)
+		//{
+		//	EffectHealingBubbleStart->Activate();
+		//}
+
+		if(!EffectHealingBubbleOn->IsActive())
+			EffectHealingBubbleOn->Activate();
+		EffectHealingBubbleOn->SetVisibility(true);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
+	else
+	{
+		//EffectHealingBubbleOn->Deactivate();
+
+		EffectHealingBubbleOn->SetVisibility(false);
+		HealingBubbleCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
 
 void AMCharacter::PickUp_Implementation(bool isLeft)
 {
@@ -481,6 +562,9 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	// ===========================================================================================================================
 	// TO DO
 
+	if (IsParalyzed)
+		return;
+
 	// Drop left/right weapon
 	if (CurrentTouchedWeapon.IsEmpty())
 	{
@@ -489,7 +573,6 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		{
 			if (LeftWeapon)
 			{
-				LeftWeapon->NetMulticast_CallThrewAwaySfx();
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -510,7 +593,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 					CombineWeapon->Destroy();
 					CombineWeapon = nullptr;
 				}
-				DropOffWeapon(isLeft);				
+				DropOffWeapon(isLeft);
 			}
 		}
 	}
@@ -528,10 +611,11 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (LeftWeapon)
 			{
 				// Drop off left weapon
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft, true);
 			}
 
-			LeftWeapon = CurrentTouchedWeapon[0];
+			if(!CurrentTouchedWeapon.IsEmpty() && CurrentTouchedWeapon[0])
+				LeftWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Left, LeftWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(LeftWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
@@ -542,13 +626,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			LeftWeapon->GetPickedUp(this);
 			LeftWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 
+			if (CurrentTouchedWeapon.Contains(LeftWeapon))
+				CurrentTouchedWeapon.Remove(LeftWeapon);
+
 			// Set isLeftHeld Anim State
 			this->AnimState[5] = true;
 
 			// Pick up left big weapon and drop right weapon and/or combine weapon
 			if (LeftWeapon->IsBigWeapon)
 			{
-				DropOffWeapon(false);
+				DropOffWeapon(false, true);
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -565,14 +652,14 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				{
 					if (RightWeapon->IsBigWeapon)
 					{
-						DropOffWeapon(false);
+						DropOffWeapon(false, true);
 					}
 					else
 					{
 						// Set isRightHeld Anim State
 						this->AnimState[6] = true;
 						OnCombineWeapon(isLeft);
-					}					
+					}
 				}
 				// no combining, pick up this weapon alone
 				else
@@ -594,10 +681,11 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			if (RightWeapon)
 			{
 				// Drop off left weapon
-				DropOffWeapon(isLeft);
+				DropOffWeapon(isLeft, true);
 			}
 
-			RightWeapon = CurrentTouchedWeapon[0];
+			if (!CurrentTouchedWeapon.IsEmpty() && CurrentTouchedWeapon[0])
+				RightWeapon = CurrentTouchedWeapon[0];
 			//SetTextureInUI(Right, RightWeapon->HoldingTextureUI);
 			FName SocketName = WeaponConfig::GetInstance()->GetWeaponSocketName(RightWeapon->GetWeaponName());
 			FString temp = SocketName.ToString();
@@ -608,13 +696,16 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 			RightWeapon->GetPickedUp(this);
 			RightWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 
+			if (CurrentTouchedWeapon.Contains(RightWeapon))
+				CurrentTouchedWeapon.Remove(RightWeapon);
+
 			// Set isRightHeld Anim State
 			this->AnimState[6] = true;
 
 			// Pick up right big weapon and drop left weapon and/or combine weapon
 			if (RightWeapon->IsBigWeapon)
 			{
-				DropOffWeapon(true);
+				DropOffWeapon(true, true);
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
@@ -631,21 +722,21 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				{
 					if (LeftWeapon->IsBigWeapon)
 					{
-						DropOffWeapon(true);
+						DropOffWeapon(true, true);
 					}
 					else
 					{
 						// Set isLeftHeld Anim State
 						this->AnimState[5] = true;
 						OnCombineWeapon(isLeft);
-					}					
+					}
 				}
 				// no combining, pick up this weapon alone
 				else
 				{
 					RightWeapon->NetMulticast_CallPickedUpSfx();
 				}
-			}			
+			}
 
 			// Update Weapon Type Anim State
 			AnimUtils::updateAnimStateWeaponType(AnimState, CombineWeapon, LeftWeapon, RightWeapon);
@@ -661,8 +752,10 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 		if (IsInvincible)
 		{
 			IsInvincible = false;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_IsInvincible();
 			InvincibleTimer = 0;
-		}			
+		}
 	}
 
 	// UI
@@ -680,36 +773,20 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	// =================================================================================
-	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
-	// Add Shellheal buff if holding any shells
-	int CntShellHeld = 0;
-	if (!CombineWeapon)
-	{
-		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
-			CntShellHeld++;
-		if (0 < CntShellHeld)
-		{
-			// clear burning buff
-			if (CheckBuffMap(EnumAttackBuff::Burning))
-			{
-				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
-				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
-			}
-			// apply shellheal buff
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, 1.0f);
-		}			
-		else
-			ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), this, -1.0f);
-	}
+	NetMulticast_AdjustMaxWalkSpeed();
+
+	// Check Shellheal buff if holding any shells
+	Server_CheckBubble();
 }
 
-void AMCharacter::DropOffWeapon(bool isLeft)
+void AMCharacter::DropOffWeapon(bool isLeft, bool bDropToReplace)
 {
 	if (isLeft && LeftWeapon)
 	{
+		// Sfx
+		if (!bDropToReplace)
+			LeftWeapon->NetMulticast_CallThrewAwaySfx();
+
 		LeftWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		// Call detach function in ABaseWeapon
 		// TO DO
@@ -742,6 +819,10 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 	}
 	else if (!isLeft && RightWeapon)
 	{
+		// Sfx
+		if (!bDropToReplace)
+			RightWeapon->NetMulticast_CallThrewAwaySfx();
+
 		RightWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 		// Call detach function in ABaseWeapon
 		// TO DO
@@ -772,6 +853,11 @@ void AMCharacter::DropOffWeapon(bool isLeft)
 			LeftWeapon->HasBeenCombined = false;
 		}
 	}
+	// Adjust the walking speed according to the holding weapon
+	NetMulticast_AdjustMaxWalkSpeed();
+
+	// Check Shellheal buff if holding any shells
+	Server_CheckBubble();
 }
 
 void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
@@ -800,10 +886,10 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		{
 			// 2 identical weapons or at least one of them is a shell
 			LeftWeapon->SetActorHiddenInGame(false);
-			RightWeapon->SetActorHiddenInGame(false);			
+			RightWeapon->SetActorHiddenInGame(false);
 			isHoldingCombineWeapon = false;
 			// Sfx
-			if(bJustPickedLeft)
+			if (bJustPickedLeft)
 				LeftWeapon->NetMulticast_CallPickedUpSfx();
 			else
 				RightWeapon->NetMulticast_CallPickedUpSfx();
@@ -850,27 +936,27 @@ void AMCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 	StopJumping();
 }
 
-void AMCharacter::Zoom(bool bZoomOut)
+void AMCharacter::Zoom(bool i_bZooming)
 {
-	//bShouldZoomOut = bZoomOut;
+	bZooming = i_bZooming;
 }
 
 void AMCharacter::Dash()
-{
-	// Update UI
+{	
 	AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
 	if (MyPlayerController && IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
 	{
+		// Update UI
 		MyPlayerController->UI_InGame_OnUseSkill(SkillType::SKILL_DASH, DashCoolDown);
+		// Call Server Dash
+		Server_Dash();
 	}
-
-	// Call Server Dash
-	Server_Dash();
 }
 
 void AMCharacter::Server_Dash_Implementation()
 {
-	if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
+	//if (IsAllowDash && OriginalMaxWalkSpeed * 0.2f < GetCharacterMovement()->Velocity.Size())
+	if (true)
 	{
 		IsAllowDash = false;
 		if (GetNetMode() == NM_ListenServer)
@@ -878,7 +964,8 @@ void AMCharacter::Server_Dash_Implementation()
 
 		// Dash implement
 		float DashSpeed = DashDistance / DashTime;
-		NetMulticast_AdjustMaxWalkSpeed(DashSpeed /OriginalMaxWalkSpeed);
+		DashSpeed *= GetCharacterMovement()->MaxWalkSpeed / OriginalMaxWalkSpeed;
+		NetMulticast_AdjustMaxWalkSpeed(DashSpeed / OriginalMaxWalkSpeed);
 		GetCharacterMovement()->Velocity *= DashSpeed / GetCharacterMovement()->Velocity.Size();
 
 		GetWorld()->GetTimerManager().SetTimer(DashingTimer, this, &AMCharacter::RefreshDash, DashTime, false);
@@ -899,7 +986,7 @@ void AMCharacter::RefreshDash()
 	FTimerHandle tempHandle;
 	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
 
-	NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+	NetMulticast_AdjustMaxWalkSpeed();
 }
 
 void AMCharacter::SetDash()
@@ -1005,6 +1092,8 @@ void AMCharacter::OnHealthUpdate()
 
 		if (CurrentHealth <= 0)
 		{
+			SetTextureInUI();
+
 			// Death
 			// to do
 			// Force respawn
@@ -1033,6 +1122,8 @@ void AMCharacter::OnHealthUpdate()
 			{
 				DropOffWeapon(false);
 			}
+
+			CurrentTouchedWeapon.Empty();
 		}
 	}
 
@@ -1103,7 +1194,6 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
-		IsInvincible = true;
 		InvincibleTimer = 0;
 	}
 
@@ -1174,8 +1264,30 @@ void AMCharacter::SetPlayerSkin()
 	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
 	if (MyPlayerState)
 	{
-		UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, CharacterMatParamNameArray[MyPlayerState->characterIndex], MyPlayerState->colorPicked);
+		/*UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, 
+			c, MyPlayerState->colorPicked);*/
+
 		GetMesh()->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+
+		// Kiko
+		if (MyPlayerState->characterIndex == 0) {
+			UMaterialInstanceDynamic* kiko_body_customize = GetMesh()->CreateDynamicMaterialInstance(0, GetMesh()->GetMaterial(0));
+			UMaterialInstanceDynamic* kiko_hair = GetMesh()->CreateDynamicMaterialInstance(1, GetMesh()->GetMaterial(1));
+			UMaterialInstanceDynamic* kiko_outfit = GetMesh()->CreateDynamicMaterialInstance(2, GetMesh()->GetMaterial(2));
+
+			kiko_body_customize->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			kiko_hair->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			kiko_outfit->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+
+			GetMesh()->SetMaterial(0, kiko_body_customize);
+			GetMesh()->SetMaterial(1, kiko_hair);
+			GetMesh()->SetMaterial(2, kiko_outfit);
+		}
+		else {
+			auto test = GetMesh()->CreateDynamicMaterialInstance(0, GetMesh()->GetMaterial(0));
+			test->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			GetMesh()->SetMaterial(0, test);
+		}
 	}
 }
 
@@ -1288,6 +1400,12 @@ void AMCharacter::ResetCharacterStatus()
 		CurrentHealth = MaxHealth;
 		OnHealthUpdate();
 		IsDead = false;
+		if (0 < Server_DeadTimes)
+		{
+			IsInvincible = true;
+			if (GetNetMode() == NM_ListenServer)
+				OnRep_IsInvincible();
+		}
 		NetMulticast_RespawnResult();
 	}
 }
@@ -1349,7 +1467,7 @@ void AMCharacter::OnRep_IsBurned()
 			if (pMInGameHUD)
 			{
 				pMInGameHUD->InGame_ToggleFireBuffWidget(true);
-			}				
+			}
 		}
 	}
 	else
@@ -1369,7 +1487,7 @@ void AMCharacter::OnRep_IsBurned()
 			if (pMInGameHUD)
 				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
 		}
-	}	
+	}
 }
 
 void AMCharacter::OnRep_IsParalyzed()
@@ -1414,6 +1532,64 @@ void AMCharacter::OnRep_IsParalyzed()
 	}
 }
 
+void AMCharacter::OnRep_IsInvincible()
+{
+	if (IsInvincible)
+	{
+		// Vfx
+		if (EffectBubbleStart)
+		{
+			//EffectBubbleStart->ResetSystem();
+			EffectBubbleStart->Activate();
+			//EffectBubbleStart->SetVisibility(true);
+		}
+		FTimerHandle ShowBubbleOnVfxTimerHandle;
+		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
+			{
+				if (EffectBubbleOn && IsInvincible)
+				{
+					if (!EffectBubbleOn->IsActive())
+						EffectBubbleOn->Activate();
+					EffectBubbleOn->SetVisibility(true);
+				}
+			}, 1.0, false);
+
+
+		// Toggle On Character's Invincible buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleInvincibleUI(true);
+		}
+	}
+	else
+	{
+		// Vfx
+		if (EffectBubbleEnd)
+			EffectBubbleEnd->Activate();
+		if (EffectBubbleOn)
+			EffectBubbleOn->SetVisibility(false);
+		/*if (EffectBubbleStart && EffectBubbleStart->IsActive())
+		{
+			EffectBubbleStart->Deactivate();
+			EffectBubbleStart->SetVisibility(false);
+		}*/
+
+		// Toggle Off Character's Invincible buff UI
+		auto pMPlayerController = Cast<AMPlayerController>(GetController());
+		if (pMPlayerController)
+		{
+			auto pMInGameHUD = pMPlayerController->GetInGameHUD();
+			if (pMInGameHUD)
+				pMInGameHUD->InGame_ToggleInvincibleUI(false);
+		}
+		InvincibleTimer = 0;
+	}
+}
+
+
 void AMCharacter::SetCurrentHealth(float healthValue)
 {
 	if (GetLocalRole() == ROLE_Authority)
@@ -1449,7 +1625,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			NetMulticast_CallGetHitVfx();
 			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 		}
-		
+
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1462,6 +1638,8 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
+
+			Server_DeadTimes++;
 
 			// Broadcast function
 			BroadcastToAllController(EventInstigator, false);
@@ -1509,6 +1687,9 @@ void AMCharacter::SetIsDead(bool n_IsDead)
 
 void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTouchWeapon)
 {
+	if (IsParalyzed)
+		return;
+
 	if (IsLocallyControlled() || GetNetMode() == NM_ListenServer)
 	{
 		UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
@@ -1562,7 +1743,7 @@ void AMCharacter::SetTipUI_Implementation(bool isShowing, ABaseWeapon* CurrentTo
 				{
 					CharacterFollowWidget->SetRightWeaponTipUI(CurrentTouchWeapon->PickUpTextureUI_E);
 				}
-			}			
+			}
 		}
 		else
 		{
@@ -1584,18 +1765,13 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 		if (Cast<ASaltcureArea>(OtherActor))
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Actor enters the SaltcureArea"));
-			// clear burning buff
-			if (CheckBuffMap(EnumAttackBuff::Burning))
-			{
-				BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
-				BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
-			}
 			// apply saltcure buff
 			if (CheckBuffMap(EnumAttackBuff::Saltcure))
 			{
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, 1.0f);
+				IsSaltCure = true;
 			}
-			NetMulticast_AdjustMaxWalkSpeed(0.75f);
+			NetMulticast_AdjustMaxWalkSpeed();
 		}
 	}
 
@@ -1645,8 +1821,9 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 			if (CheckBuffMap(EnumAttackBuff::Saltcure))
 			{
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, -1.0f);
+				IsSaltCure = false;
 			}
-			NetMulticast_AdjustMaxWalkSpeed(Server_GetMaxWalkSpeedRatioByWeapons());
+			NetMulticast_AdjustMaxWalkSpeed();
 		}
 	}
 
@@ -1667,6 +1844,58 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 		SetTipUI(false);
 	}
 }
+
+void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+		{
+			if (GetController())
+			{
+				AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+				AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
+				if (!MyPS || !TheOtherCharacterPS)
+					return;
+				if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+				{
+					ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
+				}
+			}
+		}
+	}	
+	
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = true;
+	}
+}
+
+void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
+		{
+			AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+			AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
+			if (!MyPS || !TheOtherCharacterPS)
+				return;
+			if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
+			{
+				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
+			}
+		}
+	}
+
+	if (auto pMinigameObj_Statue = Cast<AMinigameObj_Statue>(OtherActor))
+	{
+		bHealingBubbleTouchingStatue = false;
+	}
+}
 #pragma endregion Collision
 
 #pragma region Engine life cycle function
@@ -1674,6 +1903,12 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HealingBubbleCollider)
+	{
+		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
+		HealingBubbleCollider->OnComponentEndOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapEnd);
+	}
 
 	if (GetLocalRole() != ROLE_Authority || GetNetMode() == NM_ListenServer)
 	{
@@ -1699,12 +1934,12 @@ void AMCharacter::BeginPlay()
 	}
 
 	if (IsLocallyControlled())
-	{		
+	{
 		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
 
-		// Toggle off Character's buff UI
+		// Toggle off some of the Character's UI
 		auto pMPlayerController = Cast<AMPlayerController>(GetController());
 		if (pMPlayerController)
 		{
@@ -1713,9 +1948,24 @@ void AMCharacter::BeginPlay()
 			{
 				pMInGameHUD->InGame_ToggleFireBuffWidget(false);
 				pMInGameHUD->InGame_ToggleShockBuffWidget(false);
+				pMInGameHUD->InGame_ToggleInvincibleUI(false);
 			}
 		}
-	}	
+
+		// Show Weapon ShowUp Vfx(Confetti)
+		TArray<FTransform> Arr_SpawnTransform;
+		TArray<EnumWeaponType> Arr_WeaponTypeCanBeSpawned;
+		TMap<EnumWeaponType, unsigned int> Map_WeaponTypeCnt;
+
+		TSubclassOf<ABaseWeapon> ActorClass = ABaseWeapon::StaticClass();
+		TArray<AActor*> OutActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+		for (size_t i = 0; i < OutActors.Num(); i++)
+		{
+			if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
+				pWeapon->CallShowUpVfx();
+		}
+	}
 }
 
 
@@ -1723,22 +1973,74 @@ void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsInvincible)
+	// Adjust Bubble Size if needed
+	if (HealingBubbleCollider)
 	{
-		InvincibleTimer += DeltaTime;
-		if (InvincibleMaxTime < InvincibleTimer)
+		// Preset parameters
+		float TargetScale = 0;
+		float SizeChangeSpeed = 0;
+		FVector NewRelativeScale = HealingBubbleCollider->GetRelativeScale3D();
+		if (bHealingBubbleOn)
 		{
-			InvincibleTimer = 0;
-			if (GetLocalRole() == ROLE_Authority)
-				IsInvincible = false;			
+			if (!bHealingBubbleTouchingStatue)
+			{
+				float size1 = 6.0f;
+				float size2 = 10.0f;
+				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
+				if (NewRelativeScale.X < size1)
+					SizeChangeSpeed = 5.0f;
+				else if (NewRelativeScale.X <= size2) // must have =
+					SizeChangeSpeed = 2.5f;
+			}
+			else
+			{
+				TargetScale = 0;
+				SizeChangeSpeed = 5.0f;
+			}			
 		}
-	}		
+		else
+		{
+			TargetScale = 0;
+			SizeChangeSpeed = 1000.0f;
+		}
+		// Change
+		if (NewRelativeScale.X < TargetScale)
+		{
+			NewRelativeScale += FVector::OneVector * DeltaTime * SizeChangeSpeed;
+			if (TargetScale < NewRelativeScale.X)
+				NewRelativeScale = FVector(TargetScale, TargetScale, TargetScale);
+			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
+		}
+		else if (TargetScale < NewRelativeScale.X)
+		{
+			NewRelativeScale -= FVector::OneVector * DeltaTime * SizeChangeSpeed;
+			if (NewRelativeScale.X < TargetScale)
+				NewRelativeScale = FVector(TargetScale, TargetScale, TargetScale);
+			HealingBubbleCollider->SetRelativeScale3D(NewRelativeScale);
+		}
+		HealingBubbleCollider->SetWorldRotation(FRotator::ZeroRotator);
+	}	
 
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Deal with buff
-		ActByBuff_PerTick(DeltaTime);		
+		ActByBuff_PerTick(DeltaTime);
+
+		// Deal with respawn invincible buff
+		if (IsInvincible)
+		{
+			InvincibleTimer += DeltaTime;
+			if (InvincibleMaxTime < InvincibleTimer)
+			{
+				InvincibleTimer = 0;
+				IsInvincible = false;
+				if (GetNetMode() == NM_ListenServer)
+					OnRep_IsInvincible();
+			}
+			if (EffectBubbleOn && EffectBubbleOn->IsActive())
+				EffectBubbleOn->SetWorldRotation(FRotator::ZeroRotator);
+		}
 	}
 
 	// Client(Listen Server)
@@ -1761,7 +2063,7 @@ void AMCharacter::Tick(float DeltaTime)
 				if (EffectJump && EffectJump->GetAsset())
 					UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), EffectJump->GetAsset(), EffectJump->GetComponentLocation());
 			}
-		}		
+		}
 		if (!IsOnGround)
 			Client_MaxHeightDuringLastTimeOffGround = FMath::Max(Client_MaxHeightDuringLastTimeOffGround, GetActorLocation().Z);
 		else
@@ -1774,11 +2076,11 @@ void AMCharacter::Tick(float DeltaTime)
 			{
 				if (EffectRun && !(EffectRun->IsActive()))
 					EffectRun->Activate();
-			}	
+			}
 			else
-			{				
+			{
 				if (EffectRun && EffectRun->IsActive())
-					EffectRun->Deactivate();				
+					EffectRun->Deactivate();
 			}
 			Client_LowSpeedWalkAccumulateTime = 0;
 		}
@@ -1789,7 +2091,7 @@ void AMCharacter::Tick(float DeltaTime)
 			{
 				if (EffectRun && EffectRun->IsActive())
 					EffectRun->Deactivate();
-			}			
+			}
 		}
 
 		// Vfx Heal (Though we have OnRep_IsHealing() to control the vfx, it is not working as expected every time)
@@ -1805,63 +2107,174 @@ void AMCharacter::Tick(float DeltaTime)
 			if (EffectHeal && EffectHeal->IsActive())
 				EffectHeal->Deactivate();
 		}
-
-		// Vfx Invincible
-		if (IsInvincible)
-		{
-			// Vfx
-			if (EffectBurn && !EffectBurn->IsActive())
-				EffectBurn->Activate();
-		}
-		else
-		{
-			// Vfx
-			if (EffectBurn && EffectBurn->IsActive())
-				EffectBurn->Deactivate();
-		}
 	}
 
-	//if (IsLocallyControlled())
-	//{
-	//	// Zoom
-	//	//float ZoomOutSpeed = 100.0f;
-	//	//float ZoomInSpeed = ZoomOutSpeed * 0.5f;
-	//	float ZoomOutSpeed = 1400.0f;
-	//	float ZoomInSpeed = ZoomOutSpeed * 0.75f;
-	//	if (bShouldZoomOut)
-	//	{
-	//		//if (CurFov < MaxFov)
-	//		//{
-	//		//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
-	//		//	FollowCamera->SetFieldOfView(CurFov);
-	//		//}
-	//		if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
-	//		{
-	//			Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
-	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-	//		}
-	//	}
-	//	else
-	//	{
-	//		//if (MinFov < CurFov)
-	//		//{
-	//		//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
-	//		//	FollowCamera->SetFieldOfView(CurFov);
-	//		//}
-	//		if (Local_MinCameraArmLength < Local_CurCameraArmLength)
-	//		{
-	//			Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
-	//			CameraBoom->TargetArmLength = Local_CurCameraArmLength;
-	//		}
-	//	}
-	//}
+	if (IsLocallyControlled())
+	{
+		//if (0 < CameraShakingTime)
+		//{
+		//	if (100.0f == CameraShakingIntensity)
+		//	{
+		//		FVector NewRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		float Y_Speed = 20.0f;
+		//		float Z_Speed = 10.0f;
+		//		float Y_Interval = 0.05f;
+		//		float Z_Interval = 0.3f;
+		//		bool Y_odd = ((int)(CameraShakingTime / Y_Interval) & 1) == 1;
+		//		bool Z_odd = ((int)(CameraShakingTime / Z_Interval) & 1) == 1;
+
+		//		NewRelativeLocation.Y += Y_Speed * (Y_odd ? 1 : -1);
+		//		//NewRelativeLocation.Z += Z_Speed * (Z_odd ? 1 : -1);
+		//		FollowCamera->SetRelativeLocation(NewRelativeLocation);
+		//		TimePassedSinceShaking += DeltaTime;
+		//		CameraShakingTime -= DeltaTime;
+		//		if (CameraShakingTime <= 0)
+		//		{
+		//			TimePassedSinceShaking = 0;
+		//			CameraShakingTime = 0;
+		//			FollowCamera->SetRelativeLocation(FollowCameraOriginalRelativeLocation);
+		//		}
+		//	}			
+		//}			
+
+		//// Zoom
+		//if (auto pPlayerController = Cast<APlayerController>(GetController()))
+		//{
+		//	float mouse_x, mouse_y;
+		//	bool success = pPlayerController->GetMousePosition(mouse_x, mouse_y);
+		//	int32 viewport_x, viewport_y;
+		//	pPlayerController->GetViewportSize(viewport_x, viewport_y);
+		//	if (success && 0 < viewport_x && 0 < viewport_y)
+		//	{
+		//		float lowerYRatio = FMath::Max((mouse_y - (0.5f * viewport_y)) / (0.5f * viewport_y), 0); // [0, 1]
+
+		//		float FinalX = -500.0f * 1.0f;
+		//		float FinalZ = 0.0f * 1.0f;
+		//		float FinalRoll = -15.0f * 1.0f;
+
+		//		float TargetX = 0;
+		//		float TargetZ = 0;
+		//		float TargetRoll = 0;
+		//		int Gear = 0;
+		//		float TimeFromMinToMax = 0;
+		//		
+		//		//// Discrete
+		//		//int GearCnt = 3;
+		//		//float LevelRange = 1.0f / GearCnt;				
+		//		//Gear = FMath::Min(1 + (lowerYRatio / LevelRange), GearCnt);
+		//		//if (lowerYRatio <= 0)
+		//		//	Gear = 0;					
+		//		//TargetX = FinalX * Gear * LevelRange;
+		//		//TargetZ = FinalZ * Gear * LevelRange;
+		//		//TargetRoll = FinalRoll * Gear * LevelRange;
+		//		
+		//		// Continuous
+		//		//TargetX = FinalX * lowerYRatio;
+		//		//TargetZ = FinalZ * lowerYRatio;
+		//		//TargetRoll = FinalRoll * lowerYRatio;
+
+		//		// Only one gear in one area
+		//		
+		//		if (0.7f <= lowerYRatio && bZooming)
+		//		{
+		//			Gear = 1;
+		//			TimeFromMinToMax = 0.000004f;
+		//		}					
+		//		else
+		//		{
+		//			Gear = 0;
+		//			TimeFromMinToMax = 0.0000065f;
+		//		}					
+		//		TargetX = FinalX * Gear;
+		//		TargetZ = FinalZ * Gear;
+		//		TargetRoll = FinalRoll * Gear;
+		//		
+		//		
+		//		// Location
+		//		FVector CurRelativeLocation = FollowCamera->GetRelativeLocation();
+		//		if (CurRelativeLocation.X != TargetX || CurRelativeLocation.Z != TargetZ)
+		//		{
+		//			// Location X
+		//			if (CurRelativeLocation.X < TargetX)
+		//			{
+		//				CurRelativeLocation.X += DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Min(CurRelativeLocation.X, TargetX);
+		//			}
+		//			else if (TargetX < CurRelativeLocation.X)
+		//			{
+		//				CurRelativeLocation.X -= DeltaTime * FMath::Abs(FinalX / TimeFromMinToMax);
+		//				CurRelativeLocation.X = FMath::Max(CurRelativeLocation.X, TargetX);
+		//			}
+		//			// Location Z
+		//			if (CurRelativeLocation.Z < TargetZ)
+		//			{
+		//				CurRelativeLocation.Z += DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Min(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			else if (TargetZ < CurRelativeLocation.Z)
+		//			{
+		//				CurRelativeLocation.Z -= DeltaTime * FMath::Abs(FinalZ / TimeFromMinToMax);
+		//				CurRelativeLocation.Z = FMath::Max(CurRelativeLocation.Z, TargetZ);
+		//			}
+		//			FollowCamera->SetRelativeLocation(CurRelativeLocation);
+		//		}
+		//		// Rotation
+		//		if (FollowCameraRelativeRotationVector.X != TargetRoll)
+		//		{
+		//			if (FollowCameraRelativeRotationVector.X < TargetRoll)
+		//			{
+		//				FollowCameraRelativeRotationVector.X += DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Min(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			else if (TargetRoll < FollowCameraRelativeRotationVector.X)
+		//			{
+		//				FollowCameraRelativeRotationVector.X -= DeltaTime * FMath::Abs(FinalRoll / TimeFromMinToMax);
+		//				FollowCameraRelativeRotationVector.X = FMath::Max(FollowCameraRelativeRotationVector.X, TargetRoll);
+		//			}
+		//			FollowCamera->SetRelativeRotation(FRotator(FollowCameraRelativeRotationVector.X, 0, 0));
+		//		}						
+		//	}
+		//}
+
+
+		////float ZoomOutSpeed = 100.0f;
+		////float ZoomInSpeed = ZoomOutSpeed * 0.5f;
+		//float ZoomOutSpeed = 1400.0f;
+		//float ZoomInSpeed = ZoomOutSpeed * 0.75f;
+		//if (bShouldZoomOut)
+		//{
+		//	//if (CurFov < MaxFov)
+		//	//{
+		//	//	CurFov = FMath::Min(MaxFov, CurFov + DeltaTime * ZoomOutSpeed);
+		//	//	FollowCamera->SetFieldOfView(CurFov);
+		//	//}
+		//	if (Local_CurCameraArmLength < Local_MaxCameraArmLength)
+		//	{
+		//		Local_CurCameraArmLength = FMath::Min(Local_MaxCameraArmLength, Local_CurCameraArmLength + DeltaTime * ZoomOutSpeed);
+		//		CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+		//	}
+		//}
+		//else
+		//{
+		//	//if (MinFov < CurFov)
+		//	//{
+		//	//	CurFov = FMath::Max(MinFov, CurFov - DeltaTime * ZoomInSpeed);
+		//	//	FollowCamera->SetFieldOfView(CurFov);
+		//	//}
+		//	if (Local_MinCameraArmLength < Local_CurCameraArmLength)
+		//	{
+		//		Local_CurCameraArmLength = FMath::Max(Local_MinCameraArmLength, Local_CurCameraArmLength - DeltaTime * ZoomInSpeed);
+		//		CameraBoom->TargetArmLength = Local_CurCameraArmLength;
+		//	}
+		//}
+	}
 }
 #pragma endregion Engine life cycle function
 
 void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 {
 	// Server
-	if (GetLocalRole() == ROLE_Authority && 0 < CurrentHealth)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		if (!AWeaponDataHelper::DamageManagerDataAsset)
 			return;
@@ -1872,7 +2285,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffRemainedTime = BuffMap[buffType][1];
-			if (0.0f < BuffRemainedTime)
+			if (0.0f < BuffRemainedTime && 0 < CurrentHealth)
 			{
 				float BurningBuffDamagePerSecond = 0.0f;
 				FString ParName = "BurningDamagePerSecond";
@@ -1893,7 +2306,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						MyPS->addDeath(1);
 						// Broadcast burning kill
 						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
-					}					
+					}
 				}
 				BuffRemainedTime = FMath::Max(BuffRemainedTime - DeltaTime, 0.0f);
 			}
@@ -1905,7 +2318,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					IsBurned = false;
 					if (GetNetMode() == NM_ListenServer)
 						OnRep_IsBurned();
-				}				
+				}
 			}
 		}
 		/* Paralysis */
@@ -1913,7 +2326,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
 				if (Server_CanMove)
 				{
@@ -1934,7 +2347,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					IsParalyzed = false;
 					if (GetNetMode() == NM_ListenServer)
 						OnRep_IsParalyzed();
-				}				
+				}
 			}
 		}
 		/* Knockback */
@@ -1947,13 +2360,19 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Saltcure_RecoverSpeed = 2.0f;
-				//FString ParName = "BurningDamagePerSecond";
-				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				float Saltcure_RecoverSpeed = 0;
+				FString ParName = "Saltcure_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Saltcure_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Saltcure_RecoverSpeed);
+				// clear burning buff
+				if (CheckBuffMap(EnumAttackBuff::Burning))
+				{
+					BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+					BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+				}
 			}
 			else
 			{
@@ -1964,7 +2383,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						IsHealing = false;
 						if (GetNetMode() == NM_ListenServer)
 							OnRep_IsHealing();
-					}					
+					}
 				}
 			}
 		}
@@ -1973,13 +2392,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 		if (CheckBuffMap(buffType))
 		{
 			float& BuffPoints = BuffMap[buffType][0];
-			if (1.0f <= BuffPoints)
+			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				float Shellheal_RecoverSpeed = 2.0f;
-				//FString ParName = "BurningDamagePerSecond";
-				//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				//	BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				float Shellheal_RecoverSpeed = 0;
+				FString ParName = "";
+				ParName = "Shellheal_RecoverSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				ParName = "Shellheal_RecoverSpeed_OnDoubleShellHolder";
+				if(LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell && RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+					Shellheal_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				SetCurrentHealth(CurrentHealth + DeltaTime * Shellheal_RecoverSpeed);
+				// clear burning buff
+				if (CheckBuffMap(EnumAttackBuff::Burning))
+				{
+					BuffMap[EnumAttackBuff::Burning][0] = 0;  // reset BuffPoints
+					BuffMap[EnumAttackBuff::Burning][1] = 0;  // reset BuffRemainedTime
+				}
 			}
 			else
 			{
@@ -1993,6 +2422,15 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					}
 				}
 			}
+		}
+		// Crab Bubble Damage
+		if (IsAffectedByCrabBubble)
+		{
+			float CrabBubbleDamage = 0;
+			FString ParName = "CrabBubbleDamage";
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				CrabBubbleDamage = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			SetCurrentHealth(CurrentHealth - DeltaTime * CrabBubbleDamage);
 		}
 	}
 }
@@ -2070,3 +2508,54 @@ void AMCharacter::NetMulticast_CallGetHitVfx_Implementation()
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("EffectGetHit is called"));
 }
 #pragma endregion Effects
+
+
+void AMCharacter::Server_GiveShellToStatue(AWeaponShell* pShell)
+{
+	if (LeftWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(true);
+	}
+	else if (RightWeapon == pShell)
+	{
+		pShell->Server_bDetectedByStatue = true;
+		DropOffWeapon(false);
+	}		
+}
+
+void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
+{
+	if (IsAffectedByCrabBubble != bEnable)
+	{
+		IsAffectedByCrabBubble = bEnable;
+		if (IsAffectedByCrabBubble)
+		{
+			NetMulticast_AdjustMaxWalkSpeed();
+		}
+		else
+		{
+			NetMulticast_AdjustMaxWalkSpeed();
+		}		
+	}
+}
+
+void AMCharacter::Server_CheckBubble()
+{
+	int CntShellHeld = 0;
+	if (!CombineWeapon)
+	{
+		if (LeftWeapon && LeftWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (RightWeapon && RightWeapon->WeaponType == EnumWeaponType::Shell)
+			CntShellHeld++;
+		if (0 < CntShellHeld)
+		{
+			NetMulticast_SetHealingBubbleStatus(true, CntShellHeld == 2);
+		}
+		else
+		{
+			NetMulticast_SetHealingBubbleStatus(false, CntShellHeld == 2);
+		}
+	}
+}

@@ -5,6 +5,9 @@
 
 #include "GameFramework/Character.h"
 
+#include "Character/MCharacter.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
+
 AWeaponShell::AWeaponShell()
 {
 	IsCombineWeapon = false;
@@ -15,6 +18,10 @@ AWeaponShell::AWeaponShell()
 	//{
 	//	WeaponMesh->SetStaticMesh(DefaultMesh.Object);
 	//}
+
+	AttackDetectComponent = WeaponMesh;
+
+	Server_bDetectedByStatue = false;
 }
 
 void AWeaponShell::BeginPlay()
@@ -30,9 +37,26 @@ void AWeaponShell::BeginPlay()
 	if (pShellSpotLight)
 	{
 		//pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 1000.0f);
-		pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 380.0f);
+		pShellSpotLight->SourceLocation = FVector(20.0f, -400.0f, 800.0f);
 		pShellSpotLight->TargetActor = this;		
 	}
+}
+
+void AWeaponShell::AttackStart(float AttackTargetDistance)
+{
+	// Override to disable the SetActorEnableCollision in parent class function
+}
+
+
+void AWeaponShell::AttackStop()
+{
+	// Override to disable the SetActorEnableCollision in parent class function
+}
+
+void AWeaponShell::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	
 }
 
 void AWeaponShell::Destroyed()
@@ -45,7 +69,22 @@ void AWeaponShell::GetPickedUp(ACharacter* pCharacter)
 {
 	Super::GetPickedUp(pCharacter);
 
+	SetActorEnableCollision(true);
 	PreHoldingController = pCharacter->GetController();
+}
+
+void AWeaponShell::GetThrewAway()
+{
+	IsPickedUp = false;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
+	HasBeenCombined = false;
+	HoldingController = nullptr;
+	SetInstigator(nullptr);
+	SetOwner(nullptr);
+
+	if(!Server_bDetectedByStatue)
+		DisplayCaseCollisionSetActive(true);
 }
 
 AController* AWeaponShell::GetPreHoldingController()

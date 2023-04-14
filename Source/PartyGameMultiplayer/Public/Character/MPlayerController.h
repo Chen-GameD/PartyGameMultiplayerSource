@@ -36,8 +36,18 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void UpdateReadyState(bool IsAllReady);
 
-	// UFUNCTION()
-	// void InitCharacterFollowWidgetStatusAndInformation();
+	UFUNCTION()
+	void UI_UpdateLobbyInformation();
+	UFUNCTION()
+	void Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided);
+	UFUNCTION()
+	void Timer_CheckPlayerState();
+
+	UFUNCTION(Client, Reliable)
+	void Client_SyncLobbyInformation();
+
+	UFUNCTION(Client, Reliable)
+	void Client_SyncCharacters();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
@@ -52,10 +62,10 @@ public:
 	//void UpdateLobbyMenu();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void JoinATeam(int i_TeamIndex = 1);
+	void JoinATeam(int i_TeamIndex);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void GetReadyButtonClick();
+	void Server_ReadyButtonClick();
 
 	UFUNCTION(Client, Reliable, BlueprintCallable)
 	void GetNotifyPlayerControllerUpdateReadyState(bool IsAllReady);
@@ -153,5 +163,7 @@ private:
 	//InGame HUD
 	AMInGameHUD* MyInGameHUD;
 
+	FTimerHandle UpdateLobbyTimerHandle;
+	FTimerHandle UpdatePlayerStateHandle;
 	
 };

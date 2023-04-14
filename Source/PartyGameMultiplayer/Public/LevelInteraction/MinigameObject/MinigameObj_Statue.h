@@ -19,6 +19,7 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Statue : public AMinigameMainObjecti
 public:
 	AMinigameObj_Statue();
 
+	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintCallable)
@@ -27,12 +28,18 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();
 
+	void NewShellHasBeenInserted();
+
+	void Server_WhenDead();
+
 protected:
 	// only is called on server
 	UFUNCTION(Category = "Weapon")
-	virtual void OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+		virtual void OnShellOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION(Category = "Weapon")
-	virtual void OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+		virtual void OnShellOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+		virtual void OnGodRayOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
 	virtual void OnRep_CurrentHealth() override;
 
@@ -42,15 +49,46 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		class UWidgetComponent* FollowWidget;
 
+	// Vfx
+	// =========================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Explode_NC;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* Landing_NC;
+
+	bool IsDropping;
+	float DroppingTargetHeight;
+	float DroppingSpeed;
+
+	float ShellOverlapComponent_TargetScale;
+	float ShellOverlapComponent_MinScale;
+	float ShellOverlapComponent_MaxScale;
+
+	// Death related
+	// ===========================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ExplodeDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float LittleCrabDelay;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float RespawnDelay;
+
 protected:
 	UPROPERTY(EditAnywhere, Category = "Components")
-	UStaticMeshComponent* RootMesh;
+		class UStaticMeshComponent* RootMesh;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	class USphereComponent* ShellOverlapComponent;
+		class USphereComponent* ShellOverlapComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* EffectDarkBubbleOn;
 	UPROPERTY(EditAnywhere, Category = "Components")
-	USkeletalMeshComponent* SkeletalMesh;
+		class USkeletalMeshComponent* SkeletalMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UStaticMeshComponent* GodRayMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UStaticMeshComponent* CrabCenterMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ShellMeshRef")
-	TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+		class TSubclassOf<AMinigameChild_Statue_Shell> ShellMeshRef;
+	
 	UPROPERTY()
 	int CurrentSocketIndex;
 	UPROPERTY()

@@ -21,9 +21,10 @@ AMinigameChild_Statue_Shell::AMinigameChild_Statue_Shell()
 	ShellFly_NC->SetupAttachment(ShellMeshComponent);
 	ShellFly_NC->bAutoActivate = true;
 
-	ShellInsert_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsertVfx"));
+	ShellInsert_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShellInsert_NC"));
 	ShellInsert_NC->SetupAttachment(ShellMeshComponent);
 	ShellInsert_NC->bAutoActivate = false;
+	
 	
 	bReplicates = true;
 	bFinishInsert = false;
@@ -41,7 +42,6 @@ void AMinigameChild_Statue_Shell::GetLifetimeReplicatedProps(TArray<FLifetimePro
 void AMinigameChild_Statue_Shell::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame
@@ -66,44 +66,49 @@ void AMinigameChild_Statue_Shell::Tick(float DeltaTime)
 		// 	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("Server: Shell Position Update"));
 		// 	this->SetActorLocation(FVector(1000, -1000, 100));
 		// }
+
 		AMinigameObj_Statue* Target = Cast<AMinigameObj_Statue>(TartgetStatue);
-		if (TimeElapsed < LerpDuration)
+		if (Target)
 		{
-			if (Target)
+			bool IsCloseEnough = false;
+			FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
+			if (FVector::Dist(GetActorLocation(), SocketTransform.GetLocation()) < 5.0f)
+				IsCloseEnough = true;
+			if (TimeElapsed < LerpDuration && !IsCloseEnough)
 			{
-				FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
 				FVector NewPosition = FMath::Lerp(GetActorLocation(), SocketTransform.GetLocation(), TimeElapsed / LerpDuration);
-				this->SetActorLocation(NewPosition);
+				SetActorLocation(NewPosition);
 				FQuat NewRotation = FMath::Lerp(GetActorRotation().Quaternion(), SocketTransform.GetRotation(), TimeElapsed / LerpDuration);
-				this->SetActorRotation(NewRotation);
+				SetActorRotation(NewRotation);
 				FVector NewScale = FMath::Lerp(GetActorScale3D(), SocketTransform.GetScale3D(), TimeElapsed / LerpDuration);
-				this->SetActorScale3D(NewScale);
-				TimeElapsed += DeltaTime;
+				SetActorScale3D(NewScale);
 			}
+			else
+			{
+				AttachToComponent(Target->GetSkeletalMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, TargetSocketName);
+				SetActorLocation(SocketTransform.GetLocation());
+				SetActorRotation(SocketTransform.GetRotation());
+				SetActorScale3D(SocketTransform.GetScale3D());
+
+				// Vfx
+				if (ShellFly_NC && ShellFly_NC->IsActive())
+				{
+					ShellFly_NC->Deactivate();
+					ShellFly_NC->SetVisibility(false);
+				}
+				if (ShellInsert_NC && !ShellInsert_NC->IsActive())
+				{
+					ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
+					ShellInsert_NC->Activate();
+				}
+				// Sfx
+				CallShellInsertSfx();
+
+				bFinishInsert = true;
+				Target->NewShellHasBeenInserted();
+			}
+			TimeElapsed += DeltaTime;
 		}
-		else
-		{
-			if (Target)
-			{
-				FTransform SocketTransform = Target->GetSkeletalMesh()->GetSocketTransform(TargetSocketName);
-				this->SetActorLocation(SocketTransform.GetLocation());
-				this->SetActorRotation(SocketTransform.GetRotation());
-				this->SetActorScale3D(SocketTransform.GetScale3D());
-			}
-			CallShellInsertSfx();
-			bFinishInsert = true;
-			if (ShellFly_NC && ShellFly_NC->IsActive())
-			{
-				ShellFly_NC->Deactivate();
-				//HaloEffect_NSComponent->SetVisibility(false);
-			}
-			if (ShellInsert_NC && !ShellInsert_NC->IsActive())
-			{
-				ShellInsert_NC->SetWorldRotation(FRotator::ZeroRotator);
-				ShellInsert_NC->SetWorldScale3D(FVector::OneVector);
-				ShellInsert_NC->Activate();
-			}
-		}			
 	}
 
 }

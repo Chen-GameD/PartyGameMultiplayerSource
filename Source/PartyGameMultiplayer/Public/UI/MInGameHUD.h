@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "PlayerUI/MGameStatusWidget.h"
+#include "PlayerUI/MLobbyWidget.h"
 #include "PlayerUI/MPlayerStatusWidget.h"
 #include "PlayerUI/MPlayerWeaponInfoWidget.h"
 #include "MInGameHUD.generated.h"
@@ -45,13 +46,15 @@ public:
 	// Update Player Health UI
 	UFUNCTION()
 	void InGame_UpdatePlayerHealth(float percentage);
+	UFUNCTION()
+	void InGame_ToggleInvincibleUI(bool isShowing);
 	// Update Player Skill UI
 	void InGame_OnSkillUse(SkillType UseSkill, float CoolDownTotalTime);
 	// Update Player Skill Opacity
 	void InGame_SkillUIOpacityUpdate(SkillType UseSkill, float percentage);
 	// Toggle Player Buff Widget
-	void InGame_ToggleFireBuffWidget(bool IsShowing);
-	void InGame_ToggleShockBuffWidget(bool IsShowing);
+	void InGame_ToggleFireBuffWidget(bool isShowing);
+	void InGame_ToggleShockBuffWidget(bool isShowing);
 	
 
 	// Show or Hide InGame_PlayerWeaponInfoWidget
@@ -77,6 +80,28 @@ public:
 	UFUNCTION()
 	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
 
+	// Show or Hide InGame_LobbyWidget
+	UFUNCTION()
+	void InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility);
+	UFUNCTION()
+	void InGame_UpdateLobbyInformation(TArray<FLobbyInformationStruct> i_Team1Arr, TArray<FLobbyInformationStruct> i_Team2Arr, TArray<FLobbyInformationStruct> i_UndecidedArr);
+	UFUNCTION()
+	void InGame_UpdateTeam1LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateUndecidedLobbyInformation(TArray<FLobbyInformationStruct> i_TeamArr);
+	UFUNCTION()
+	void InGame_UpdateReadyButtonState(bool isReady);
+	UFUNCTION()
+	void InGame_UpdateEqualConditionState(bool isEqual);
+	UFUNCTION()
+	void InGame_UpdateReadyConditionState(bool isReady);
+	UFUNCTION()
+	void InGame_UpdateHintPageInformation(int levelIndex);
+	UFUNCTION(BlueprintCallable)
+	UMLobbyWidget* InGame_GetLobbyWidget();
+
 protected:
 	// In Game UI Class Ref
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
@@ -88,6 +113,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="Widgets")
 	TSubclassOf<UUserWidget> InGame_GameStatusWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="Widgets")
+	TSubclassOf<UUserWidget> InGame_LobbyWidgetClass;
+
 private:
 	// In Game UI Widget
 	UPROPERTY()
@@ -98,4 +126,7 @@ private:
 
 	UPROPERTY()
 	UMGameStatusWidget* InGame_GameStatusWidget;
+
+	UPROPERTY()
+	UMLobbyWidget* InGame_LobbyWidget;
 };

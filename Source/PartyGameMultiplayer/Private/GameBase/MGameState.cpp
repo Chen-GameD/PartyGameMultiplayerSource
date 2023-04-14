@@ -8,6 +8,12 @@
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
 #include "GameFramework/GameSession.h"
+#include "EngineUtils.h"
+
+bool AMGameState::HasBegunPlay() const
+{
+	return Super::HasBegunPlay();
+}
 
 void AMGameState::BeginPlay()
 {
@@ -15,6 +21,34 @@ void AMGameState::BeginPlay()
 
 	Team_1_Score = 0;
 	Team_2_Score = 0;
+	
+	FTimerDelegate TimerDelegate;
+	TimerDelegate.BindUObject(this, &AMGameState::GameHasBeenPlayed);
+	GetWorldTimerManager().SetTimer(HasBeenPlayedTimerHandle, TimerDelegate, 1, true);
+}
+
+void AMGameState::GameHasBeenPlayed()
+{
+	if (HasBegunPlay())
+	{
+		GetWorldTimerManager().ClearTimer(HasBeenPlayedTimerHandle);
+		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("HasBeenPlayed!"));
+		// Start Sync
+		Server_StartSyncForNewPlayer();
+	}
+}
+
+void AMGameState::Server_StartSyncForNewPlayer_Implementation()
+{
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+		if (MyController)
+		{
+			MyController->Client_SyncLobbyInformation();
+			MyController->Client_SyncCharacters();
+		}
+	}
 }
 
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -26,6 +60,7 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, GameTime);
 	DOREPLIFETIME(AMGameState, Team_1_Score);
 	DOREPLIFETIME(AMGameState, Team_2_Score);
+	DOREPLIFETIME(AMGameState, LevelIndex);
 }
 
 void AMGameState::OnRep_IsGameStart()
@@ -60,6 +95,7 @@ void AMGameState::OnRep_IsGameStart()
 		{
 			MyLocalPlayerController->StartTheGame();
 			MyLocalPlayerController->AddWeaponUI();
+			BPF_GameStartBGM(true);
 		}
 	}
 	else
@@ -67,6 +103,7 @@ void AMGameState::OnRep_IsGameStart()
 		if (MyLocalPlayerController)
 		{
 			MyLocalPlayerController->EndTheGame();
+			BPF_GameStartBGM(false);
 		}
 	}
 }

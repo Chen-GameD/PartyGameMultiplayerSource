@@ -45,13 +45,16 @@ public:
 	// =================================================================================================================
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnPlayer(APlayerController* PlayerController);
+		void Server_RespawnPlayer(APlayerController* PlayerController);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnMinigameObject();
+		void Server_RespawnMinigameObject(bool bFirstTimeSpawn = false);
 
 	UFUNCTION(Server, Reliable, BlueprintCallable)
-	void Server_RespawnShellObject(int AdditionalInformationIndex);
+		void Server_RespawnShellObject(int AdditionalInformationIndex);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable)
+		void Server_RearrangeWeapons();
 
 	UFUNCTION()
 	void CheckGameStart();
@@ -64,6 +67,9 @@ public:
 
 	UFUNCTION()
 	void TestRestartLevel();
+
+	UFUNCTION(BlueprintCallable)
+	void OnLevelIndexUpdate(int i_LevelIndex);
 
 protected:
 	UFUNCTION()
@@ -80,13 +86,13 @@ public:
 	int TeamTwoPlayerNum = 0;
 
 	UPROPERTY()
-	int MaxTeamPlayers = 4;
+	int MaxTeamPlayers = 3;
 
 	UPROPERTY()
 	int CurrentPlayerNum = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int LevelIndex = 1;
+	int LevelIndex = -1;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
@@ -114,6 +120,15 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	int CurrentMinigameIndex;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponAlarm> WeaponAlarmSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponBlower> WeaponBlowerSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponFork> WeaponForkSubClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+		TSubclassOf<class AWeaponLighter> WeaponLighterSubClass;
 
 private:
 	bool IsGameInitialized = false;

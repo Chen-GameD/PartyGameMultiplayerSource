@@ -24,8 +24,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-
-
 public:
 	UPROPERTY(Replicated)
 	FName TargetSocketName = "None";
@@ -43,6 +41,6 @@ protected:
 
 private:
 	float TimeElapsed = 0;
-	float LerpDuration = 4;
+	float LerpDuration = 4.5f;
 	bool bFinishInsert;
 };

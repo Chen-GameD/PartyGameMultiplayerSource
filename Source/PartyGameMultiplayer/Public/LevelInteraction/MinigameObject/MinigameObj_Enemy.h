@@ -14,12 +14,17 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_Enemy : public AMinigameMainObjectiv
 
 public:
 	AMinigameObj_Enemy();
+
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Tick(float DeltaTime) override;
 	virtual float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	void Server_WhenDead();
 
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_ShowNoDamageHint(AController* pController, FVector HitLocation);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_BroadcastCrabAnimation();
 
 protected:
 	virtual void BeginPlay() override;
@@ -37,13 +42,20 @@ public:
 		class UStaticMeshComponent* CollisionMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		class UStaticMeshComponent* BigWeaponMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* LittleCrabMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class ABaseWeapon> SpecificWeaponClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificNoDamageHintActorClass;
+	// Deprecated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TSubclassOf<class AActor> SpecificLittleCrabClass;
+
+	// For animation
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
+		bool isAttacked = false;
 
 	float Server_CallGetHitEffects_MinInterval;
 	float Server_LastTime_CallGetHitEffects;
@@ -53,7 +65,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* Explode_NC;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* Shield_NC;
+		class UNiagaraComponent* Rising_NC;
+	float GetHitAnimMinLastingTime;
 
 	// UI
 	// =============================

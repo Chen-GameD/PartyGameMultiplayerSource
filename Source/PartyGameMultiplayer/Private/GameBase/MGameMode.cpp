@@ -18,6 +18,11 @@
 #include "Matchmaking/EOSGameInstance.h"
 #include "Weapon/JsonFactory.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
+#include "Kismet/GameplayStatics.h"
+#include "Weapon/ElementWeapon/WeaponAlarm.h"
+#include "Weapon/ElementWeapon/WeaponBlower.h"
+#include "Weapon/ElementWeapon/WeaponFork.h"
+#include "Weapon/ElementWeapon/WeaponLighter.h"
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
@@ -29,6 +34,8 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, TEXT("GameMode Init JsonObject_1 failed"));*/
 
 	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
+
+	Server_RearrangeWeapons();
 }
 
 void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -92,6 +99,12 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				MyPawn->OnRep_PlayerState();
 			}
 		}
+
+		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		// if (MyGameState)
+		// {
+		// 	MyGameState->LevelIndex = LevelIndex;
+		// }
 	}
 }
 
@@ -103,32 +116,25 @@ void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPl
 void AMGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
-
+	
 	if (Exiting)
 	{
 		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
 		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
 		{
 			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(NewPlayer->IsLocalController())
+			if(!NewPlayer->IsLocalController())
 			{
-				ULocalPlayer *LocalPlayer = NewPlayer->GetLocalPlayer();
-				if(LocalPlayer)
+				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
+				if(IsValid(NetConnectionRef))
 				{
-					UniqueNetIdRepl = LocalPlayer->GetPreferredUniqueNetId();
+					UniqueNetIdRepl = NetConnectionRef->PlayerId;
 				}
 				else
 				{
-					UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-					check(IsValid(NetConnectionRef));
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
+					UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
 				}
-			}
-			else
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				check(IsValid(NetConnectionRef));
-				UniqueNetIdRepl = NetConnectionRef->PlayerId;
 			}
 		
 			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
@@ -143,15 +149,28 @@ void AMGameMode::Logout(AController* Exiting)
 				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
 			}
 		}
+	}
+	
+	CurrentPlayerNum--;
 
-		CurrentPlayerNum--;
-
-		if (CurrentPlayerNum <= 0)
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		if (*ControllerItr != Exiting)
 		{
-			// Need to restart the server level
-			//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
+			if (MyController)
+			{
+				MyController->Client_SyncLobbyInformation();
+			}
 		}
 	}
+
+	//	if (CurrentPlayerNum <= 0)
+	//	{
+	//		// Need to restart the server level
+	//		//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+	//	}
+	//}
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
@@ -192,16 +211,36 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 	}
 }
 
-void AMGameMode::Server_RespawnMinigameObject_Implementation()
+void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpawn)
 {
 	if (MinigameDataAsset)
-	{
-		// Spawn the minigame object
-		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-		FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-		AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-		if(spawnActor && MinigameDataAsset)
-			spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+	{		
+		if (bFirstTimeSpawn)
+		{
+			// SpawnMinigameObject with a certain delay after the game starts
+			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 7.0f;
+			FTimerHandle TimerHandle;
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+				{
+					// Spawn the minigame object
+					CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+					FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+					AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+					if (spawnActor && MinigameDataAsset)
+						spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+
+				}, DelaySpawnMinigameObjectAtStart, false);
+		}
+		else
+		{
+			// Spawn the minigame object
+			CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+			FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+			AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+			if (spawnActor && MinigameDataAsset)
+				spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+		}
+		
 
 		// Special rules
 		switch (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameType)
@@ -213,13 +252,69 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation()
 		default:
 			break;
 		}
-		
+
 		// Update Minigame Hint
 		AMGameState* MyGameState = GetGameState<AMGameState>();
 		if (MyGameState)
 		{
 			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHintImage);
 		}
+	}
+}
+
+void AMGameMode::Server_RearrangeWeapons_Implementation()
+{
+	TArray<FTransform> Arr_SpawnTransform;
+	TArray<EnumWeaponType> Arr_WeaponTypeCanBeSpawned;
+	TMap<EnumWeaponType, unsigned int> Map_WeaponTypeCnt;
+
+	TSubclassOf<ABaseWeapon> ActorClass = ABaseWeapon::StaticClass();
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+	for (size_t i = 0; i < OutActors.Num(); i++)
+	{
+		if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
+		{
+			if (pWeapon->WeaponType != EnumWeaponType::Shell)
+			{
+				Arr_SpawnTransform.Add(pWeapon->GetTransform());
+				EnumWeaponType ThisWeaponType = pWeapon->WeaponType;
+				pWeapon->Destroy();
+				
+				if (!Map_WeaponTypeCnt.Contains(ThisWeaponType))
+				{
+					Arr_WeaponTypeCanBeSpawned.Add(ThisWeaponType);
+					Map_WeaponTypeCnt.Add(ThisWeaponType);
+					Map_WeaponTypeCnt[ThisWeaponType] = 0;
+				}
+				Map_WeaponTypeCnt[ThisWeaponType]++;
+			}
+		}
+	}
+
+	for (size_t i = 0; i < Arr_SpawnTransform.Num(); i++)
+	{
+		int SizeOf_Arr_WeaponTypeCanBeSpawned = Arr_WeaponTypeCanBeSpawned.Num();
+		if (SizeOf_Arr_WeaponTypeCanBeSpawned <= 0)
+			break;
+		
+		EnumWeaponType SpawnWeaponType = Arr_WeaponTypeCanBeSpawned[FMath::RandRange(0, SizeOf_Arr_WeaponTypeCanBeSpawned-1)];
+		FTransform SpawnTransform = Arr_SpawnTransform[i];
+		if (--Map_WeaponTypeCnt[SpawnWeaponType] <= 0)
+			Arr_WeaponTypeCanBeSpawned.Remove(SpawnWeaponType);
+
+		ABaseWeapon* NewlySpawnWeapon = nullptr;
+		if (SpawnWeaponType == EnumWeaponType::Alarm)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponAlarm>(WeaponAlarmSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Blower)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponBlower>(WeaponBlowerSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Fork)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponFork>(WeaponForkSubClass, SpawnTransform);
+		else if (SpawnWeaponType == EnumWeaponType::Lighter)
+			NewlySpawnWeapon = GetWorld()->SpawnActor<AWeaponLighter>(WeaponLighterSubClass, SpawnTransform);
+
+		/*if (NewlySpawnWeapon)
+			NewlySpawnWeapon->NetMulticast_CallShowUpVfx();*/
 	}
 }
 
@@ -295,12 +390,26 @@ void AMGameMode::StartTheGame()
 		MyGameState->Server_StartGame();
 	}
 
-	Server_RespawnMinigameObject();
+	//Server_RearrangeWeapons();
+	Server_RespawnMinigameObject(true);
 }
 
 void AMGameMode::TestRestartLevel()
 {
 	UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
+}
+
+void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
+{
+	if (i_LevelIndex != LevelIndex)
+	{
+		LevelIndex = i_LevelIndex;
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState)
+		{
+			MyGameState->LevelIndex = LevelIndex;
+		}
+	}
 }
 
 void AMGameMode::InitMinigame_ShellObject()
@@ -328,7 +437,7 @@ void AMGameMode::InitMinigame_ShellObject()
 
 void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformationIndex)
 {
-	/*FTransform spawnTransform;
+	FTransform spawnTransform;
 	if (MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_PositionType == EMinigamePositionTypeEnum::Single)
 	{
 		spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Transform;
@@ -344,5 +453,5 @@ void AMGameMode::Server_RespawnShellObject_Implementation(int AdditionalInformat
 	{
 		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].AdditionalInformation[AdditionalInformationIndex].Additional_Int);
 		spawnActor->UpdateConfigIndex(AdditionalInformationIndex);
-	}*/
+	}
 }

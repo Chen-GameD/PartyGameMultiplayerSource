@@ -165,6 +165,8 @@ public:
 		void OnRep_IsBurned();
 	UFUNCTION()
 		void OnRep_IsParalyzed();
+	UFUNCTION()
+		void OnRep_IsInvincible();
 	UFUNCTION(Client, Reliable)
 		void Client_MoveCharacter(FVector MoveDirection, float SpeedRatio);
 
@@ -188,6 +190,10 @@ public:
 		void CallParalysisBuffStartSfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallParalysisBuffStopSfx();
+
+	void Server_GiveShellToStatue(class AWeaponShell* pShell);
+	void Server_EnableEffectByCrabBubble(bool bEnable);
+
 protected:
 
 	// Health
@@ -238,8 +244,8 @@ protected:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
-	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
-	void Zoom(bool bZoomOut);
+	DECLARE_DELEGATE_OneParam(FIsZooming, bool);
+	void Zoom(bool bZooming);
 
 	/* Called for Server_Dash input */
 	UFUNCTION()
@@ -253,7 +259,9 @@ protected:
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio = -1);
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
 	/* Called for Pick Up input */
 	DECLARE_DELEGATE_OneParam(FPickUpDelegate, bool);
@@ -261,7 +269,7 @@ protected:
 	void PickUp(bool isLeft);
 
 	UFUNCTION()
-	void DropOffWeapon(bool isLeft);
+	void DropOffWeapon(bool isLeft, bool bDropToReplace = false);
 
 	UFUNCTION()
 	void OnCombineWeapon(bool bJustPickedLeft);
@@ -278,10 +286,15 @@ protected:
 
 	// Collision
 	UFUNCTION(Category = "Weapon")
-	void OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+		void OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION(Category = "Weapon")
-	void OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+		void OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION(Category = "Weapon")
+		void OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
+			class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION(Category = "Weapon")
+		void OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -294,6 +307,9 @@ protected:
 	// When it not null anymore, start to Init all the pawn related information
 	UFUNCTION()
 	void CheckPlayerFollowWidgetTick();
+
+	void Server_CheckBubble();
+	void EnablebHealingBubble(bool bEnable);
 
 	// Broadcast function
 	UFUNCTION()
@@ -351,6 +367,21 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<int> SKDArray = { 0, 0, 0 };
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class USphereComponent* HealingBubbleCollider;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectHealingBubbleOn;
+	bool bHealingBubbleOn;
+	bool bDoubleHealingBubbleSize;
+	//UPROPERTY(Replicated)
+		bool bHealingBubbleTouchingStatue;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleStart;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleOn;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+		class UNiagaraComponent* EffectBubbleEnd;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectHeal;
 	UPROPERTY(EditAnywhere, Category = "Effects")
@@ -373,13 +404,18 @@ public:
 	float Server_MaxWalkSpeed;
 	float Client_LowSpeedWalkAccumulateTime;
 
-	bool bShouldZoomOut;
+	bool bZooming;
 	float CurFov;
 	float MinFov;
 	float MaxFov;	
 	float Local_CurCameraArmLength;
 	float Local_MinCameraArmLength;
 	float Local_MaxCameraArmLength;
+	FVector FollowCameraRelativeRotationVector;
+	FVector FollowCameraOriginalRelativeLocation;
+	float CameraShakingTime;
+	float CameraShakingIntensity;
+	float TimePassedSinceShaking;
 
 	// Buff Map
 	// BuffName: BuffPoints, BuffRemainedTime, BuffAccumulatedTime
@@ -396,8 +432,12 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
 		bool IsInvincible;
+	UPROPERTY(Replicated)
+		bool IsAffectedByCrabBubble;
+	UPROPERTY(Replicated)
+		bool IsSaltCure;
 	float InvincibleTimer;
 	float InvincibleMaxTime;
 	
@@ -428,6 +468,7 @@ protected:
 
 	UPROPERTY(Replicated)
 	bool IsDead;
+	int Server_DeadTimes;
 
 	// Action
 	bool IsOnGround;

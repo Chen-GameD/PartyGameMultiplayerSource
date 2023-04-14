@@ -24,11 +24,13 @@ public:
 	virtual void NativeConstruct() override;
 	
 	UFUNCTION()
-	void ShowWidget(bool IsShowing);
+	void ShowWidget(bool isShowing);
 
 	// Player Information
 	UFUNCTION()
 	void UpdateHealthBar(float percentage);
+	UFUNCTION()
+	void ToggleInvincibleUI(bool isShowing);
 	UFUNCTION()
 	void SetPlayerName(FString i_Name);
 
@@ -36,11 +38,11 @@ public:
 	// Currently, two functions are used to control the display and disappearance of the two buffs, which can be changed according to subsequent needs.
 
 	UFUNCTION()
-	void ToggleBuffUI(bool IsShowing);
+	void ToggleBuffUI(bool isShowing);
 	UFUNCTION()
-	void ToggleFireBuffUI(bool IsShowing);
+	void ToggleFireBuffUI(bool isShowing);
 	UFUNCTION()
-	void ToggleShockBuffUI(bool IsShowing);
+	void ToggleShockBuffUI(bool isShowing);
 
 	// Skill Information
 	UFUNCTION()
@@ -52,6 +54,8 @@ protected:
 	// Player Information
 	UPROPERTY(meta = (BindWidget))
 	UProgressBar* HealthBar;
+	UPROPERTY(meta = (BindWidget))
+	UImage* InvincibleUI;
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* PlayerName;
 

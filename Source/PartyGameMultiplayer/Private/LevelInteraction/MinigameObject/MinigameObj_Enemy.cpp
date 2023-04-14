@@ -10,6 +10,10 @@
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
+#include "Weapon/ElementWeapon/WeaponFork.h"
+#include "Weapon/ElementWeapon/WeaponLighter.h"
+#include "Weapon/ElementWeapon/WeaponBlower.h"
+#include "Weapon/ElementWeapon/WeaponAlarm.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "UI/MinigameObjFollowWidget.h"
@@ -36,6 +40,11 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	BigWeaponMesh->SetupAttachment(CrabMesh);
 	BigWeaponMesh->SetCollisionProfileName(TEXT("NoCollision"));
 
+	LittleCrabMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LittleCrabMesh"));
+	LittleCrabMesh->SetupAttachment(CrabMesh);
+	LittleCrabMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	
+
 	Explode_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ExplodeVfx"));
 	Explode_NC->SetupAttachment(CrabMesh);
 	Explode_NC->bAutoActivate = false;
@@ -43,12 +52,9 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	if (DefaultExplodeNS.Succeeded())
 		Explode_NC->SetAsset(DefaultExplodeNS.Object);
 
-	Shield_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ShieldVfx"));
-	Shield_NC->SetupAttachment(CrabMesh);
-	Shield_NC->bAutoActivate = false;
-	/*static ConstructorHelpers::FObjectFinder<UNiagaraSystem> DefaultExplodeNS(TEXT("/Game/ArtAssets/Niagara/NS_CrabExplode.NS_CrabExplode"));
-	if (DefaultExplodeNS.Succeeded())
-		Explode_NC->SetAsset(DefaultExplodeNS.Object);*/
+	Rising_NC = CreateDefaultSubobject<UNiagaraComponent>(TEXT("RisingVfx"));
+	Rising_NC->SetupAttachment(CrabMesh);
+	Rising_NC->bAutoActivate = true;
 
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
@@ -60,13 +66,23 @@ AMinigameObj_Enemy::AMinigameObj_Enemy()
 	RisingTargetHeight = 100.0f;
 
 	DropWeaponDelay = 2.25f;
-	RespawnDelay = 5.0f;
+	RespawnDelay = 6.5f;
 
-	Local_ShowNoDamageHint_Interval = 1.0f;
+	Local_ShowNoDamageHint_Interval = 0.25f;
 	Local_ShowNoDamageHint_LastTime = -1.0f;
 
 	Server_CallGetHitEffects_MinInterval = 0.5f;
 	Server_LastTime_CallGetHitEffects = -1.0f;
+
+	GetHitAnimMinLastingTime = 0.25f;
+}
+
+
+void AMinigameObj_Enemy::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AMinigameObj_Enemy, isAttacked);
 }
 
 
@@ -82,7 +98,8 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 		{
 			TargetLocation.Z = RisingTargetHeight;			
 			FollowWidget->SetVisibility(true);
-			SetActorEnableCollision(true);
+			if (Rising_NC && Rising_NC->IsActive())
+				Rising_NC->Deactivate();
 			IsRisingFromSand = false;
 
 			// Server
@@ -92,7 +109,28 @@ void AMinigameObj_Enemy::Tick(float DeltaTime)
 				Server_SpawnBigWeaponRotation = BigWeaponMesh->GetComponentRotation();
 			}
 		}
+		// Detach in Beginplay won't work somehow, so do the following instead
+		if (Rising_NC && Rising_NC->IsActive())
+		{
+			Rising_NC->SetWorldLocation(FVector(0, -90.0, 130.0));
+			Rising_NC->SetWorldRotation(FRotator::ZeroRotator);
+			Rising_NC->SetWorldScale3D(FVector::OneVector);
+		}
 		SetActorLocation(TargetLocation);
+	}
+
+	// Server
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		// Reset crab's animation state to idle after not getting hit for GetHitAnimMinLastingTime seconds
+		if (isAttacked)
+		{
+			if (0 < Server_LastTime_CallGetHitEffects && GetHitAnimMinLastingTime < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
+			{
+				//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = false"));
+				isAttacked = false;
+			}
+		}
 	}
 }
 
@@ -101,7 +139,7 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 {
 	if (!EventInstigator || !DamageCauser)
 		return 0.0f;
-	if (DamageTaken == 0 || CurrentHealth <= 0)
+	if (DamageTaken == 0 || CurrentHealth <= 0 || IsRisingFromSand)
 		return 0.0f;
 
 	// Adjust the damage according to the minigame damage ratio
@@ -136,7 +174,9 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	{
 		//NetMulticast_CallGetHitSfx();
 		
-		// TODO: Call crab get hit animation, make sure the animation is synced on all clients 
+		// Call crab get hit animation
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = true"));
+		isAttacked = true;
 
 		Server_LastTime_CallGetHitEffects = GetWorld()->TimeSeconds;
 	}
@@ -171,14 +211,14 @@ void AMinigameObj_Enemy::Server_WhenDead()
 			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
 		}, DropWeaponDelay, false);
 
-	// Spawn the little crab that walks into the ocean.
-	FTimerHandle SpawnCrabTimerHandle;
-	GetWorldTimerManager().SetTimer(SpawnCrabTimerHandle, [this]
-		{
-			FVector spawnLocation = GetActorLocation();
-			FRotator spawnRotation = GetActorRotation();
-			auto pLittleCrab = GetWorld()->SpawnActor<AActor>(SpecificLittleCrabClass, spawnLocation, spawnRotation);
-		}, DropWeaponDelay * 0.5f, false);
+	//// Spawn the little crab that walks into the ocean.
+	//FTimerHandle SpawnCrabTimerHandle;
+	//GetWorldTimerManager().SetTimer(SpawnCrabTimerHandle, [this]
+	//	{
+	//		FVector spawnLocation = GetActorLocation();
+	//		FRotator spawnRotation = GetActorRotation();
+	//		auto pLittleCrab = GetWorld()->SpawnActor<AActor>(SpecificLittleCrabClass, spawnLocation, spawnRotation);
+	//	}, DropWeaponDelay * 0.5f, false);
 
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;
@@ -194,9 +234,40 @@ void AMinigameObj_Enemy::BeginPlay()
 		pFollowWidget->SetHealthByPercentage(1);
 		FollowWidget->SetVisibility(false);
 	}	
-	SetActorEnableCollision(false);
+
+	FName SocketName;
+	FString SocketName_str = "";
+	
+	if (SpecificWeaponClass->IsChildOf(AWeaponFork::StaticClass()))
+		SocketName_str = "Fork";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponLighter::StaticClass()))
+		SocketName_str = "Lighter";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponBlower::StaticClass()))
+		SocketName_str = "Blower";
+	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
+		SocketName_str = "Alarm";
+	SocketName = FName(*SocketName_str);
+	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	SocketName_str = "LittleCrab";
+	SocketName = FName(*SocketName_str);
+	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
+	if (Rising_NC && !Rising_NC->IsActive())
+	{
+		Rising_NC->Activate();		
+	}
+	// Shake localcontrolled character's camera
+	if (auto pController = GetWorld()->GetFirstPlayerController())
+	{
+		//if (auto pMCharacter = Cast<AMCharacter>(pController->GetPawn()))
+		//{
+		//	pMCharacter->CameraShakingTime = 0.7f;
+		//	pMCharacter->CameraShakingIntensity = 10.0f;
+		//}
+		if (auto pCamMg = pController->PlayerCameraManager)
+			pCamMg->StartCameraShake(CameraShakeTriggered);
+	}		
 }
 
 void AMinigameObj_Enemy::OnRep_CurrentHealth()
@@ -205,18 +276,20 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 
 	if (CurrentHealth <= 0)
 	{
-		// HideCrab
+		// Hide Crab
 		FTimerHandle HideCrabTimerHandle;
 		GetWorldTimerManager().SetTimer(HideCrabTimerHandle, [this]
 			{
 				SetActorEnableCollision(false);
 				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-				FollowWidget->SetVisibility(false);
+				if (FollowWidget)
+					FollowWidget->SetVisibility(false);
+				BPF_BroadcastCrabAnimation();
 			}, DropWeaponDelay, false);
 
 		// Vfx
 		if (Explode_NC)
-			Explode_NC->Activate();	
+			Explode_NC->Activate();
 	}
 
 	// Set UI: Health Bar
@@ -236,11 +309,12 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 			AActor* NoDamageHintActor = GetWorld()->SpawnActor<AActor>(SpecificNoDamageHintActorClass, spawnLocation, spawnRotation);
 			FTimerHandle TimerHandle;
 			float NoDamageHintActor_LifeTime = Local_ShowNoDamageHint_Interval;
+			float NoDamageHintAnimTime = 1.0f;
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [NoDamageHintActor]()
 				{
 					if (NoDamageHintActor)
 						NoDamageHintActor->Destroy();
-				}, NoDamageHintActor_LifeTime, false);
+				}, NoDamageHintAnimTime, false);
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
 		}		
 	}	
