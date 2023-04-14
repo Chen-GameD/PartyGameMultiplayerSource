@@ -93,12 +93,17 @@ void AMGameState::OnRep_IsGameStart()
 		auto ps = Cast<AM_PlayerState>(PlayerArray[i]);
 		auto character = Cast<AMCharacter>(ps->GetPawn());
 		// On the same team as the local player
-		if (ps->TeamIndex == myTeamID) {
+		if (ps->TeamIndex == myTeamID) 
+		{
 			character->GetMesh()->SetCustomDepthStencilValue(252);
 		}
-		else {
+		else 
+		{
 			character->GetMesh()->SetCustomDepthStencilValue(0);
 		}
+
+		if (ps->PlayerNameString == MyPlayerState->PlayerNameString)
+			character->GetMesh()->SetRenderCustomDepth(false);
 	}
 
 #pragma endregion Siloutte_Config

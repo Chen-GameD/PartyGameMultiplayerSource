@@ -162,8 +162,11 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// Apply constant damage
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
-					for (auto& Elem : AttackObjectMap)
-					{					
+					FScopeLock Lock(&DataGuard);
+					auto CopiedAttackObjectMap = AttackObjectMap;
+					// Prevent AttackObjectMap from getting written by the overlap functions during the iteration
+					for (auto Elem : CopiedAttackObjectMap)
+					{			
 						AActor* DamagedActor = Elem.Key;						
 						if (DamagedActor)
 						{

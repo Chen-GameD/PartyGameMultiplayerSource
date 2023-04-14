@@ -99,7 +99,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{								
+			{					
 				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
@@ -277,17 +277,12 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				// if it hits the teammates
 				if(pCharacterBeingHit != GetOwner())
 				{
-					auto MyController = HoldingController;
-					if (!MyController)
+					int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), pCharacterBeingHit);
+					if (TeammateCheckResult == -1)
 						return;
-					AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-					AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-					if (!MyPS || !TheOtherCharacterPS)
-						return;
-					if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-					{
-						bTargetCanBeAttacked = false;
-					}
+					else if (TeammateCheckResult == 1)
+						bTargetCanBeAttacked = false;	
+				
 				}
 				// if it hits an invincible character
 				if (pCharacterBeingHit->IsInvincible)

@@ -228,6 +228,8 @@ protected:
 	//WeaponName
 	FString WeaponName;
 
+	mutable FCriticalSection DataGuard;
+
 private:
 
 };
