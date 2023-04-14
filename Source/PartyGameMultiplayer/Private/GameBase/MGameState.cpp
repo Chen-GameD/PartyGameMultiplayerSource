@@ -5,6 +5,7 @@
 #include "../../Public/M_PlayerState.h"
 #include "Character/MPlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
 #include "GameFramework/GameSession.h"
@@ -67,6 +68,35 @@ void AMGameState::OnRep_IsGameStart()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	
+	// Assign character's Teammates and Opponents
+	TSubclassOf<AMCharacter> ActorClass = AMCharacter::StaticClass();
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+	for (size_t i = 0; i < OutActors.Num(); i++)
+	{
+		for (size_t j = i+1; j < OutActors.Num(); j++)
+		{
+			auto Chr1 = Cast<AMCharacter>(OutActors[i]);
+			auto Chr2 = Cast<AMCharacter>(OutActors[j]);
+			if (!Chr1 || !Chr2)
+				continue;
+			auto Ps1 = Chr1->GetPlayerState<AM_PlayerState>();
+			auto Ps2 = Chr2->GetPlayerState<AM_PlayerState>();
+			if (!Ps1 || !Ps2)
+				continue;
+			if (Ps1->TeamIndex == Ps2->TeamIndex)
+			{
+				Chr1->Teammates.Add(Chr2);
+				Chr2->Teammates.Add(Chr1);
+			}
+			else
+			{
+				Chr1->Opponents.Add(Chr2);
+				Chr2->Opponents.Add(Chr1);
+			}
+		}
+	}
+
 #pragma region Siloutte_Config
 
 	// Get local player state and team id
