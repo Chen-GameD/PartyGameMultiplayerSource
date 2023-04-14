@@ -170,6 +170,21 @@ void ABaseProjectile::BeginPlay()
 		if (AttackOnEffect_NSComponent)
 			AttackOnEffect_NSComponent->Activate();
 	}
+
+	// Show projectile silouette on teammates' end
+	int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
+	if (TeammateCheckResult == 1)
+	{
+		// Exclude self
+		if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
+		{
+			if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+			{
+				StaticMesh->SetRenderCustomDepth(true);
+				StaticMesh->SetCustomDepthStencilValue(252);
+			}
+		}
+	}
 }
 
 

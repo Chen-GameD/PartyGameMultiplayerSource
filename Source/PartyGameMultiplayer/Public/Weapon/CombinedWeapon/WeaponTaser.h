@@ -28,6 +28,7 @@ protected:
 		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) override;
 	virtual void OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 		class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
+	virtual void OnRep_IsPickedUp() override;
 
 	UFUNCTION()
 		virtual void OnRep_ServerForkWorldTransform();
