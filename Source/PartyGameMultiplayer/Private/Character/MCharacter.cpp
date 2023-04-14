@@ -189,8 +189,8 @@ void AMCharacter::Restart()
 
 	if (IsLocallyControlled())
 	{
-		AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-		playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
+		if(AMPlayerController* playerController = Cast<AMPlayerController>(Controller))
+			playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
 	}
 }
 
@@ -472,36 +472,38 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 
 
 void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
-{
-	if(0 < MaxWalkSpeedRatio)
-		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
-	else
-	{
-		float MaxWalkSpeedRatioByWeapon = 1.0f;
-		float MaxWalkSpeedRatioBySaltCure = 1.0f;		
-		float MaxWalkSpeedRatioByCrabBubble = 1.0f;
-		// Weapon Effect
-		MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
-		MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
-		// Sea Effect
-		if (IsSaltCure)
-		{
-			FString ParName = "Saltcure";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-				MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-			MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
-		}		
-		// Crab Bubble Effect
-		if (IsAffectedByCrabBubble)
-		{
-			FString ParName = "CrabBubble";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-				MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-			MaxWalkSpeedRatio = MaxWalkSpeedRatioByCrabBubble;
-		}	
-		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
-	}
+{	
+	Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
 	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
+}
+
+void AMCharacter::Server_SetMaxWalkSpeed()
+{
+	float MaxWalkSpeedRatio = 1.0f;
+	float MaxWalkSpeedRatioByWeapon = 1.0f;
+	float MaxWalkSpeedRatioBySaltCure = 1.0f;
+	float MaxWalkSpeedRatioByCrabBubble = 1.0f;
+	// Weapon Effect
+	MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
+	MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
+	// Sea Effect
+	if (IsSaltCure)
+	{
+		FString ParName = "Saltcure";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+			MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+		MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
+	}
+	// Crab Bubble Effect
+	if (IsAffectedByCrabBubble)
+	{
+		FString ParName = "CrabBubble";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+			MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+		MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioByCrabBubble);
+	}
+	
+	NetMulticast_AdjustMaxWalkSpeed(MaxWalkSpeedRatio);
 }
 
 void AMCharacter::NetMulticast_SetHealingBubbleStatus_Implementation(bool i_bBubbleOn, bool i_bDoubleSize)
@@ -773,7 +775,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -853,8 +855,15 @@ void AMCharacter::DropOffWeapon(bool isLeft, bool bDropToReplace)
 			LeftWeapon->HasBeenCombined = false;
 		}
 	}
+
+	// UI
+	// ======================================================================
+	// Set Inventory UI
+	if (GetNetMode() == NM_ListenServer)
+		SetTextureInUI();
+
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -986,7 +995,7 @@ void AMCharacter::RefreshDash()
 	FTimerHandle tempHandle;
 	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
 
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 }
 
 void AMCharacter::SetDash()
@@ -1092,8 +1101,6 @@ void AMCharacter::OnHealthUpdate()
 
 		if (CurrentHealth <= 0)
 		{
-			SetTextureInUI();
-
 			// Death
 			// to do
 			// Force respawn
@@ -1602,20 +1609,14 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0 || IsInvincible)
+	if (DamageTaken <= 0 || IsInvincible || !EventInstigator || !DamageCauser)
 		return 0.0f;
 
 	if (!IsDead)
 	{
 		// Check if it is the attack from self or teammates
-		auto MyController = GetController();
-		if (!MyController)
-			return 0.0f;
-		AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
-		AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-		if (!AttackerPS || !MyPS)
-			return 0.0f;
-		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
+		int TeammateCheckResult = ADamageManager::IsTeammate(this, EventInstigator);
+		if (TeammateCheckResult != 0)
 			return 0.0f;
 
 		// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
@@ -1635,6 +1636,11 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
+			AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
+			AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>();
+			if (!AttackerPS || !MyPS)
+				return 0.0f;
+
 			AttackerPS->addScore(0);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
@@ -1771,7 +1777,7 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, 1.0f);
 				IsSaltCure = true;
 			}
-			NetMulticast_AdjustMaxWalkSpeed();
+			Server_SetMaxWalkSpeed();
 		}
 	}
 
@@ -1823,7 +1829,7 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, -1.0f);
 				IsSaltCure = false;
 			}
-			NetMulticast_AdjustMaxWalkSpeed();
+			Server_SetMaxWalkSpeed();
 		}
 	}
 
@@ -1853,17 +1859,11 @@ void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent*
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 		{
-			if (GetController())
-			{
-				AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-				AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
-				if (!MyPS || !TheOtherCharacterPS)
-					return;
-				if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-				{
-					ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
-				}
-			}
+			int TeammateCheckResult = ADamageManager::IsTeammate(this, pMCharacter);
+			if (TeammateCheckResult == -1)
+				return;
+			else if (TeammateCheckResult == 1)
+				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
 		}
 	}	
 	
@@ -1880,14 +1880,11 @@ void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* O
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 		{
-			AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-			AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
-			if (!MyPS || !TheOtherCharacterPS)
+			int TeammateCheckResult = ADamageManager::IsTeammate(this, pMCharacter);
+			if (TeammateCheckResult == -1)
 				return;
-			if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-			{
+			else if (TeammateCheckResult == 1)
 				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
-			}
 		}
 	}
 
@@ -1935,6 +1932,7 @@ void AMCharacter::BeginPlay()
 
 	if (IsLocallyControlled())
 	{
+		// Cursor Plane
 		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
@@ -1965,6 +1963,9 @@ void AMCharacter::BeginPlay()
 			if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
 				pWeapon->CallShowUpVfx();
 		}
+
+		// Silouette
+		GetMesh()->SetRenderCustomDepth(false);
 	}
 }
 
@@ -2529,14 +2530,7 @@ void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
 	if (IsAffectedByCrabBubble != bEnable)
 	{
 		IsAffectedByCrabBubble = bEnable;
-		if (IsAffectedByCrabBubble)
-		{
-			NetMulticast_AdjustMaxWalkSpeed();
-		}
-		else
-		{
-			NetMulticast_AdjustMaxWalkSpeed();
-		}		
+		Server_SetMaxWalkSpeed();
 	}
 }
 

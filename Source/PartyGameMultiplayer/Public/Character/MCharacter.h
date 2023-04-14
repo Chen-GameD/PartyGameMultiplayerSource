@@ -258,8 +258,9 @@ protected:
 
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
+	void Server_SetMaxWalkSpeed();
 	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio = -1);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatioByWeapon);
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
