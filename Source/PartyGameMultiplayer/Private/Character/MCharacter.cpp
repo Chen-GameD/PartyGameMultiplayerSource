@@ -1566,7 +1566,7 @@ void AMCharacter::OnRep_IsInvincible()
 		FTimerHandle ShowBubbleOnVfxTimerHandle;
 		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
 			{
-				if (EffectBubbleOn)
+				if (EffectBubbleOn && IsInvincible)
 				{
 					if (!EffectBubbleOn->IsActive())
 						EffectBubbleOn->Activate();
@@ -1993,23 +1993,6 @@ void AMCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsInvincible)
-	{
-		InvincibleTimer += DeltaTime;
-		if (InvincibleMaxTime < InvincibleTimer)
-		{
-			InvincibleTimer = 0;
-			if (GetLocalRole() == ROLE_Authority)
-			{
-				IsInvincible = false;
-				if (GetNetMode() == NM_ListenServer)
-					OnRep_IsInvincible();
-			}
-		}
-		if (EffectBubbleOn && EffectBubbleOn->IsActive())
-			EffectBubbleOn->SetWorldRotation(FRotator::ZeroRotator);
-	}
-
 	// Adjust Bubble Size if needed
 	if (HealingBubbleCollider)
 	{
@@ -2063,6 +2046,21 @@ void AMCharacter::Tick(float DeltaTime)
 	{
 		// Deal with buff
 		ActByBuff_PerTick(DeltaTime);
+
+		// Deal with respawn invincible buff
+		if (IsInvincible)
+		{
+			InvincibleTimer += DeltaTime;
+			if (InvincibleMaxTime < InvincibleTimer)
+			{
+				InvincibleTimer = 0;
+				IsInvincible = false;
+				if (GetNetMode() == NM_ListenServer)
+					OnRep_IsInvincible();
+			}
+			if (EffectBubbleOn && EffectBubbleOn->IsActive())
+				EffectBubbleOn->SetWorldRotation(FRotator::ZeroRotator);
+		}
 	}
 
 	// Client(Listen Server)
