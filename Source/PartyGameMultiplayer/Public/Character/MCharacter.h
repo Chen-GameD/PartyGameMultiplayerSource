@@ -457,6 +457,11 @@ public:
 	// Fire Image
 	UPROPERTY(EditDefaultsOnly, Category = "FireBuff")
 	UTexture2D* FireImage;
+
+	// Teammates and Opponents in the same world
+	TArray<AMCharacter*> Teammates;
+	TArray<AMCharacter*> Opponents;
+
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/

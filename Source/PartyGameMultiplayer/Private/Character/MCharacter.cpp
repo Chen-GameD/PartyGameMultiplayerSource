@@ -2154,6 +2154,21 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
+		/*if (0 < Opponents.Num() && Opponents[0])
+		{
+			FVector WorldPos = Opponents[0]->GetActorLocation();
+			FVector2D ScreenPosition;
+			bool success = UGameplayStatics::ProjectWorldToScreen
+			(
+				Cast<APlayerController>(GetController()),
+				WorldPos,
+				ScreenPosition,
+				false
+			);
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("screen pos: %f, %f"), ScreenPosition.X, ScreenPosition.Y));
+		}*/
+			
+
 		//if (0 < CameraShakingTime)
 		//{
 		//	if (100.0f == CameraShakingIntensity)
