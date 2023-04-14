@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
 #include "MLobbyWidget.generated.h"
 
@@ -53,19 +54,19 @@ protected:
 	////////////////////////////////////////////////////
 	// Team1
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_1_Player1;
+	URichTextBlock* Team_1_Player1;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_1_Player2;
+	URichTextBlock* Team_1_Player2;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_1_Player3;
+	URichTextBlock* Team_1_Player3;
 
 	// Team2
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_2_Player1;
+	URichTextBlock* Team_2_Player1;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_2_Player2;
+	URichTextBlock* Team_2_Player2;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* Team_2_Player3;
+	URichTextBlock* Team_2_Player3;
 
 	// Undecided
 	UPROPERTY(meta = (BindWidget))
@@ -83,9 +84,9 @@ protected:
 
 	// Information Container
 	UPROPERTY()
-	TMap<int, UTextBlock*> Team1TextContainer;
+	TMap<int, URichTextBlock*> Team1TextContainer;
 	UPROPERTY()
-	TMap<int, UTextBlock*> Team2TextContainer;
+	TMap<int, URichTextBlock*> Team2TextContainer;
 	UPROPERTY()
 	TMap<int, UTextBlock*> UndecidedTextContainer;
 

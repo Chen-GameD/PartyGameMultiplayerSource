@@ -140,6 +140,20 @@ void AMPlayerController::Timer_CheckPlayerState()
 	}
 }
 
+void AMPlayerController::Client_SyncCharacters_Implementation()
+{
+	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	{
+		AMCharacter* CurrentPawn = *PawnItr;
+		if (CurrentPawn)
+		{
+			CurrentPawn->SetPlayerNameUIInformation();
+			CurrentPawn->SetPlayerSkin();
+			CurrentPawn->InitFollowWidget();
+		}
+	}
+}
+
 void AMPlayerController::Client_SyncLobbyInformation_Implementation()
 {
 	AM_PlayerState* MyPlayerstate = GetPlayerState<AM_PlayerState>();
