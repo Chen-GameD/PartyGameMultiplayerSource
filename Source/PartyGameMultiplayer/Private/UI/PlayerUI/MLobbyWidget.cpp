@@ -42,18 +42,18 @@ void UMLobbyWidget::UpdateTeam1LobbyInformation(TArray<FLobbyInformationStruct> 
 	// Set information for each player in this team;
 	for (index = 0; index < i_TeamArr.Num(); index++)
 	{
-		UTextBlock* CurrentTextBlock = *Team1TextContainer.Find(index);
+		URichTextBlock* CurrentTextBlock = *Team1TextContainer.Find(index);
 		if (CurrentTextBlock)
 		{
 			FLobbyInformationStruct CurrentInfo = i_TeamArr[index];
-			FString TextInfo = CurrentInfo.PlayerName + (CurrentInfo.IsReady ? " is Ready!" : " is Not Ready");
+			FString TextInfo = CurrentInfo.PlayerName + (CurrentInfo.IsReady ? " is <Ready>Ready!</>" : " is <NotReady>Not Ready</>");
 			CurrentTextBlock->SetText(FText::FromString(TextInfo));
 		}
 	}
 	// Set the rest
 	for (int rest = index; rest < Team1TextContainer.Num(); rest++)
 	{
-		UTextBlock* CurrentTextBlock = *Team1TextContainer.Find(rest);
+		URichTextBlock* CurrentTextBlock = *Team1TextContainer.Find(rest);
 		if (CurrentTextBlock)
 		{
 			FString TextInfo = "Waiting for player...";
@@ -68,18 +68,18 @@ void UMLobbyWidget::UpdateTeam2LobbyInformation(TArray<FLobbyInformationStruct> 
 	// Set information for each player in this team;
 	for (index = 0; index < i_TeamArr.Num(); index++)
 	{
-		UTextBlock* CurrentTextBlock = *Team2TextContainer.Find(index);
+		URichTextBlock* CurrentTextBlock = *Team2TextContainer.Find(index);
 		if (CurrentTextBlock)
 		{
 			FLobbyInformationStruct CurrentInfo = i_TeamArr[index];
-			FString TextInfo = CurrentInfo.PlayerName + (CurrentInfo.IsReady ? " is Ready!" : " is Not Ready");
+			FString TextInfo = CurrentInfo.PlayerName + (CurrentInfo.IsReady ? " is <Ready>Ready!</>" : " is <NotReady>Not Ready</>");
 			CurrentTextBlock->SetText(FText::FromString(TextInfo));
 		}
 	}
 	// Set the rest
 	for (int rest = index; rest < Team2TextContainer.Num(); rest++)
 	{
-		UTextBlock* CurrentTextBlock = *Team2TextContainer.Find(rest);
+		URichTextBlock* CurrentTextBlock = *Team2TextContainer.Find(rest);
 		if (CurrentTextBlock)
 		{
 			FString TextInfo = "Waiting for player...";
