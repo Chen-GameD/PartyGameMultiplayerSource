@@ -46,21 +46,10 @@ void AMGameState::Server_StartSyncForNewPlayer_Implementation()
 		if (MyController)
 		{
 			MyController->Client_SyncLobbyInformation();
+			MyController->Client_SyncCharacters();
 		}
 	}
 }
-
-// void AMGameState::OnRep_LevelIndex()
-// {
-// 	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-// 	{
-// 		AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-// 		if (MyController && MyController->IsLocalPlayerController())
-// 		{
-// 			MyController->Client_SyncLobbyInformation_Implementation();
-// 		}
-// 	}
-// }
 
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -72,9 +61,6 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, Team_1_Score);
 	DOREPLIFETIME(AMGameState, Team_2_Score);
 	DOREPLIFETIME(AMGameState, LevelIndex);
-	// DOREPLIFETIME(AMGameState, Team1Array);
-	// DOREPLIFETIME(AMGameState, Team2Array);
-	// DOREPLIFETIME(AMGameState, UndecidedArray);
 }
 
 void AMGameState::OnRep_IsGameStart()
@@ -154,57 +140,6 @@ void AMGameState::UpdateGameTime()
 		UpdateGameStartTimerUI();
 	}
 }
-
-// void AMGameState::OnRep_UpdateTeam1Array()
-// {
-// 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-// 	{
-// 		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-//
-// 		if (currentController->IsLocalPlayerController())
-// 		{
-// 			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
-// 			if (MyHUD)
-// 			{
-// 				MyHUD->InGame_UpdateTeam1LobbyInformation(Team1Array);
-// 			}
-// 		}
-// 	}
-// }
-//
-// void AMGameState::OnRep_UpdateTeam2Array()
-// {
-// 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-// 	{
-// 		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-//
-// 		if (currentController->IsLocalPlayerController())
-// 		{
-// 			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
-// 			if (MyHUD)
-// 			{
-// 				MyHUD->InGame_UpdateTeam2LobbyInformation(Team2Array);
-// 			}
-// 		}
-// 	}
-// }
-//
-// void AMGameState::OnRep_UpdateUndecidedArray()
-// {
-// 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
-// 	{
-// 		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-//
-// 		if (currentController->IsLocalPlayerController())
-// 		{
-// 			AMInGameHUD* MyHUD = currentController->GetInGameHUD();
-// 			if (MyHUD)
-// 			{
-// 				MyHUD->InGame_UpdateUndecidedLobbyInformation(UndecidedArray);
-// 			}
-// 		}
-// 	}
-// }
 
 void AMGameState::OnRep_Team_1_ScoreUpdate()
 {

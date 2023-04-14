@@ -196,50 +196,8 @@ void AMCharacter::Restart()
 void AMCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
-
-	// This will call one time when a new client join a server.
-	if (GetNetMode() == NM_Client)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Client Playerstate Rep!"));
-	}
-	else if (GetNetMode() == NM_ListenServer)
-	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("ListenServer Playerstate Rep!"));
-	}
-
-	if (PlayerFollowWidget->GetUserWidgetObject())
-	{
-		SetPlayerNameUIInformation();
-		SetPlayerSkin();
-		InitFollowWidget();
-		for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-		{
-			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-			if (MyController && MyController->IsLocalPlayerController())
-			{
-				MyController->Client_SyncLobbyInformation_Implementation();
-			}
-		}
-	}
-	else
-	{
-		GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
-	}
-
-	// AMPlayerController* MyPlayerController = Cast<AMPlayerController>(Controller);
-	// if (MyPlayerController)
-	// {
-	// 	MyPlayerController->Client_SyncLobbyInformation_Implementation();
-	// }
-
-	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-	// {
-	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-	// 	if (MyController && MyController->IsLocalPlayerController())
-	// 	{
-	// 		MyController->Client_SyncLobbyInformation_Implementation();
-	// 	}
-	// }
+	
+	GetWorldTimerManager().SetTimer(InitPlayerInformationTimer, this, &AMCharacter::CheckPlayerFollowWidgetTick, 0.5, true);
 }
 
 void AMCharacter::CheckPlayerFollowWidgetTick()

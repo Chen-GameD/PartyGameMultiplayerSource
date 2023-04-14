@@ -46,8 +46,8 @@ public:
 	UFUNCTION(Client, Reliable)
 	void Client_SyncLobbyInformation();
 
-	// UFUNCTION()
-	// void InitCharacterFollowWidgetStatusAndInformation();
+	UFUNCTION(Client, Reliable)
+	void Client_SyncCharacters();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
