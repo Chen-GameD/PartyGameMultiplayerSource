@@ -32,7 +32,11 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 	
 	/**	Health Bar UI widget */
 	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* PlayerFollowWidget;
+		class UWidgetComponent* PlayerFollowWidget;
+
+	/**	Opponent Marker UI widget */
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* OpponentMarkerWidget;
 
 	/**	Inventory Menu UI widget Reference */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))

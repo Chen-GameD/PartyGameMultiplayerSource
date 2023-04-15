@@ -36,6 +36,7 @@
 #include "GameBase/MGameState.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
+#include "UI/PlayerUI/OpponentMarkerWidget.h"
 
 // Constructor
 // ===================================================
@@ -94,6 +95,9 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	//Create HealthBar_Enemy UI Widget
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
+	OpponentMarkerWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OpponentMarkerWidget"));
+	OpponentMarkerWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -1968,6 +1972,10 @@ void AMCharacter::BeginPlay()
 		// Silouette
 		GetMesh()->SetRenderCustomDepth(false);
 	}
+	
+	// Opponent Marker
+	if (UOpponentMarkerWidget* pOpponentMarkerWidget = Cast<UOpponentMarkerWidget>(OpponentMarkerWidget->GetUserWidgetObject()))
+		pOpponentMarkerWidget->SetAllMarkerVisibility(false);
 }
 
 
@@ -2113,19 +2121,74 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
-		/*if (0 < Opponents.Num() && Opponents[0])
+		// Opponent Marker on the bottom
+		// ========================================================================================================================
+		UOpponentMarkerWidget* pOpponentMarkerWidget = Cast<UOpponentMarkerWidget>(OpponentMarkerWidget->GetUserWidgetObject());
+		APlayerController* pPlayerController = Cast<APlayerController>(GetController());
+		FVector2D ScreenPosition_Self;
+		bool Success_GetSelfScreenPos = UGameplayStatics::ProjectWorldToScreen
+		(
+			Cast<APlayerController>(GetController()),
+			GetActorLocation(),
+			ScreenPosition_Self,
+			false
+		);
+		int32 viewport_x, viewport_y;
+		if(pPlayerController)
+			pPlayerController->GetViewportSize(viewport_x, viewport_y);
+		if (Success_GetSelfScreenPos && pOpponentMarkerWidget && pPlayerController)
 		{
-			FVector WorldPos = Opponents[0]->GetActorLocation();
-			FVector2D ScreenPosition;
-			bool success = UGameplayStatics::ProjectWorldToScreen
-			(
-				Cast<APlayerController>(GetController()),
-				WorldPos,
-				ScreenPosition,
-				false
-			);
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("screen pos: %f, %f"), ScreenPosition.X, ScreenPosition.Y));
-		}*/
+			// Let Widget know my TeamId
+			if (pOpponentMarkerWidget->TeamID == 0)
+			{
+				if (AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>())
+					pOpponentMarkerWidget->TeamID = MyPS->TeamIndex;
+			}			
+			int MaxPeopleInTeam = 3;
+			for (size_t i = 0; i < MaxPeopleInTeam; i++)
+			{
+				pOpponentMarkerWidget->SetMarkerVisibility(i, false);
+				if (i < Opponents.Num() && Opponents[i])
+				{
+					FVector WorldPos = Opponents[i]->GetActorLocation();
+					FVector2D ScreenPosition_Opponent;
+					// ProjectWorldToScreen may fail if opponent is too far from self
+					bool Success_GetOpScreenPos = UGameplayStatics::ProjectWorldToScreen
+					(
+						pPlayerController,
+						WorldPos,
+						ScreenPosition_Opponent,
+						false
+					);
+					if (Success_GetOpScreenPos)
+					{
+						if (ScreenPosition_Self.Y < ScreenPosition_Opponent.Y && viewport_y * 1.0f < ScreenPosition_Opponent.Y)
+						{			
+							pOpponentMarkerWidget->SetMarkerVisibility(i, true);
+							// line1: y = ax+b;  line2: y = viewport_y;
+							float a = (ScreenPosition_Opponent.Y - ScreenPosition_Self.Y) / (ScreenPosition_Opponent.X - ScreenPosition_Self.X);
+							float b = ScreenPosition_Opponent.Y - (a * ScreenPosition_Opponent.X);
+							float targetX = (viewport_y - b) / a;
+							targetX -= (viewport_x * 0.5f);
+							targetX = FMath::Clamp(targetX, -viewport_x * 0.5f, viewport_x * 0.5f);
+							pOpponentMarkerWidget->SetMarkerTranslation(i, targetX , 0);
+
+							FVector2D Self_To_Opponent = ScreenPosition_Opponent - ScreenPosition_Self;
+							Self_To_Opponent.Normalize();
+							FVector2D Self_To_BottomCenter = FVector2D(viewport_x * 0.5f, viewport_y) - ScreenPosition_Self;
+							Self_To_BottomCenter.Normalize();							
+							float OffsetAngle = FMath::RadiansToDegrees(FMath::Acos(FVector2D::DotProduct(Self_To_Opponent, Self_To_BottomCenter)));
+							FVector3d CrossProductResult = FVector3d::CrossProduct(FVector3d(Self_To_Opponent, 0.0f), FVector3d(Self_To_BottomCenter, 0.0f));
+							if (0 < CrossProductResult.Z)
+								OffsetAngle = -OffsetAngle;
+							OffsetAngle = FMath::Clamp(OffsetAngle, -65.0f, 65.0f);
+							pOpponentMarkerWidget->SetMarkerOffsetAngle(i, OffsetAngle);
+						}						
+					}					
+				}
+			}
+		}
+		
 			
 
 		//if (0 < CameraShakingTime)
