@@ -396,7 +396,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectJump;
