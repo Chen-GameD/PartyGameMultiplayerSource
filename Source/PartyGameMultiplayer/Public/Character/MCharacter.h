@@ -524,4 +524,6 @@ protected:
 	bool IsPickingWeapon = false;
 
 	FTimerHandle InitPlayerInformationTimer;
+
+	mutable FCriticalSection DataGuard;
 };

@@ -1278,6 +1278,7 @@ void AMCharacter::SetPlayerSkin()
 		/*UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, 
 			c, MyPlayerState->colorPicked);*/
 
+		FScopeLock Lock(&DataGuard);
 		USkeletalMeshComponent* MyMesh = GetMesh();
 		MyMesh->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
 
