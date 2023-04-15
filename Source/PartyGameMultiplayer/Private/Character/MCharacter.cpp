@@ -924,8 +924,10 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
 		LeftWeapon->HasBeenCombined = true;
+		LeftWeapon->AttackStop();
 		RightWeapon->SetActorHiddenInGame(true);
 		RightWeapon->HasBeenCombined = true;
+		RightWeapon->AttackStop();
 
 		// If combine successfully, always set isLeftHeld Anim State to false, 
 		// this will be reset to true when picking up new item in PickUp_Implementation
@@ -2147,7 +2149,7 @@ void AMCharacter::Tick(float DeltaTime)
 			for (size_t i = 0; i < MaxPeopleInTeam; i++)
 			{
 				pOpponentMarkerWidget->SetMarkerVisibility(i, false);
-				if (i < Opponents.Num() && Opponents[i])
+				if (i < Opponents.Num() && Opponents[i] && !Opponents[i]->IsDead)
 				{
 					FVector WorldPos = Opponents[i]->GetActorLocation();
 					FVector2D ScreenPosition_Opponent;

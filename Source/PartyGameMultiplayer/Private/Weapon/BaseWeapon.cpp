@@ -408,6 +408,8 @@ void ABaseWeapon::BeginPlay()
 void ABaseWeapon::Destroyed()
 {
 	Super::Destroyed();
+
+	AttackStop();
 }
 
 

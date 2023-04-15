@@ -65,7 +65,7 @@ void AWeaponBomb::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CD_MaxEnergy <= CD_LeftEnergy)
+	if (CD_MinEnergyToAttak <= CD_LeftEnergy)
 	{
 		if(!WeaponMesh->IsVisible())
 			WeaponMesh->SetVisibility(true);

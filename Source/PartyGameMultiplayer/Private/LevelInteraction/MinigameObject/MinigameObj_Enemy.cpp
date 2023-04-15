@@ -172,7 +172,7 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
 	if (Server_LastTime_CallGetHitEffects < 0 || Server_CallGetHitEffects_MinInterval < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
 	{
-		//NetMulticast_CallGetHitSfx();
+		NetMulticast_CallGetCorrectHitSfx();
 		
 		// Call crab get hit animation
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = true"));
@@ -247,10 +247,10 @@ void AMinigameObj_Enemy::BeginPlay()
 	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
 		SocketName_str = "Alarm";
 	SocketName = FName(*SocketName_str);
-	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 	SocketName_str = "LittleCrab";
 	SocketName = FName(*SocketName_str);
-	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
 	if (Rising_NC && !Rising_NC->IsActive())
@@ -316,6 +316,12 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 						NoDamageHintActor->Destroy();
 				}, NoDamageHintAnimTime, false);
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
+			CallGetIncorrectHitSfx();
 		}		
 	}	
+}
+
+void AMinigameObj_Enemy::NetMulticast_CallGetCorrectHitSfx_Implementation()
+{
+	CallGetCorrectHitSfx();
 }

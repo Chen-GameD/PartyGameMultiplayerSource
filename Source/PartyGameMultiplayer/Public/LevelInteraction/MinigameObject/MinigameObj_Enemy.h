@@ -22,6 +22,13 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_ShowNoDamageHint(AController* pController, FVector HitLocation);
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallGetCorrectHitSfx();
+
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallGetCorrectHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallGetIncorrectHitSfx();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_BroadcastCrabAnimation();
