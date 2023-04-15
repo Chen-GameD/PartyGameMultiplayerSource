@@ -54,7 +54,7 @@ FString UEOSGameInstance::GetPlayerUsername()
 }
 
 void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections,
-	bool IsPrivate = false, FString RoomName = FString(""), int32 MapReference = -1)
+	bool IsPrivate = false, FString RoomName = FString(), int32 MapReference = -1)
 {
 	isLoading = true;
 	if(bIsLoggedIn)
@@ -161,10 +161,35 @@ TArray<USessionEntry*> UEOSGameInstance::GetSessionsList()
 		for (auto session : SearchSettings->SearchResults)
 		{
 			USessionEntry *newEntry = NewObject<USessionEntry>();
-			newEntry->SetSessionData(session.GetSessionIdStr(), session.Session.SessionSettings.NumPublicConnections,
-			              session.Session.SessionSettings.NumPublicConnections-session.Session.NumOpenPublicConnections);
+			const bool isSessionPrivate = session.Session.SessionSettings.bAllowJoinViaPresenceFriendsOnly;
+			int minPlayers, maxPlayers;
+			if(isSessionPrivate)
+			{
+				maxPlayers = session.Session.SessionSettings.NumPrivateConnections;
+				minPlayers = session.Session.SessionSettings.NumPrivateConnections-session.Session.NumOpenPrivateConnections;
+			}
+			else
+			{
+				maxPlayers = session.Session.SessionSettings.NumPublicConnections;
+				minPlayers = session.Session.SessionSettings.NumPublicConnections-session.Session.NumOpenPublicConnections;
+			}
+			UE_LOG(LogTemp, Warning, TEXT("Sessions maxP : %d"), maxPlayers);
+			UE_LOG(LogTemp, Warning, TEXT("Sessions minP : %d"), minPlayers);
+			FString sessionNameString = FString();
+			if(session.Session.SessionSettings.Settings.Contains(SETTING_SESSIONKEY))
+			{
+				const auto val = session.Session.SessionSettings.Settings.Find(SETTING_SESSIONKEY);
+				UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *val->ToString());
+				sessionNameString = val->Data.ToString();
+			}
+			if(sessionNameString.IsEmpty())
+			{
+				sessionNameString = session.GetSessionIdStr();
+			}
+			
+			newEntry->SetSessionData(sessionNameString, maxPlayers, minPlayers, isSessionPrivate);
 			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sessions in search result"));
-			UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *session.GetSessionIdStr());
+			UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *sessionNameString);
 			sessions.Add(newEntry);
 		}
 	}
