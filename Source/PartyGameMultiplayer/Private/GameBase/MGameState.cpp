@@ -95,7 +95,7 @@ void AMGameState::OnRep_IsGameStart()
 				Chr2->Opponents.Add(Chr1);
 			}
 		}
-	}
+	}	
 
 #pragma region Siloutte_Config
 
