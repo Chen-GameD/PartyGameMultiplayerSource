@@ -2161,7 +2161,7 @@ void AMCharacter::Tick(float DeltaTime)
 					);
 					if (Success_GetOpScreenPos)
 					{
-						if (ScreenPosition_Self.Y < ScreenPosition_Opponent.Y && viewport_y * 1.1f < ScreenPosition_Opponent.Y)
+						if (ScreenPosition_Self.Y < ScreenPosition_Opponent.Y && viewport_y * 1.0f < ScreenPosition_Opponent.Y)
 						{			
 							pOpponentMarkerWidget->SetMarkerVisibility(i, true);
 							// line1: y = ax+b;  line2: y = viewport_y;
