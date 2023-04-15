@@ -41,29 +41,33 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 	TArray<FLobbyInformationStruct> arrTeam2;
 	TArray<FLobbyInformationStruct> arrUndecided;
 
-	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState)
 	{
-		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
-		AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
-		if (CurrentPawnPlayerState)
+		TArray<TObjectPtr<APlayerState>> PlayerArray = MyGameState->PlayerArray;
+		for (TObjectPtr<APlayerState> CurrentPlayer : PlayerArray)
 		{
-			FLobbyInformationStruct newStruct;
-			newStruct.PlayerName = CurrentPawnPlayerState->PlayerNameString;
-			newStruct.TeamIndex = CurrentPawnPlayerState->TeamIndex;
-			newStruct.IsReady = CurrentPawnPlayerState->IsReady;
-			switch (newStruct.TeamIndex)
+			AM_PlayerState* CurrentPlayerState = Cast<AM_PlayerState>(CurrentPlayer);
+			if (CurrentPlayerState)
 			{
-			case 0:
-				arrUndecided.Add(newStruct);
-				break;
-			case 1:
-				arrTeam1.Add(newStruct);
-				break;
-			case 2:
-				arrTeam2.Add(newStruct);
-				break;
+				FLobbyInformationStruct newStruct;
+				newStruct.PlayerName = CurrentPlayerState->PlayerNameString;
+				newStruct.TeamIndex = CurrentPlayerState->TeamIndex;
+				newStruct.IsReady = CurrentPlayerState->IsReady;
+				switch (newStruct.TeamIndex)
+				{
+				case 0:
+					arrUndecided.Add(newStruct);
+					break;
+				case 1:
+					arrTeam1.Add(newStruct);
+					break;
+				case 2:
+					arrTeam2.Add(newStruct);
+					break;
 				default:
 					break;
+				}
 			}
 		}
 	}
@@ -170,23 +174,6 @@ void AMPlayerController::Client_SyncLobbyInformation_Implementation()
 	}
 }
 
-// void AMPlayerController::NetMulticast_LoginInit_Implementation()
-// {
-// 	if (GetNetMode() == NM_ListenServer)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("ListenServer"));
-// 	}
-// 	else if (GetNetMode() == NM_Client)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("Client"));
-// 	}
-// 	if (IsLocalPlayerController())
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("UpdateUI"));
-// 		UI_UpdateLobbyMenu();
-// 	}
-// }
-
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
@@ -249,7 +236,6 @@ void AMPlayerController::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		//UI_ShowLobbyMenu();
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
 		check(MyInGameHUD);
 
@@ -290,36 +276,6 @@ void AMPlayerController::SetupInputComponent()
 	
 	InputComponent->BindAxis("Move Forward / Backward", this, &AMPlayerController::MoveForward);
 	InputComponent->BindAxis("Move Right / Left", this, &AMPlayerController::MoveRight);
-
-	// handle touch devices
-	InputComponent->BindTouch(IE_Pressed, this, &AMPlayerController::TouchStarted);
-	InputComponent->BindTouch(IE_Released, this, &AMPlayerController::TouchStopped);
-
-	// Test
-	//InputComponent->BindAction("TestKey", IE_Released, this, &AMPlayerController::Test);
-}
-
-void AMPlayerController::UI_ShowLobbyMenu()
-{
-	if (WB_LobbyMenuClass)
-	{
-		if (!WB_LobbyMenu)
-		{
-			// Create menu on client
-			if (IsLocalPlayerController())
-			{
-				WB_LobbyMenu = CreateWidget<UUserWidget>(this, WB_LobbyMenuClass);
-				//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
-                
-				WB_LobbyMenu->AddToViewport();
-				//FInputModeUIOnly inputMode;
-				FInputModeUIOnly inputMode;
-				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				this->SetInputMode(inputMode);
-				this->SetShowMouseCursor(true);
-			}
-		}
-	}
 }
 
 void AMPlayerController::GetNotifyPlayerControllerUpdateReadyState_Implementation(bool IsAllReady)
@@ -341,15 +297,6 @@ void AMPlayerController::Client_RefreshWeaponUI_Implementation()
 
 void AMPlayerController::StartTheGame()
 {
-	// Hide the lobby menu
-	// if (WB_LobbyMenu)
-	// {
-	// 	if (WB_LobbyMenu->IsVisible())
-	// 	{
-	// 		WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
-	// 	}
-	// }
-	
 	if (MyInGameHUD)
 	{
 		// Hide the lobby menu
@@ -390,19 +337,11 @@ void AMPlayerController::StartTheGame()
 
 void AMPlayerController::Server_RequestRespawn_Implementation()
 {
-	// Delete current controlled character
-	//GetPawn()->Destroy();
-	
 	AMGameMode* myGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 
 	if (myGameMode)
 	{
 		myGameMode->Server_RespawnPlayer(this);
-		// AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		// if (myGameState)
-		// {
-		// 	Client_SetGameUIVisibility(myGameState->IsGameStart);
-		// }
 	}
 }
 
@@ -452,51 +391,6 @@ void AMPlayerController::MoveRight(float Value)
 		}
 	}
 	
-}
-
-void AMPlayerController::TurnAtRate(float Rate)
-{
-}
-
-void AMPlayerController::LookUpAtRate(float Rate)
-{
-}
-
-void AMPlayerController::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-}
-
-void AMPlayerController::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-}
-
-void AMPlayerController::Test_Implementation()
-{
-	// if (IsLocalPlayerController())
-	// {
-	// 	UI_ShowLobbyMenu();
- //        
-	// 	// Get Name and update to playerstate
-	// 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
-	// 	UMGameInstance* MyGameInstance = Cast<UMGameInstance>(GetGameInstance());
-	// 	if (MyPlayerState && MyGameInstance)
-	// 	{
-	// 		MyPlayerState->UpdatePlayerName(MyGameInstance->PlayerName);
-	// 		MyPlayerState->UpdateTeamIndex();
-	// 	}
-	// 	//GetPlayerState<AM_PlayerState>()->UpdatePlayerName(Cast<UMGameInstance>(GetGameInstance())->PlayerName);
- //        
-	// 	//GetPlayerState<AM_PlayerState>()->UpdateTeamIndex();
-	// }
-
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
-		if (MyGameMode)
-		{
-			MyGameMode->TestRestartLevel();
-		}
-	}
 }
 
 #pragma endregion Input
