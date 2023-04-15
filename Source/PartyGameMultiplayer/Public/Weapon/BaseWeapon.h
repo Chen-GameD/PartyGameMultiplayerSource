@@ -150,7 +150,6 @@ protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;
 
-	// don't replicate pointers
 	AController* HoldingController;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
@@ -227,6 +226,8 @@ protected:
 
 	//WeaponName
 	FString WeaponName;
+
+	mutable FCriticalSection DataGuard;
 
 private:
 

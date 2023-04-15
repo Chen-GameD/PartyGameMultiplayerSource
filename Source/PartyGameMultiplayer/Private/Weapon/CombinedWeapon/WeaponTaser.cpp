@@ -99,7 +99,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{								
+			{					
 				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
@@ -277,17 +277,12 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				// if it hits the teammates
 				if(pCharacterBeingHit != GetOwner())
 				{
-					auto MyController = HoldingController;
-					if (!MyController)
+					int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), pCharacterBeingHit);
+					if (TeammateCheckResult == -1)
 						return;
-					AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-					AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-					if (!MyPS || !TheOtherCharacterPS)
-						return;
-					if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-					{
-						bTargetCanBeAttacked = false;
-					}
+					else if (TeammateCheckResult == 1)
+						bTargetCanBeAttacked = false;	
+				
 				}
 				// if it hits an invincible character
 				if (pCharacterBeingHit->IsInvincible)
@@ -426,5 +421,32 @@ void AWeaponTaser::SetTaserForkAttached(bool bShouldAttachToWeapon)
 		// Attach the component to the world with absolute position, rotation, and scale
 		TaserForkMesh->AttachToComponent(nullptr, FAttachmentTransformRules::KeepWorldTransform);
 		bForkAttachedToWeapon = false;
+	}
+}
+
+void AWeaponTaser::OnRep_IsPickedUp()
+{
+	Super::OnRep_IsPickedUp();
+
+	if (IsPickedUp)
+	{
+		// Show weapon silouette on teammates' end
+		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		if (TeammateCheckResult == 1)
+		{
+			// Exclude self
+			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+			{
+				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+				{
+					TaserForkMesh->SetRenderCustomDepth(true);
+					TaserForkMesh->SetCustomDepthStencilValue(252);
+				}
+			}
+		}
+	}
+	else
+	{
+		TaserForkMesh->SetRenderCustomDepth(false);
 	}
 }

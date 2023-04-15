@@ -29,6 +29,7 @@ public:
 
 protected:
 	virtual void OnRep_bAttackOn() override;
+	virtual void OnRep_IsPickedUp() override;
 private:
 
 // MEMBER VARIABLES

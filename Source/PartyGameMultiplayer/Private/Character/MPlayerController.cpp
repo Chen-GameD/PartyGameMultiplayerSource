@@ -67,59 +67,11 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 			}
 		}
 	}
-
-	if (MyInGameHUD)
-	{
-		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
-		MyInGameHUD->InGame_UpdateReadyButtonState(GetPlayerState<AM_PlayerState>()->IsReady);
-
-		// Update Equal State
-		if (arrTeam1.Num() == arrTeam2.Num() && arrTeam1.Num() != 0)
-		{
-			MyInGameHUD->InGame_UpdateEqualConditionState(true);
-		}
-		else
-		{
-			MyInGameHUD->InGame_UpdateEqualConditionState(false);
-		}
-
-		// Update Ready State
-		if (arrUndecided.Num() > 0)
-		{
-			MyInGameHUD->InGame_UpdateReadyConditionState(false);
-		}
-		else
-		{
-			bool isReady = true;
-			for (int i = 0; i < arrTeam1.Num(); i++)
-			{
-				if (!arrTeam1[i].IsReady)
-				{
-					isReady = false;
-					break;
-				}
-			}
-			if (isReady)
-			{
-				for (int i = 0; i < arrTeam2.Num(); i++)
-				{
-					if (!arrTeam2[i].IsReady)
-					{
-						isReady = false;
-						break;
-					}
-				}
-			}
-			MyInGameHUD->InGame_UpdateReadyConditionState(isReady);
-		}
-	}
-	else
-	{
-		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
-		FTimerDelegate UpdateLobbyTimerDelegate;
-		UpdateLobbyTimerDelegate.BindUObject(this, &AMPlayerController::Timer_CheckUpdateLobby, arrTeam1, arrTeam2, arrUndecided);
-		GetWorldTimerManager().SetTimer(UpdateLobbyTimerHandle, UpdateLobbyTimerDelegate, 0.5, true);
-	}
+	
+	GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
+	FTimerDelegate UpdateLobbyTimerDelegate;
+	UpdateLobbyTimerDelegate.BindUObject(this, &AMPlayerController::Timer_CheckUpdateLobby, arrTeam1, arrTeam2, arrUndecided);
+	GetWorldTimerManager().SetTimer(UpdateLobbyTimerHandle, UpdateLobbyTimerDelegate, 0.5, true);
 }
 
 void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided)
@@ -130,6 +82,11 @@ void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> 
 		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
 
 		MyInGameHUD->InGame_UpdateReadyButtonState(GetPlayerState<AM_PlayerState>()->IsReady);
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState)
+		{
+			MyInGameHUD->InGame_UpdateHintPageInformation(MyGameState->LevelIndex);
+		}
 
 		// Update Equal State
 		if (arrTeam1.Num() == arrTeam2.Num() && arrTeam1.Num() != 0)
@@ -180,6 +137,20 @@ void AMPlayerController::Timer_CheckPlayerState()
 	{
 		UI_UpdateLobbyInformation();
 		GetWorldTimerManager().ClearTimer(UpdatePlayerStateHandle);
+	}
+}
+
+void AMPlayerController::Client_SyncCharacters_Implementation()
+{
+	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	{
+		AMCharacter* CurrentPawn = *PawnItr;
+		if (CurrentPawn)
+		{
+			CurrentPawn->SetPlayerNameUIInformation();
+			CurrentPawn->SetPlayerSkin();
+			CurrentPawn->InitFollowWidget();
+		}
 	}
 }
 

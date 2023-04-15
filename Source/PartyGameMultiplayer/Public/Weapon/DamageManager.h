@@ -39,4 +39,7 @@ public:
 
 
 	static bool CanApplyDamageToEnemyCrab(TSubclassOf<class ABaseWeapon> EnemyCrab_SpecificWeaponClass, EnumWeaponType WeaponType);
+
+	// 1 yes, 0 no, -1 input error
+	static int IsTeammate(AActor* a, AActor* b);
 };

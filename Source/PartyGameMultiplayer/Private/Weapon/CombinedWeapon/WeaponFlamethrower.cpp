@@ -56,7 +56,9 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 		{
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 			{
-				for (auto& Elem : AttackObjectMap)
+				FScopeLock Lock(&DataGuard);
+				auto CopiedAttackObjectMap = AttackObjectMap;
+				for (auto& Elem : CopiedAttackObjectMap)
 				{
 					// Apply knockback buff at a fixed frequency
 					Elem.Value += DeltaTime;

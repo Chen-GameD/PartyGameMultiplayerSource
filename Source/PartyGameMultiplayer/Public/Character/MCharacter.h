@@ -32,7 +32,11 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 	
 	/**	Health Bar UI widget */
 	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* PlayerFollowWidget;
+		class UWidgetComponent* PlayerFollowWidget;
+
+	/**	Opponent Marker UI widget */
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* OpponentMarkerWidget;
 
 	/**	Inventory Menu UI widget Reference */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -244,8 +248,8 @@ protected:
 	UFUNCTION(Server, Reliable, BlueprintCallable)
 	void StopAttack(bool isMeleeRelease);
 
-	DECLARE_DELEGATE_OneParam(FIsZoomOut, bool);
-	void Zoom(bool bZoomOut);
+	DECLARE_DELEGATE_OneParam(FIsZooming, bool);
+	void Zoom(bool bZooming);
 
 	/* Called for Server_Dash input */
 	UFUNCTION()
@@ -258,8 +262,9 @@ protected:
 
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
+	void Server_SetMaxWalkSpeed();
 	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatioByWeapon);
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
@@ -391,7 +396,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectJump;
@@ -404,7 +409,7 @@ public:
 	float Server_MaxWalkSpeed;
 	float Client_LowSpeedWalkAccumulateTime;
 
-	bool bShouldZoomOut;
+	bool bZooming;
 	float CurFov;
 	float MinFov;
 	float MaxFov;	
@@ -436,6 +441,8 @@ public:
 		bool IsInvincible;
 	UPROPERTY(Replicated)
 		bool IsAffectedByCrabBubble;
+	UPROPERTY(Replicated)
+		bool IsSaltCure;
 	float InvincibleTimer;
 	float InvincibleMaxTime;
 	
@@ -454,6 +461,11 @@ public:
 	// Fire Image
 	UPROPERTY(EditDefaultsOnly, Category = "FireBuff")
 	UTexture2D* FireImage;
+
+	// Teammates and Opponents in the same world
+	TArray<AMCharacter*> Teammates;
+	TArray<AMCharacter*> Opponents;
+
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/

@@ -149,11 +149,8 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 	// if it is the teammate
 	if (AttackBuff == EnumAttackBuff::Burning || AttackBuff == EnumAttackBuff::Paralysis)
 	{
-		AM_PlayerState* AttackerPS = AttackerController->GetPlayerState<AM_PlayerState>();
-		AM_PlayerState* DamagedCharacterPS = DamagedCharacter->GetPlayerState<AM_PlayerState>();
-		if (!AttackerPS || !DamagedCharacterPS)
-			return false;
-		if (AttackerPS->TeamIndex == DamagedCharacterPS->TeamIndex)
+		int TeammateCheckResult = ADamageManager::IsTeammate(AttackerController, DamagedCharacter);
+		if (TeammateCheckResult != 0)
 			return false;
 	}
 
@@ -222,13 +219,9 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		return false;
 
 	// if it is the teammate
-	AM_PlayerState* AttackerPS = AttackerController->GetPlayerState<AM_PlayerState>();
-	AM_PlayerState* DamagedCharacterPS = DamagedCharacter->GetPlayerState<AM_PlayerState>();
-	if (!AttackerPS || !DamagedCharacterPS)
-		return false;
-	if (AttackerPS->TeamIndex == DamagedCharacterPS->TeamIndex)
-		return false;
-		
+	int TeammateCheckResult = IsTeammate(AttackerController, DamagedCharacter->GetController());
+	if (TeammateCheckResult != 0)
+		return false;		
 
 	/* Knockback */
 	if (AttackBuff == EnumAttackBuff::Knockback && AttackerController->GetPawn())
@@ -261,7 +254,7 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 				DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 
 			//DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
-			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
+			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio * DeltaTime * 30);
 		}
 	}
 	return true;
@@ -293,4 +286,30 @@ bool ADamageManager::CanApplyDamageToEnemyCrab(TSubclassOf<class ABaseWeapon> En
 	}
 
 	return beingAttackedByValidWeapon;
+}
+
+int ADamageManager::IsTeammate(AActor* a, AActor* b)
+{
+	AM_PlayerState* PS1 = nullptr;
+	AM_PlayerState* PS2 = nullptr;
+	if (auto pCtrl = Cast<AController>(a))
+		PS1 = pCtrl->GetPlayerState<AM_PlayerState>();
+	else if (auto pPawn = Cast<APawn>(a))
+		PS1 = pPawn->GetPlayerState<AM_PlayerState>();
+	else
+		return -1;
+
+	if (auto pCtrl = Cast<AController>(b))
+		PS2 = pCtrl->GetPlayerState<AM_PlayerState>();
+	else if (auto pPawn = Cast<APawn>(b))
+		PS2 = pPawn->GetPlayerState<AM_PlayerState>();
+	else
+		return -1;
+
+	if (!PS1 || !PS2)
+		return -1;
+	if (PS1->TeamIndex == PS2->TeamIndex)
+		return 1;
+	else
+		return 0;
 }

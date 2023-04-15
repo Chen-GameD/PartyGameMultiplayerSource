@@ -68,6 +68,9 @@ public:
 	UFUNCTION()
 	void TestRestartLevel();
 
+	UFUNCTION(BlueprintCallable)
+	void OnLevelIndexUpdate(int i_LevelIndex);
+
 protected:
 	UFUNCTION()
 	void InitMinigame_ShellObject();
@@ -89,7 +92,7 @@ public:
 	int CurrentPlayerNum = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int LevelIndex = 1;
+	int LevelIndex = -1;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)

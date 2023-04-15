@@ -13,6 +13,9 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Net/UnrealNetwork.h"
 
+#include "Weapon/DamageManager.h"
+#include "Character/MCharacter.h"
+
 #include "Weapon/CombinedWeapon/ProjectileBomb.h"
 
 
@@ -62,7 +65,7 @@ void AWeaponBomb::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (CD_MaxEnergy <= CD_LeftEnergy)
+	if (CD_MinEnergyToAttak <= CD_LeftEnergy)
 	{
 		if(!WeaponMesh->IsVisible())
 			WeaponMesh->SetVisibility(true);
@@ -147,3 +150,29 @@ void AWeaponBomb::OnRep_bAttackOn()
 }
 
 
+void AWeaponBomb::OnRep_IsPickedUp()
+{
+	Super::OnRep_IsPickedUp();
+
+	if (IsPickedUp)
+	{
+		// Show weapon silouette on teammates' end
+		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		if (TeammateCheckResult == 1)
+		{
+			// Exclude self
+			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+			{
+				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+				{
+					WeaponMesh_WithoutBomb->SetRenderCustomDepth(true);
+					WeaponMesh_WithoutBomb->SetCustomDepthStencilValue(252);
+				}
+			}
+		}
+	}
+	else
+	{
+		WeaponMesh_WithoutBomb->SetRenderCustomDepth(false);
+	}
+}

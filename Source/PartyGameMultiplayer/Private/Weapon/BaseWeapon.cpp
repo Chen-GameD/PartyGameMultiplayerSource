@@ -38,6 +38,7 @@ ABaseWeapon::ABaseWeapon()
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
 	bAttackOn = false;
 	bAttackOverlap = false;
+	HoldingController = nullptr;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
@@ -162,8 +163,11 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// Apply constant damage
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
-					for (auto& Elem : AttackObjectMap)
-					{					
+					FScopeLock Lock(&DataGuard);
+					auto CopiedAttackObjectMap = AttackObjectMap;
+					// Prevent AttackObjectMap from getting written by the overlap functions during the iteration
+					for (auto Elem : CopiedAttackObjectMap)
+					{			
 						AActor* DamagedActor = Elem.Key;						
 						if (DamagedActor)
 						{
@@ -219,7 +223,6 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
 	DOREPLIFETIME(ABaseWeapon, HasBeenCombined);	
 	DOREPLIFETIME(ABaseWeapon, MovementComponent);
-	//DOREPLIFETIME(ABaseWeapon, DamageGenerationCounter);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseLocation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseRotation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseScale);
@@ -228,9 +231,9 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 
 void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
-	IsPickedUp = true;
-	if (GetNetMode() == NM_ListenServer)
-		OnRep_IsPickedUp();
+	if (IsPickedUp)
+		return;
+
 	if (!pCharacter)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::GetPickedUp"));
@@ -247,16 +250,20 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 
 	SetActorEnableCollision(false);
 	DisplayCaseCollisionSetActive(false);
+
+	IsPickedUp = true;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 }
 
 
 void ABaseWeapon::GetThrewAway()
 {
+	if (!IsPickedUp)
+		return;
+
 	AttackStop();
 
-	IsPickedUp = false;
-	if (GetNetMode() == NM_ListenServer)
-		OnRep_IsPickedUp();
 	HasBeenCombined = false;
 	HoldingController = nullptr;
 	SetInstigator(nullptr);
@@ -265,6 +272,10 @@ void ABaseWeapon::GetThrewAway()
 	SetActorEnableCollision(true);
 	//  Set DisplayCaseCollision to active
 	DisplayCaseCollisionSetActive(true);
+
+	IsPickedUp = false;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 }
 
 
@@ -397,6 +408,8 @@ void ABaseWeapon::BeginPlay()
 void ABaseWeapon::Destroyed()
 {
 	Super::Destroyed();
+
+	AttackStop();
 }
 
 
@@ -507,12 +520,29 @@ void ABaseWeapon::OnRep_IsPickedUp()
 
 		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
 		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
+
+		// Show weapon silouette on teammates' end
+		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		if (TeammateCheckResult == 1)
+		{
+			// Exclude self
+			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+			{
+				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+				{
+					WeaponMesh->SetRenderCustomDepth(true);
+					WeaponMesh->SetCustomDepthStencilValue(252);
+				}				
+			}	
+		}			
 	}
 	else
 	{		
 		TimePassed_SinceGetThrewAway = 0;	
 		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
 		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
+
+		WeaponMesh->SetRenderCustomDepth(false);
 	}	
 
 	if (AttackOnEffect && AttackOnEffect->IsActive())

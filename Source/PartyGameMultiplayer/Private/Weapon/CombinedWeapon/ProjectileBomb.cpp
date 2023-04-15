@@ -71,7 +71,7 @@ void AProjectileBomb::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		if (2.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
+		if (1.5f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
 		{
 			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
@@ -79,6 +79,25 @@ void AProjectileBomb::Tick(float DeltaTime)
 	}
 }
 
+void AProjectileBomb::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Show projectile silouette on teammates' end
+	int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
+	if (TeammateCheckResult == 1)
+	{
+		// Exclude self
+		if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
+		{
+			if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+			{
+				BombMesh->SetRenderCustomDepth(true);
+				BombMesh->SetCustomDepthStencilValue(252);
+			}
+		}
+	}
+}
 
 void AProjectileBomb::OnRep_HasExploded()
 {
