@@ -71,7 +71,7 @@ void AProjectileBomb::Tick(float DeltaTime)
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		if (2.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
+		if (1.0f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
 		{
 			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
