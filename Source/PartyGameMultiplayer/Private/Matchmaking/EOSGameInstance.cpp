@@ -333,10 +333,14 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_SESSIONKEY);
 							UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *val->ToString());
 						}
-						PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
-						CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 					}
+					OnlineSessionPtr->ClearOnJoinSessionCompleteDelegates(this);
 				}
+			}
+			if(!JoinURL.IsEmpty())
+			{
+				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
+				CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 			}
 		}
 	}

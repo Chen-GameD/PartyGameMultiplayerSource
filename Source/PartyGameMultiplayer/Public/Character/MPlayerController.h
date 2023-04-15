@@ -20,6 +20,8 @@ class PARTYGAMEMULTIPLAYER_API AMPlayerController : public APlayerController
 	
 public:
 	AMPlayerController();
+
+	virtual void Destroyed() override;
 	
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

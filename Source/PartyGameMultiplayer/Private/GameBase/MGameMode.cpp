@@ -109,6 +109,8 @@ void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPl
 
 void AMGameMode::Logout(AController* Exiting)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Logout-GameMode-Server"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : Logout-GameMode-Server"));
 	Super::Logout(Exiting);
 
 	CurrentPlayerNum--;
@@ -152,15 +154,21 @@ void AMGameMode::Logout(AController* Exiting)
 			}
 		
 			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId == nullptr)
-				return;
-			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
-			if(bRegistrationSuccess)
+			if(UniqueNetId != nullptr)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+				bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
+				if(bRegistrationSuccess)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				}
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Failure UN-Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Failure UN-registration"));
 			}
 		}
 	}

@@ -26,6 +26,13 @@ AMPlayerController::AMPlayerController()
 {
 }
 
+void AMPlayerController::Destroyed()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Destroyed-PlayerController"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : DestroyedPlayerController"));
+	Super::Destroyed();
+}
+
 void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -80,7 +87,7 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 
 void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
 		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
@@ -203,7 +210,7 @@ void AMPlayerController::Server_SetCanMove_Implementation(bool i_CanMove)
 
 void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_UpdatePlayerHealth(percentage);
 	}
@@ -211,7 +218,7 @@ void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 
 void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
 	}
@@ -219,7 +226,7 @@ void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDown
 
 void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_BroadcastInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 	}
@@ -227,7 +234,7 @@ void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int Kille
 
 AMInGameHUD* AMPlayerController::GetInGameHUD()
 {
-	return MyInGameHUD ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
+	return IsValid(MyInGameHUD) ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
 }
 
 void AMPlayerController::BeginPlay()
@@ -237,9 +244,8 @@ void AMPlayerController::BeginPlay()
 	if (IsLocalPlayerController())
 	{
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
-		check(MyInGameHUD);
 
-		if (MyInGameHUD)
+		if (IsValid(MyInGameHUD))
 		{
 			// Set input mode
 			if (IsLocalPlayerController())
@@ -256,6 +262,8 @@ void AMPlayerController::BeginPlay()
 
 void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : OnNetCleanup"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : OnNetCleanup"));
 	if(IsLocalPlayerController() && GetNetMode() == NM_Client)
 	{
 		UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
@@ -297,7 +305,7 @@ void AMPlayerController::Client_RefreshWeaponUI_Implementation()
 
 void AMPlayerController::StartTheGame()
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		// Hide the lobby menu
 		MyInGameHUD->InGame_SetVisibilityLobbyWidget(ESlateVisibility::Hidden);
