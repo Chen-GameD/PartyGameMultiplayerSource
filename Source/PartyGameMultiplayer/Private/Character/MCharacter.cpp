@@ -1617,7 +1617,7 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0 || IsInvincible || !EventInstigator || !DamageCauser)
+	if (DamageTaken <= 0 || CurrentHealth <= 0 || IsInvincible || !EventInstigator || !DamageCauser)
 		return 0.0f;
 
 	if (!IsDead)
