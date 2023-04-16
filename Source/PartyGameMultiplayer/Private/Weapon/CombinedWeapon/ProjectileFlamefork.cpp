@@ -18,6 +18,7 @@
 #include "Weapon/DamageManager.h"
 #include "Weapon/WeaponDataHelper.h"
 #include "LevelInteraction/MinigameMainObjective.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 #include "Character/MCharacter.h"
 
 AProjectileFlamefork::AProjectileFlamefork()
@@ -83,7 +84,8 @@ void AProjectileFlamefork::OnProjectileOverlapBegin(class UPrimitiveComponent* O
 		return;
 
 	Origin = this->GetActorLocation();
-	//HasExploded = true;
+	if(Cast<AMinigameObj_Enemy>(OtherActor))
+		HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
 	{
 		OnRep_HasExploded();
@@ -99,13 +101,5 @@ void AProjectileFlamefork::OnProjectileOverlapBegin(class UPrimitiveComponent* O
 	{
 		float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 		ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, Controller, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
-	}
-
-	// Range Damage		
-	if (0 < TotalDamage)
-	{
-		DrawDebugSphere(GetWorld(), Origin, DamageRadius, 12, FColor::Red, false, 5.0f);
-		if (!bApplyConstantDamage)
-			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 	}
 }
