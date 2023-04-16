@@ -307,7 +307,7 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 
 void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AController* pController, FVector HitLocation)
 {
-	if (GetWorld()->GetFirstPlayerController() == pController)
+	if (0 < CurrentHealth && GetWorld()->GetFirstPlayerController() == pController)
 	{
 		if (Local_ShowNoDamageHint_LastTime < 0 || Local_ShowNoDamageHint_Interval < GetWorld()->TimeSeconds - Local_ShowNoDamageHint_LastTime)
 		{

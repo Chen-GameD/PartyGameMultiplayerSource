@@ -111,7 +111,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Server_DeadTimes = 0;
 
 	IsAllowDash = true;
-	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	DashDistance = 300.0f;
 	DashTime = 0.2f;
 	DashCoolDown = 5.0f;
@@ -184,7 +183,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsInvincible = false;
 	InvincibleTimer = 0;
-	InvincibleMaxTime = 10.0f;
+	InvincibleMaxTime = 999.0f;
 }
 
 void AMCharacter::Restart()
@@ -446,6 +445,7 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 {
 	FString ParName = "";
 	int CntShellHeld = 0;
+	bool HoldingBigWeapon = false;
 	if (CombineWeapon)
 		ParName = CombineWeapon->GetWeaponName();
 	else
@@ -455,15 +455,21 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 			ParName = LeftWeapon->GetWeaponName();
 			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (LeftWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 		if (RightWeapon)
 		{
 			ParName = RightWeapon->GetWeaponName();
 			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (RightWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 	}
-	if (1 == CntShellHeld)
+	if(HoldingBigWeapon)
+		ParName = "BigWeapon";
+	else if (1 == CntShellHeld)
 		ParName = "OneShell";
 	else if (2 == CntShellHeld)
 		ParName = "TwoShells";
@@ -1909,6 +1915,9 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Assign Variables
+	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
 	if (HealingBubbleCollider)
 	{
 		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
@@ -1997,7 +2006,7 @@ void AMCharacter::Tick(float DeltaTime)
 		{
 			if (!bHealingBubbleTouchingStatue)
 			{
-				float size1 = 6.0f;
+				float size1 = 6.5f;
 				float size2 = 10.0f;
 				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
 				if (NewRelativeScale.X < size1)
