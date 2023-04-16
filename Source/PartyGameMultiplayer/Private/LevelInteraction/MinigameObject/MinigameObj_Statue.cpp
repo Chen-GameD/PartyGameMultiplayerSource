@@ -303,6 +303,13 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 					if (CurrentPS)
 					{
 						CurrentPS->addScore(ScoreCanGet);
+
+						// Broadcast information to all clients
+						for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+						{
+							AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+							currentController->UI_InGame_BroadcastMiniInformation(CurrentPS->TeamIndex, CurrentPS->PlayerNameString, MinigameInformation);
+						}
 					}
 				}
 			}

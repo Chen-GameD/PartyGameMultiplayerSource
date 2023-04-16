@@ -89,6 +89,8 @@ public:
 	void UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime);
 	UFUNCTION(Client, Reliable)
 	void UI_InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
+	UFUNCTION(Client, Reliable)
+	void UI_InGame_BroadcastMiniInformation(int KillerTeamIndex, const FString& i_KillerName, const FString& i_MinigameInformation);
 
 	// HUD getter
 	UFUNCTION(BlueprintCallable)
