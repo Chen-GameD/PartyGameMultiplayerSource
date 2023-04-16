@@ -582,7 +582,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
@@ -596,7 +596,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
@@ -645,7 +645,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				LeftWeapon->NetMulticast_CallPickedUpSfx();
@@ -715,7 +715,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				RightWeapon->NetMulticast_CallPickedUpSfx();
@@ -882,7 +882,7 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 	{
 		if (CombineWeapon)
 		{
-			CombineWeapon->Destroy();
+			CombineWeapon->SafeDestroyWhenGetThrew();
 			CombineWeapon = nullptr;
 			//SetTextureInUI(Main, nullptr);
 		}
@@ -1121,7 +1121,7 @@ void AMCharacter::OnHealthUpdate()
 		{
 			if (CombineWeapon)
 			{
-				CombineWeapon->Destroy();
+				CombineWeapon->SafeDestroyWhenGetThrew();
 				CombineWeapon = nullptr;
 				//SetTextureInUI(Main, nullptr);
 			}

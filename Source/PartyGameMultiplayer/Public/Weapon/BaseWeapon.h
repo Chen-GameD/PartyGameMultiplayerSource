@@ -30,6 +30,7 @@ public:
 	// should only be called on server
 	UFUNCTION(BlueprintCallable)
 		virtual void GetThrewAway();
+	virtual void SafeDestroyWhenGetThrew();
 	// should only be called on server
 	virtual void AttackStart(float AttackTargetDistance);
 	// should only be called on server

@@ -257,6 +257,7 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 }
 
 
+// only will be called on element weapons
 void ABaseWeapon::GetThrewAway()
 {
 	if (!IsPickedUp)
@@ -278,6 +279,19 @@ void ABaseWeapon::GetThrewAway()
 		OnRep_IsPickedUp();
 }
 
+void ABaseWeapon::SafeDestroyWhenGetThrew()
+{
+	AttackStop();
+	SetActorEnableCollision(false);
+	SetActorHiddenInGame(true);
+
+	FTimerHandle TimerHandle;
+	float Delay = 1.0f;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+		{
+			Destroy();
+		}, Delay, false);
+}
 
 void ABaseWeapon::AttackStart(float AttackTargetDistance)
 {
@@ -409,7 +423,7 @@ void ABaseWeapon::Destroyed()
 {
 	Super::Destroyed();
 
-	AttackStop();
+	//AttackStop();
 }
 
 

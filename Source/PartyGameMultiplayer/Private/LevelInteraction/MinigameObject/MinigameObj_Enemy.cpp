@@ -267,7 +267,10 @@ void AMinigameObj_Enemy::BeginPlay()
 		//}
 		if (auto pCamMg = pController->PlayerCameraManager)
 			pCamMg->StartCameraShake(CameraShakeTriggered);
-	}		
+	}	
+
+	// Sfx
+	CallStartSfx();
 }
 
 void AMinigameObj_Enemy::OnRep_CurrentHealth()
@@ -284,12 +287,16 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
 				if (FollowWidget)
 					FollowWidget->SetVisibility(false);
+				// little crab
 				BPF_BroadcastCrabAnimation();
+				CallLittleCrabFleeSfx();
 			}, DropWeaponDelay, false);
 
 		// Vfx
 		if (Explode_NC)
 			Explode_NC->Activate();
+		// Sfx
+		CallDeathSfx();
 	}
 
 	// Set UI: Health Bar

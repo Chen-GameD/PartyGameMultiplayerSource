@@ -114,6 +114,9 @@ void AMinigameObj_Statue::BeginPlay()
 	// UI
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(0);
+
+	// Sfx
+	CallStartSfx();
 }
 
 void AMinigameObj_Statue::Tick(float DeltaTime)

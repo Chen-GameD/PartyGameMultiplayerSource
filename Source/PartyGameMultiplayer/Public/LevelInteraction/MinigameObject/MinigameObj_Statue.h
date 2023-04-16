@@ -22,8 +22,15 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void BeginPlay() override;
 
+	// Effects
+	// =============================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDeathSfx();
+
 	UFUNCTION(BlueprintCallable)
-	USkeletalMeshComponent* GetSkeletalMesh();
+		USkeletalMeshComponent* GetSkeletalMesh();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStatueFinishedEvent();

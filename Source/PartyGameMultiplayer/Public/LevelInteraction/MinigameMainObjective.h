@@ -7,7 +7,7 @@
 #include "MinigameMainObjective.generated.h"
 
 /**
- * 
+ * This Class's only duty: Manage the get, set, sync of health-realated variables
  */
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMinigameMainObjective : public AInteractable
@@ -18,13 +18,6 @@ public:
 	AMinigameMainObjective();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	// Effects
-	// =============================
-	UFUNCTION(BlueprintImplementableEvent)
-		void CallGetHitSfx();
-	UFUNCTION(BlueprintImplementableEvent)
-		void CallDeathSfx();
 
 protected:
 	virtual void BeginPlay() override;
@@ -50,8 +43,6 @@ public:
 
 	// Effects
 	// =============================
-	float CallGetHitSfxVfx_MinInterval;
-	float LastTime_CallGetHitSfxVfx;
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class UCameraShakeBase> CameraShakeTriggered;
 

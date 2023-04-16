@@ -25,10 +25,19 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_CallGetCorrectHitSfx();
 
+	// Effects
+	// =============================
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallStartSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallDeathSfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallGetCorrectHitSfx();
 	UFUNCTION(BlueprintImplementableEvent)
 		void CallGetIncorrectHitSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallLittleCrabFleeSfx();
+
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_BroadcastCrabAnimation();
