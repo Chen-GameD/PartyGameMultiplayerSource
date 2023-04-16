@@ -373,7 +373,7 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 			}, LittleCrabDelay, false);
 
 		// TODO
-		OnStatueFinishedEvent();
+		//OnStatueFinishedEvent();
 
 		// Sfx
 		CallDeathSfx();
