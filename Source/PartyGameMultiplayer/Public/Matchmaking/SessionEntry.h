@@ -17,11 +17,12 @@ class PARTYGAMEMULTIPLAYER_API USessionEntry : public UObject
 	FString sessionID;
 	int32 maxPlayers;
 	int32 minPlayers;
+	bool isPrivateSession;
 
 public:
 	USessionEntry();
 
-	void SetSessionData(FString id, int32 max, int32 min);
+	void SetSessionData(FString id, int32 max, int32 min, bool isPrivate);
 
 	UFUNCTION(BlueprintCallable)
 	FString GetSessionID();
@@ -29,4 +30,6 @@ public:
 	int32 GetMaxPlayers();
 	UFUNCTION(BlueprintCallable)
 	int32 GetMinPlayers();
+	UFUNCTION(BlueprintCallable)
+	bool IsSessionPrivate();
 };

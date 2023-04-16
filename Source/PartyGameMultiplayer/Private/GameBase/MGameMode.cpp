@@ -99,12 +99,6 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				MyPawn->OnRep_PlayerState();
 			}
 		}
-
-		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		// if (MyGameState)
-		// {
-		// 	MyGameState->LevelIndex = LevelIndex;
-		// }
 	}
 }
 
@@ -115,7 +109,29 @@ void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPl
 
 void AMGameMode::Logout(AController* Exiting)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Logout-GameMode-Server"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : Logout-GameMode-Server"));
 	Super::Logout(Exiting);
+
+	CurrentPlayerNum--;
+	AM_PlayerState* PS = Exiting->GetPlayerState<AM_PlayerState>();
+	if (PS)
+	{
+		switch (PS->TeamIndex)
+		{
+		case 1:
+			TeamOnePlayerNum--;
+			break;
+		case 2:
+			TeamTwoPlayerNum--;
+		case 0:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Log out when Player teamindex is 0!"));
+			break;
+		default:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Log out when Player teamindex is invaild!"));
+			break;
+		}
+	}
 	
 	if (Exiting)
 	{
@@ -138,39 +154,24 @@ void AMGameMode::Logout(AController* Exiting)
 			}
 		
 			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId == nullptr)
-				return;
-			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
-			if(bRegistrationSuccess)
+			if(UniqueNetId != nullptr)
 			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
+				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+				bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
+				if(bRegistrationSuccess)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				}
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Failure UN-Registration"));
+				UE_LOG(LogTemp, Warning, TEXT("Failure UN-registration"));
 			}
 		}
 	}
-	
-	CurrentPlayerNum--;
-
-	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-	{
-		if (*ControllerItr != Exiting)
-		{
-			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-			if (MyController)
-			{
-				MyController->Client_SyncLobbyInformation();
-			}
-		}
-	}
-
-	//	if (CurrentPlayerNum <= 0)
-	//	{
-	//		// Need to restart the server level
-	//		//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
-	//	}
-	//}
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)

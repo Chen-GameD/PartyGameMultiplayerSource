@@ -20,6 +20,8 @@ class PARTYGAMEMULTIPLAYER_API AMPlayerController : public APlayerController
 	
 public:
 	AMPlayerController();
+
+	virtual void Destroyed() override;
 	
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -107,35 +109,10 @@ protected:
 	/** Called for side to side input */
 	void MoveRight(float Value);
 
-	/**
-	 * Called via input to turn at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void TurnAtRate(float Rate);
-
-	/**
-	 * Called via input to turn look up/down at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void LookUpAtRate(float Rate);
-
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
-	// Test
-	UFUNCTION(Server, Reliable)
-	void Test();
-
 	// Begin PlayerController interface
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void SetupInputComponent() override;
 	// End PlayerController interface
-
-	UFUNCTION(BlueprintCallable)
-	void UI_ShowLobbyMenu();
 	
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
@@ -161,8 +138,9 @@ public:
 // ==============================================================
 private:
 	//InGame HUD
+	UPROPERTY()
 	AMInGameHUD* MyInGameHUD;
-
+	
 	FTimerHandle UpdateLobbyTimerHandle;
 	FTimerHandle UpdatePlayerStateHandle;
 	

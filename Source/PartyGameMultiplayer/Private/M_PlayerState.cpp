@@ -20,15 +20,6 @@ void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Nam
 	{
 		OnRep_PlayerNameString();
 	}
-	
-	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-	// {
-	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-	// 	if (MyController)
-	// 	{
-	// 		MyController->Client_SyncLobbyInformation();
-	// 	}
-	// }
 }
 
 void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()

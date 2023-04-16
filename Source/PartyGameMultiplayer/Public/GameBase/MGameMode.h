@@ -109,9 +109,6 @@ protected:
 	
 	FTimerHandle StartGameCountDownTimerHandle;
 
-	// UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	// FTransform MinigameObjectSpawnTransform;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AMinigameMainObjective> MinigameObjectClass;
 

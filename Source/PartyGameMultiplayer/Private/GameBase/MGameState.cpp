@@ -28,6 +28,19 @@ void AMGameState::BeginPlay()
 	GetWorldTimerManager().SetTimer(HasBeenPlayedTimerHandle, TimerDelegate, 1, true);
 }
 
+void AMGameState::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		if (*ControllerItr && ControllerItr->IsLocalPlayerController())
+		{
+			ControllerItr->Client_SyncLobbyInformation_Implementation();
+		}
+	}
+}
+
 void AMGameState::GameHasBeenPlayed()
 {
 	if (HasBegunPlay())
