@@ -248,7 +248,7 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		if (100.0f < Direction_TargetToAttacker.Length())
 		{
 			Direction_TargetToAttacker.Normalize();
-			float DragSpeedRatio = 0.25f;
+			float DragSpeedRatio = 0.1f;
 			FString ParName = "Paralysis_DragSpeedRatio";
 			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 				DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
