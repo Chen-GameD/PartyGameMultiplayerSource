@@ -7,6 +7,7 @@
 #include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
+#include "Character/MPlayerController.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
@@ -189,7 +190,15 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
 		{
 			killerPS->addScore(ScoreCanGet);
+			
+			// Broadcast information to all clients
+			for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+			{
+				AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+				currentController->UI_InGame_BroadcastMiniInformation(killerPS->TeamIndex, killerPS->PlayerNameString, MinigameInformation);
+			}
 		}
+		
 		Server_WhenDead();
 	}
 

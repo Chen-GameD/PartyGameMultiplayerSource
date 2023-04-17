@@ -18,16 +18,7 @@ public:
 	AMinigameMainObjective();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-protected:
-	virtual void BeginPlay() override;
-	UFUNCTION()
-	virtual void OnRep_CurrentHealth();
-
-	UFUNCTION()
-	void StartToRespawnActor();
-
-public:
+	
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -39,12 +30,23 @@ public:
 	UFUNCTION()
 	void UpdateScoreCanGet(int n_Score);
 
+protected:
+	virtual void BeginPlay() override;
+	UFUNCTION()
+	virtual void OnRep_CurrentHealth();
+
+	UFUNCTION()
+	void StartToRespawnActor();
+
 public:
 
 	// Effects
 	// =============================
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class UCameraShakeBase> CameraShakeTriggered;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FString MinigameInformation;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Health")

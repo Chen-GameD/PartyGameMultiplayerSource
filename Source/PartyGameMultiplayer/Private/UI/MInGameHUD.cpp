@@ -234,6 +234,14 @@ void AMInGameHUD::InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedT
 	}
 }
 
+void AMInGameHUD::InGame_BroadcastMinigameInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation)
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->UpdateAndShowMiniBroadcastingInformation(KillerTeamIndex, i_KillerName, i_MinigameInformation);
+	}
+}
+
 void AMInGameHUD::InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility)
 {
 	if (InGame_LobbyWidget)
