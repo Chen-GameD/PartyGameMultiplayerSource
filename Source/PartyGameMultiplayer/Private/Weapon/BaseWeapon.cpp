@@ -31,6 +31,7 @@ ABaseWeapon::ABaseWeapon()
 	PrimaryActorTick.bCanEverTick = true;  // Can turn this off to improve performance if you don't need it.
 
 	IsPickedUp = false;
+	Server_BigWeaponShouldSink = false;
 	HasBeenCombined = false;
 	IsBigWeapon = false;
 	WeaponType = EnumWeaponType::None;
@@ -78,7 +79,7 @@ ABaseWeapon::ABaseWeapon()
 	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
 	CD_CanRecover = true;
 	TimePassed_SinceAttackStop = 0.0f;
-	LastTime_DisplayCaseTransformBeenReplicated = 0;
+	LastTime_DisplayCaseTransformBeenReplicated = -1.0f;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
@@ -110,6 +111,14 @@ void ABaseWeapon::Tick(float DeltaTime)
 			DisplayCaseLocation = DisplayCase->GetComponentLocation();
 			DisplayCaseRotation = DisplayCase->GetComponentRotation();
 			DisplayCaseScale = DisplayCase->GetComponentScale();
+
+			if (IsBigWeapon && Server_BigWeaponShouldSink)
+			{
+				float SinkSpeed = 75.0f;
+				SetActorLocation(GetActorLocation() + FVector::DownVector * DeltaTime * SinkSpeed);
+				if (GetActorLocation().Z < -250.0f)
+					Destroy();
+			}
 		}
 		// being picked up
 		else
@@ -163,9 +172,9 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// Apply constant damage
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
-					FScopeLock Lock(&DataGuard);
-					auto CopiedAttackObjectMap = AttackObjectMap;
 					// Prevent AttackObjectMap from getting written by the overlap functions during the iteration
+					FScopeLock Lock(&DataGuard);
+					auto CopiedAttackObjectMap = AttackObjectMap;					
 					for (auto Elem : CopiedAttackObjectMap)
 					{			
 						AActor* DamagedActor = Elem.Key;						
@@ -209,6 +218,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 		else
 			TimePassed_SinceAttackStop = tmpVal;
 	}
+
 }
 
 
@@ -220,7 +230,7 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABaseWeapon, CD_LeftEnergy);
 	DOREPLIFETIME(ABaseWeapon, bAttackOn);
 	DOREPLIFETIME(ABaseWeapon, bAttackOverlap);
-	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
+	DOREPLIFETIME(ABaseWeapon, IsPickedUp); 
 	DOREPLIFETIME(ABaseWeapon, HasBeenCombined);	
 	DOREPLIFETIME(ABaseWeapon, MovementComponent);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseLocation);
@@ -271,9 +281,29 @@ void ABaseWeapon::GetThrewAway()
 	SetOwner(nullptr);
 
 	SetActorEnableCollision(true);
-	//  Set DisplayCaseCollision to active
-	DisplayCaseCollisionSetActive(true);
-
+	if (!IsBigWeapon)
+	{
+		//  Set DisplayCaseCollision to active
+		DisplayCaseCollisionSetActive(true);
+	}
+	else
+	{
+		DisplayCase->SetCollisionProfileName(TEXT("Custom"));
+		DisplayCase->SetSimulatePhysics(true);
+		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+		FTimerHandle TimerHandle;
+		float SinkDelay = 3.0f;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				DisplayCase->SetSimulatePhysics(false);
+				DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));			
+				Server_BigWeaponShouldSink = true;
+			}, SinkDelay, false);		
+	}	
 	IsPickedUp = false;
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_IsPickedUp();
@@ -444,7 +474,7 @@ void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 	TimePassed_SinceGetThrewAway += DeltaTime;
 	if (HaloEffect_NSComponent && !HaloEffect_NSComponent->IsActive())
 	{
-		if (0.2f < TimePassed_SinceGetThrewAway && 0.2f < GetWorld()->TimeSeconds - LastTime_DisplayCaseTransformBeenReplicated)
+		if (0.2f < TimePassed_SinceGetThrewAway && 0 < LastTime_DisplayCaseTransformBeenReplicated && 0.2f < GetWorld()->TimeSeconds - LastTime_DisplayCaseTransformBeenReplicated)
 		{
 			HaloEffect_NSComponent->Activate();
 			HaloEffect_NSComponent->SetVisibility(true);

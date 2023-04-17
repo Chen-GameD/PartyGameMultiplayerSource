@@ -111,7 +111,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Server_DeadTimes = 0;
 
 	IsAllowDash = true;
-	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	DashDistance = 300.0f;
 	DashTime = 0.2f;
 	DashCoolDown = 5.0f;
@@ -184,7 +183,12 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsInvincible = false;
 	InvincibleTimer = 0;
-	InvincibleMaxTime = 10.0f;
+	InvincibleMaxTime = 999.0f;
+
+	// Anti-Cheat lol: prevent use double Q/E to refresh the Combine Weapon CD
+	Server_LastDitchCombineWeaponType = EnumWeaponType::None;
+	Server_LastDitchCombineWeaponTime = -1.0f;
+	Server_LastDitchCombineWeapon_CD_LeftEnergy = 0.0f;
 }
 
 void AMCharacter::Restart()
@@ -446,6 +450,7 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 {
 	FString ParName = "";
 	int CntShellHeld = 0;
+	bool HoldingBigWeapon = false;
 	if (CombineWeapon)
 		ParName = CombineWeapon->GetWeaponName();
 	else
@@ -455,15 +460,21 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 			ParName = LeftWeapon->GetWeaponName();
 			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (LeftWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 		if (RightWeapon)
 		{
 			ParName = RightWeapon->GetWeaponName();
 			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (RightWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 	}
-	if (1 == CntShellHeld)
+	if(HoldingBigWeapon)
+		ParName = "BigWeapon";
+	else if (1 == CntShellHeld)
 		ParName = "OneShell";
 	else if (2 == CntShellHeld)
 		ParName = "TwoShells";
@@ -582,6 +593,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -596,6 +608,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -645,6 +658,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -715,6 +729,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -882,6 +897,7 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 	{
 		if (CombineWeapon)
 		{
+			PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 			CombineWeapon->SafeDestroyWhenGetThrew();
 			CombineWeapon = nullptr;
 			//SetTextureInUI(Main, nullptr);
@@ -920,6 +936,8 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		CombineWeapon->GetPickedUp(this);
 		CombineWeapon->NetMulticast_CallPickedUpSfx();
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
+		if (CombineWeapon && CombineWeapon->WeaponType == Server_LastDitchCombineWeaponType && GetWorld()->TimeSeconds - Server_LastDitchCombineWeaponTime < 3.0f)
+			CombineWeapon->CD_LeftEnergy = Server_LastDitchCombineWeapon_CD_LeftEnergy;
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
@@ -1121,6 +1139,7 @@ void AMCharacter::OnHealthUpdate()
 		{
 			if (CombineWeapon)
 			{
+				PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 				CombineWeapon->SafeDestroyWhenGetThrew();
 				CombineWeapon = nullptr;
 				//SetTextureInUI(Main, nullptr);
@@ -1216,6 +1235,15 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		BPF_DeathCameraAnimation(false);
 	}
 }
+
+
+
+void AMCharacter::NetMulticast_SetWorldLocationRotation_Implementation(FVector NewWorldLocation, FRotator NewWorldRotation)
+{
+	SetActorLocation(NewWorldLocation);
+	SetActorRotation(NewWorldRotation);
+}
+
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
 {
@@ -1913,6 +1941,9 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Assign Variables
+	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
 	if (HealingBubbleCollider)
 	{
 		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
@@ -2001,7 +2032,7 @@ void AMCharacter::Tick(float DeltaTime)
 		{
 			if (!bHealingBubbleTouchingStatue)
 			{
-				float size1 = 6.0f;
+				float size1 = 6.5f;
 				float size2 = 10.0f;
 				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
 				if (NewRelativeScale.X < size1)
@@ -2637,5 +2668,15 @@ void AMCharacter::Server_CheckBubble()
 		{
 			NetMulticast_SetHealingBubbleStatus(false, CntShellHeld == 2);
 		}
+	}
+}
+
+void AMCharacter::PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon)
+{
+	if (pCombineWeapon)
+	{
+		Server_LastDitchCombineWeaponType = pCombineWeapon->WeaponType;
+		Server_LastDitchCombineWeaponTime = GetWorld()->TimeSeconds;
+		Server_LastDitchCombineWeapon_CD_LeftEnergy = pCombineWeapon->CD_LeftEnergy;
 	}
 }

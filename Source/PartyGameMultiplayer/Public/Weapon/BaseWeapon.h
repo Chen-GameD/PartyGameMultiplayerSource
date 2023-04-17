@@ -144,6 +144,7 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
+	bool Server_BigWeaponShouldSink;
 
 	float CurDeltaTime;
 

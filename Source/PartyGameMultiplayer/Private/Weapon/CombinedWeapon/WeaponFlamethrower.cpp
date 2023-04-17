@@ -56,17 +56,17 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 		{
 			if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 			{
+				// Cannot used CopiedAttackObjectMap this time because we need to change the value of AttackObjectMap
 				FScopeLock Lock(&DataGuard);
-				auto CopiedAttackObjectMap = AttackObjectMap;
-				for (auto& Elem : CopiedAttackObjectMap)
+				for (auto& Elem : AttackObjectMap)
 				{
-					// Apply knockback buff at a fixed frequency
-					Elem.Value += DeltaTime;
-					if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
-					{
-						ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
-						Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
-					}
+					//// Apply knockback buff at a fixed frequency
+					//Elem.Value += DeltaTime;
+					//if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
+					//{
+					//	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
+					//	Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
+					//}
 					// Add burning buff points
 					FString ParName = "Flamethrower_Burning_PointsToAdd_PerSec";
 					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))

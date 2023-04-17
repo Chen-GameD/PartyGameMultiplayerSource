@@ -82,11 +82,15 @@ bool ADamageManager::TryApplyDamageToAnActor(AActor* DamageCauser, AController* 
 			}			
 		}
 		// Special situation: Bomb's fork, Taser's fork
-		if( (WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass()) || 
-			WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass() )
+		if(WeaponType == EnumWeaponType::Bomb && DamageTypeClass == UMeleeDamageType::StaticClass())
 		{
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Fork"))
-				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Fork"];
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Bomb_Fork"))
+				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Bomb_Fork"];
+		}
+		if (WeaponType == EnumWeaponType::Taser && DamageTypeClass == UMeleeDamageType::StaticClass())
+		{
+			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map.Contains("Taser_Fork"))
+				Damage = AWeaponDataHelper::DamageManagerDataAsset->Character_Damage_Map["Taser_Fork"];
 		}
 		UGameplayStatics::ApplyDamage(DamagedActor, Damage, Controller, DamageCauser, DamageTypeClass);
 	}
