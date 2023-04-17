@@ -157,6 +157,9 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_RespawnResult();
 
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_SetWorldLocationRotation(FVector NewWorldLocation, FRotator NewWorldRotation);
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_DeathCameraAnimation(bool isBroadcast);
 
@@ -320,6 +323,7 @@ protected:
 	UFUNCTION()
 	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
 
+	void PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon);
 
 // Members
 // ==============================================================
@@ -506,6 +510,10 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon*  CombineWeapon;
+
+	EnumWeaponType Server_LastDitchCombineWeaponType;
+	float Server_LastDitchCombineWeaponTime;
+	float Server_LastDitchCombineWeapon_CD_LeftEnergy;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;

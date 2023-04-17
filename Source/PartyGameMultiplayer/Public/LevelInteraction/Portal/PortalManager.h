@@ -11,16 +11,17 @@ class PARTYGAMEMULTIPLAYER_API APortalManager : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
-	// Sets default values for this actor's properties
-	APortalManager();
-
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
+//public:	
+//	APortalManager();
+//	virtual void Tick(float DeltaTime) override;
+//	
+//	void StartToPort(class APortal* pPortal, class AMCharacter* pMCharacter);
+//
+//protected:
+//	virtual void BeginPlay() override;
+//
+//
+//public:	
+//	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Portal")
+//		TArray<class APortal*> Portals;
 };

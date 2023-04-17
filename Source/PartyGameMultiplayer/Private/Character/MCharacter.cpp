@@ -184,6 +184,11 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	IsInvincible = false;
 	InvincibleTimer = 0;
 	InvincibleMaxTime = 999.0f;
+
+	// Anti-Cheat lol: prevent use double Q/E to refresh the Combine Weapon CD
+	Server_LastDitchCombineWeaponType = EnumWeaponType::None;
+	Server_LastDitchCombineWeaponTime = -1.0f;
+	Server_LastDitchCombineWeapon_CD_LeftEnergy = 0.0f;
 }
 
 void AMCharacter::Restart()
@@ -1222,6 +1227,15 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		BPF_DeathCameraAnimation(false);
 	}
 }
+
+
+
+void AMCharacter::NetMulticast_SetWorldLocationRotation_Implementation(FVector NewWorldLocation, FRotator NewWorldRotation)
+{
+	SetActorLocation(NewWorldLocation);
+	SetActorRotation(NewWorldRotation);
+}
+
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
 {
@@ -2642,5 +2656,15 @@ void AMCharacter::Server_CheckBubble()
 		{
 			NetMulticast_SetHealingBubbleStatus(false, CntShellHeld == 2);
 		}
+	}
+}
+
+void AMCharacter::PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon)
+{
+	if (pCombineWeapon)
+	{
+		Server_LastDitchCombineWeaponType = pCombineWeapon->WeaponType;
+		Server_LastDitchCombineWeaponTime = GetWorld()->TimeSeconds;
+		Server_LastDitchCombineWeapon_CD_LeftEnergy = pCombineWeapon->CD_LeftEnergy;
 	}
 }
