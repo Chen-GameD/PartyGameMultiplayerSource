@@ -70,7 +70,7 @@ void APortal::OnPortalTriggerOverlapBegin(class UPrimitiveComponent* OverlappedC
 		int32 StartID = 0;
 		int32 EndId = Size - 1;
 		int32 TargetPortalID = FMath::RandRange(StartID, EndId);
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("TargetPortalID: %i"), TargetPortalID));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("TargetPortalID: %i"), TargetPortalID));
 		bool bFindValidPort;
 		for (size_t i = 0; i < Size; i++)
 		{
