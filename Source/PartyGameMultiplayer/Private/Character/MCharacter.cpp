@@ -1170,7 +1170,6 @@ void AMCharacter::Server_ForceRespawn_Implementation(float Delay)
 {
 	IsDead = true;
 	NetMulticast_DieResult();
-	Server_SetMaxWalkSpeed();
 	StartToRespawn(Delay);
 }
 
