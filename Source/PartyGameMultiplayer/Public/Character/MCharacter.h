@@ -112,12 +112,6 @@ public:
 	UFUNCTION()
 	void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
 
-	// UFUNCTION()
-	// void SetFollowWidgetStatusAndInformation();
-
-	// UFUNCTION()
-	// void SetLocallyControlledGameUI(bool isVisible);
-
 	UFUNCTION()
 	void SetPlayerNameUIInformation();
 
@@ -126,6 +120,9 @@ public:
 
 	UFUNCTION()
 	void InitFollowWidget();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_SetPlayerDirectionIndicatorWidget(int TeamIndex);
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);

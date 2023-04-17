@@ -79,6 +79,9 @@ public:
 	// Broadcasting system
 	UFUNCTION()
 	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
+	// Broadcasting Mini game system
+	UFUNCTION()
+	void InGame_BroadcastMinigameInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation);
 
 	// Show or Hide InGame_LobbyWidget
 	UFUNCTION()

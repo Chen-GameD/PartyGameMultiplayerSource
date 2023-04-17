@@ -16,6 +16,39 @@ void UMGameStatusWidget::NativeConstruct()
 	Super::NativeConstruct();
 }
 
+void UMGameStatusWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// Broadcast Canvas
+	if (IsNeedShowBroadcast)
+	{
+		if (BroadcastTimer < BroadcastTotalTime)
+		{
+			BroadcastTimer += InDeltaTime;
+		}
+		else
+		{
+			IsNeedShowBroadcast = false;
+			BroadcastCanvas->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+
+	// Broadcast Mini canvas
+	if (Mini_IsNeedShowBroadcast)
+	{
+		if (Mini_BroadcastTimer < Mini_BroadcastTotalTime)
+		{
+			Mini_BroadcastTimer += InDeltaTime;
+		}
+		else
+		{
+			Mini_IsNeedShowBroadcast = false;
+			Mini_BroadcastCanvas->SetVisibility(ESlateVisibility::Hidden);
+		}
+	}
+}
+
 void UMGameStatusWidget::UpdateTeam_1_Score(int i_Score)
 {
 	Team_1_Score->SetText(FText::FromString(FString::FromInt(i_Score)));
@@ -68,4 +101,16 @@ void UMGameStatusWidget::UpdateAndShowBroadcastingInformation(int KillerTeamInde
 	BroadcastCanvas->SetVisibility(ESlateVisibility::Visible);
 	BroadcastingAnimationEvent();
 	UpdateKillBoardInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
+}
+
+void UMGameStatusWidget::UpdateAndShowMiniBroadcastingInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation)
+{
+	FString Killer = KillerTeamIndex == 1 ? "<RedTeam>" + i_KillerName + "</>" : "<BlueTeam>" + i_KillerName + "</>";
+	FString MinigameInformation = Killer + i_MinigameInformation;
+	Mini_Information->SetText(FText::FromString(MinigameInformation));
+
+	Mini_BroadcastTimer = 0;
+	Mini_IsNeedShowBroadcast = true;
+	Mini_BroadcastCanvas->SetVisibility(ESlateVisibility::Visible);
+	BroadcastingMiniAnimationEvent();
 }

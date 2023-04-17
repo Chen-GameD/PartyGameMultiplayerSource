@@ -232,6 +232,14 @@ void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int Kille
 	}
 }
 
+void AMPlayerController::UI_InGame_BroadcastMiniInformation_Implementation(int KillerTeamIndex, const FString& i_KillerName, const FString& i_MinigameInformation)
+{
+	if (IsValid(MyInGameHUD))
+	{
+		MyInGameHUD->InGame_BroadcastMinigameInformation(KillerTeamIndex, i_KillerName, i_MinigameInformation);
+	}
+}
+
 AMInGameHUD* AMPlayerController::GetInGameHUD()
 {
 	return IsValid(MyInGameHUD) ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
@@ -329,6 +337,13 @@ void AMPlayerController::StartTheGame()
 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
 	if (MyPlayerState)
 	{
+		// Update Player Direction Indicator
+		AMCharacter* MyCharacter = Cast<AMCharacter>(GetPawn());
+		if (MyCharacter)
+		{
+			MyCharacter->BPF_SetPlayerDirectionIndicatorWidget(MyPlayerState->TeamIndex);
+		}
+		
 		// Update All Pawn's FollowWidget status
 		for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
 		{
