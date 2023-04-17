@@ -593,6 +593,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -607,6 +608,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -656,6 +658,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -726,6 +729,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
@@ -893,6 +897,7 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 	{
 		if (CombineWeapon)
 		{
+			PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 			CombineWeapon->SafeDestroyWhenGetThrew();
 			CombineWeapon = nullptr;
 			//SetTextureInUI(Main, nullptr);
@@ -931,6 +936,8 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		CombineWeapon->GetPickedUp(this);
 		CombineWeapon->NetMulticast_CallPickedUpSfx();
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
+		if (CombineWeapon && CombineWeapon->WeaponType == Server_LastDitchCombineWeaponType && GetWorld()->TimeSeconds - Server_LastDitchCombineWeaponTime < 3.0f)
+			CombineWeapon->CD_LeftEnergy = Server_LastDitchCombineWeapon_CD_LeftEnergy;
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
@@ -1132,6 +1139,7 @@ void AMCharacter::OnHealthUpdate()
 		{
 			if (CombineWeapon)
 			{
+				PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
 				CombineWeapon->SafeDestroyWhenGetThrew();
 				CombineWeapon = nullptr;
 				//SetTextureInUI(Main, nullptr);
