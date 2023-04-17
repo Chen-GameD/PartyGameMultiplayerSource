@@ -20,8 +20,18 @@ void AMGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		ReturnGameState = gameInstance->GetReturnGameStateRef();
+	}
+
 	Team_1_Score = 0;
 	Team_2_Score = 0;
+	if(IsValid(ReturnGameState))
+	{
+		ReturnGameState->UpdateTeamScore(true, 0);
+		ReturnGameState->UpdateTeamScore(false, 0);
+	}
 	
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUObject(this, &AMGameState::GameHasBeenPlayed);
@@ -204,6 +214,7 @@ void AMGameState::OnRep_Team_1_ScoreUpdate()
 			}
 		}
 	}
+	ReturnGameState->UpdateTeamScore(true, Team_1_Score);
 }
 
 void AMGameState::OnRep_Team_2_ScoreUpdate()
@@ -221,6 +232,7 @@ void AMGameState::OnRep_Team_2_ScoreUpdate()
 			}
 		}
 	}
+	ReturnGameState->UpdateTeamScore(false, Team_2_Score);
 }
 
 void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& i_Hint, UTexture2D* i_HintImage)

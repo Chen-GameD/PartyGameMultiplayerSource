@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Matchmaking/ReturnGameState.h"
 #include "UI/PlayerUI/MLobbyWidget.h"
 #include "MGameState.generated.h"
 
@@ -14,6 +15,9 @@ UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 {
 	GENERATED_BODY()
+
+	UPROPERTY()
+	UReturnGameState* ReturnGameState;
 
 public:
 	

@@ -216,10 +216,24 @@ void AM_PlayerState::addScore(float i_scoreToAdd) {
 	}
 }
 
-void AM_PlayerState::addKill(int i_killToAdd) {
+void AM_PlayerState::addKill(int i_killToAdd)
+{
 	kill += i_killToAdd;
+	if(auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		if(TeamIndex == 0)
+			return;
+		gameInstance->GetReturnGameStateRef()->UpdatePlayerKills((TeamIndex==1)? true : false, PlayerNameString, kill);
+	}
 }
 
-void AM_PlayerState::addDeath(int i_deathToAdd) {
+void AM_PlayerState::addDeath(int i_deathToAdd)
+{
 	death += i_deathToAdd;
+	if(auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		if(TeamIndex == 0)
+			return;
+		gameInstance->GetReturnGameStateRef()->UpdatePlayerKills((TeamIndex==1)? true : false, PlayerNameString, kill);
+	}
 }

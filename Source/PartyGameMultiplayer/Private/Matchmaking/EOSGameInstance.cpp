@@ -14,7 +14,7 @@ const FName SESSION_NAME = FName("MAINSESSION");
 void UEOSGameInstance::Init()
 {
 	Super::Init();
-	
+	ReturnGameState = NewObject<UReturnGameState>();
 	Login("", "", "accountportal");
 }
 
@@ -137,6 +137,11 @@ void UEOSGameInstance::DestroySession()
 	{
 		isLoading = false;
 	}
+}
+
+UReturnGameState* UEOSGameInstance::GetReturnGameStateRef()
+{
+	return ReturnGameState;
 }
 
 void UEOSGameInstance::ShowInviteUI()

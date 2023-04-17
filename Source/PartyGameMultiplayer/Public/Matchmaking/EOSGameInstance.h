@@ -8,6 +8,7 @@
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "ReturnGameState.h"
 #include "SessionEntry.h"
 #include "EOSGameInstance.generated.h"
 
@@ -26,6 +27,9 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 
 	bool bIsLoggedIn = false;
 
+protected:
+	UPROPERTY(BlueprintReadWrite)
+	UReturnGameState* ReturnGameState = nullptr;
 
 public:
 	UPROPERTY(BlueprintAssignable)
@@ -42,6 +46,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	FString GetPlayerUsername();
 
+
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections, bool IsPrivate, FString RoomName, int MapIndex);
 
@@ -53,6 +58,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void DestroySession();
+
+	UFUNCTION(BlueprintCallable)
+	UReturnGameState* GetReturnGameStateRef();
 
 	UFUNCTION(BlueprintCallable)
 	void ShowInviteUI();
