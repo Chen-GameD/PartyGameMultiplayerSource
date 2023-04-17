@@ -1303,7 +1303,7 @@ void AMCharacter::SetPlayerSkin()
 {
 	// TODO
 	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-	if (MyPlayerState)
+	if (MyPlayerState && MyPlayerState->characterIndex != -1 && !IsAlreadySetPlayerSkin)
 	{
 		/*UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, 
 			c, MyPlayerState->colorPicked);*/
@@ -1335,6 +1335,8 @@ void AMCharacter::SetPlayerSkin()
 		}
 
 		//BPF_SetPlayerSkin();
+
+		IsAlreadySetPlayerSkin = true;
 	}
 }
 
@@ -1959,18 +1961,18 @@ void AMCharacter::BeginPlay()
 		{
 			SetFollowWidgetVisibility(MyGameState->IsGameStart);
 		}
-		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-		if (MyPlayerState)
-		{
-			if (MyPlayerState->TeamIndex == 1)
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
-			}
-			else
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
-			}
-		}
+		// AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+		// if (MyPlayerState)
+		// {
+		// 	if (MyPlayerState->TeamIndex == 1)
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
+		// 	}
+		// 	else
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
+		// 	}
+		// }
 	}
 
 	if (IsLocallyControlled())

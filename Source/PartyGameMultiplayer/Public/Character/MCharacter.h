@@ -534,4 +534,5 @@ protected:
 	FTimerHandle InitPlayerInformationTimer;
 
 	mutable FCriticalSection DataGuard;
+	bool IsAlreadySetPlayerSkin = false;
 };
