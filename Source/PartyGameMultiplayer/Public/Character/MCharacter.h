@@ -118,6 +118,9 @@ public:
 	UFUNCTION()
 	void SetPlayerSkin();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_SetPlayerSkin();
+
 	UFUNCTION()
 	void InitFollowWidget();
 

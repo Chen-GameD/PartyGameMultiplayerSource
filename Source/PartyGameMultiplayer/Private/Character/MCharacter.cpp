@@ -1282,7 +1282,9 @@ void AMCharacter::SetPlayerSkin()
 
 		FScopeLock Lock(&DataGuard);
 		USkeletalMeshComponent* MyMesh = GetMesh();
-		MyMesh->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+		int CharacterIndex = MyPlayerState->characterIndex;
+		FLinearColor ColorPicked = MyPlayerState->colorPicked;
+		MyMesh->SetSkeletalMesh(CharacterBPArray[CharacterIndex]);
 
 		// Kiko
 		if (MyPlayerState->characterIndex == 0) {
@@ -1290,9 +1292,9 @@ void AMCharacter::SetPlayerSkin()
 			UMaterialInstanceDynamic* kiko_hair = MyMesh->CreateDynamicMaterialInstance(1, MyMesh->GetMaterial(1));
 			UMaterialInstanceDynamic* kiko_outfit = MyMesh->CreateDynamicMaterialInstance(2, MyMesh->GetMaterial(2));
 
-			kiko_body_customize->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_hair->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_outfit->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			kiko_body_customize->SetVectorParameterValue("color", ColorPicked);
+			kiko_hair->SetVectorParameterValue("color", ColorPicked);
+			kiko_outfit->SetVectorParameterValue("color", ColorPicked);
 
 			MyMesh->SetMaterial(0, kiko_body_customize);
 			MyMesh->SetMaterial(1, kiko_hair);
@@ -1300,9 +1302,11 @@ void AMCharacter::SetPlayerSkin()
 		}
 		else {
 			auto test = MyMesh->CreateDynamicMaterialInstance(0, MyMesh->GetMaterial(0));
-			test->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			test->SetVectorParameterValue("color", ColorPicked);
 			MyMesh->SetMaterial(0, test);
 		}
+
+		//BPF_SetPlayerSkin();
 	}
 }
 
