@@ -73,6 +73,7 @@ void AProjectileBomb::Tick(float DeltaTime)
 	{
 		if (1.5f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
 		{
+			BombMesh->SetRenderCustomDepth(false);
 			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
 		}

@@ -137,6 +137,7 @@ public:
 	float CD_LeftEnergy;	
 	float CD_DropSpeed;
 	float CD_RecoverSpeed;
+	float CD_RecoverDelay;
 	bool CD_CanRecover;
 	float TimePassed_SinceAttackStop;
 	float TimePassed_SinceGetThrewAway;

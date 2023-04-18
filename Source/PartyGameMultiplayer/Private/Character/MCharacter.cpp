@@ -1242,6 +1242,10 @@ void AMCharacter::NetMulticast_SetWorldLocationRotation_Implementation(FVector N
 {
 	SetActorLocation(NewWorldLocation);
 	SetActorRotation(NewWorldRotation);
+
+	// Disable Dash Vfx during instant move
+	if (EffectDash && EffectDash->IsVisible())
+		EffectDash->SetVisibility(false);
 }
 
 
@@ -1472,6 +1476,7 @@ void AMCharacter::OnRep_IsAllowDash()
 		// Vfx
 		if (EffectDash)
 		{
+			EffectDash->SetVisibility(true);
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
