@@ -113,7 +113,8 @@ void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABaseProjectile, HasExploded);	
+	DOREPLIFETIME(ABaseProjectile, HasExploded);
+	DOREPLIFETIME(ABaseProjectile, TimePassed_SinceExplosion);	
 }
 
 

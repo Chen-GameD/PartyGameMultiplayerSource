@@ -54,25 +54,25 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 				AttackObjectMap.Add(OtherActor);
 			AttackObjectMap[OtherActor] = 0.0f;
 			bAttackOverlap = true;
-			// Listen server
 			if (GetNetMode() == NM_ListenServer)
-			{
 				OnRep_bAttackOverlap();
-			}
 
-			if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
+			if (AttackType != EnumAttackType::Constant)
 			{
-				ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-				ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-				// Add burning buff points
-				FString ParName = "Lighter_Burning_PointsToAdd_PerHit";
-				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+				if (ApplyDamageCounter == 0)
 				{
-					float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("buffPointsToAdd: %f"), buffPointsToAdd));
+					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					// Add burning buff points
+					FString ParName = "Lighter_Burning_PointsToAdd_PerHit";
+					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					{
+						float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
+						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("buffPointsToAdd: %f"), buffPointsToAdd));
+					}
+					ApplyDamageCounter++;
 				}
-				ApplyDamageCounter++;
 			}
 		}
 	}

@@ -72,11 +72,15 @@ void AProjectileBomb::Tick(float DeltaTime)
 	if (GetLocalRole() == ROLE_Authority)
 	{
 		if (1.5f <= TimePassed_SinceExplosion && !HasAppliedNeedleRainDamage)
-		{
-			BombMesh->SetRenderCustomDepth(false);
+		{			
 			ADamageManager::TryApplyRadialDamage(this, Controller, Origin, 0, DamageRadius, TotalDamage);
 			HasAppliedNeedleRainDamage = true;
 		}
+	}
+
+	if (1.5f <= TimePassed_SinceExplosion)
+	{
+		BombMesh->SetRenderCustomDepth(false);
 	}
 }
 

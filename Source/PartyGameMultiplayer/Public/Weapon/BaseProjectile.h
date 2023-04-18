@@ -78,9 +78,10 @@ protected:
 	bool bApplyConstantDamage;
 	float BaseDamage;
 	UPROPERTY(ReplicatedUsing = OnRep_HasExploded)
-	bool HasExploded;
+		bool HasExploded;
 	float TimePassed_SinceLastTryApplyRadialDamage;
-	float TimePassed_SinceExplosion;
+	UPROPERTY(Replicated)
+		float TimePassed_SinceExplosion;
 
 private:
 
