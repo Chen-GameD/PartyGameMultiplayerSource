@@ -74,11 +74,11 @@ void ABaseProjectile::Tick(float DeltaTime)
 			Destroy();
 			return;
 		}
-		if (GetActorLocation().Z < 0)
-		{
-			Destroy();
-			return;
-		}
+		//if (GetActorLocation().Z < 0)
+		//{
+		//	Destroy();
+		//	return;
+		//}
 
 		// Explosion has started
 		if (HasExploded)
