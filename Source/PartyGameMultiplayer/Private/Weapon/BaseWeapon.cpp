@@ -76,7 +76,7 @@ ABaseWeapon::ABaseWeapon()
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
 	//DamageGenerationCounter = 0;
-	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
+	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = CD_RecoverDelay = 0.0f;
 	CD_CanRecover = true;
 	TimePassed_SinceAttackStop = 0.0f;
 	LastTime_DisplayCaseTransformBeenReplicated = -1.0f;
@@ -111,6 +111,12 @@ void ABaseWeapon::Tick(float DeltaTime)
 			DisplayCaseLocation = DisplayCase->GetComponentLocation();
 			DisplayCaseRotation = DisplayCase->GetComponentRotation();
 			DisplayCaseScale = DisplayCase->GetComponentScale();
+
+			if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
+			{
+				CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
+				CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
+			}
 
 			if (IsBigWeapon && Server_BigWeaponShouldSink)
 			{
@@ -161,10 +167,6 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					if (!CD_CanRecover)
 					{
-						float CD_RecoverDelay = 0.0f;
-						FString ParName =  WeaponName + "_CD_RecoverDelay";
-						if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-							CD_RecoverDelay = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 						if (CD_RecoverDelay < TimePassed_SinceAttackStop)
 							CD_CanRecover = true;
 					}
@@ -257,6 +259,7 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	}
 	SetInstigator(pCharacter);
 	SetOwner(pCharacter);
+	PreHoldingController = pCharacter->GetController();
 
 	SetActorEnableCollision(false);
 	DisplayCaseCollisionSetActive(false);
@@ -410,6 +413,9 @@ void ABaseWeapon::BeginPlay()
 		ParName = ThisWeaponName + "_" + "CD_RecoverSpeed";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		ParName = ThisWeaponName + "_" + "CD_RecoverDelay";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			CD_RecoverDelay = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 		ParName = ThisWeaponName + "_" + "CD_MinEnergyToAttak";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 		{
@@ -619,7 +625,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 			if (AttackType != EnumAttackType::Constant)
 			{
-				if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
+				if (ApplyDamageCounter == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);

@@ -34,7 +34,7 @@ void APortal::BeginPlay()
 	// Server
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		DrawDebugBox(GetWorld(), PortalTrigger->GetComponentLocation(), PortalTrigger->GetScaledBoxExtent(), FColor::Purple, true, -1, 0, 5);
+		//DrawDebugBox(GetWorld(), PortalTrigger->GetComponentLocation(), PortalTrigger->GetScaledBoxExtent(), FColor::Purple, true, -1, 0, 5);
 
 		PortalTrigger->OnComponentBeginOverlap.AddDynamic(this, &APortal::OnPortalTriggerOverlapBegin);
 	}

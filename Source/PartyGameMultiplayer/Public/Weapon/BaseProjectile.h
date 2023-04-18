@@ -52,6 +52,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UProjectileMovementComponent* ProjectileMovementComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Broadcast;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Message;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
@@ -72,9 +78,10 @@ protected:
 	bool bApplyConstantDamage;
 	float BaseDamage;
 	UPROPERTY(ReplicatedUsing = OnRep_HasExploded)
-	bool HasExploded;
+		bool HasExploded;
 	float TimePassed_SinceLastTryApplyRadialDamage;
-	float TimePassed_SinceExplosion;
+	UPROPERTY(Replicated)
+		float TimePassed_SinceExplosion;
 
 private:
 

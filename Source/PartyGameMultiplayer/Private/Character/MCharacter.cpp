@@ -1242,6 +1242,10 @@ void AMCharacter::NetMulticast_SetWorldLocationRotation_Implementation(FVector N
 {
 	SetActorLocation(NewWorldLocation);
 	SetActorRotation(NewWorldRotation);
+
+	// Disable Dash Vfx during instant move
+	if (EffectDash && EffectDash->IsVisible())
+		EffectDash->SetVisibility(false);
 }
 
 
@@ -1303,14 +1307,16 @@ void AMCharacter::SetPlayerSkin()
 {
 	// TODO
 	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-	if (MyPlayerState)
+	if (MyPlayerState && MyPlayerState->characterIndex != -1 && !IsAlreadySetPlayerSkin)
 	{
 		/*UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, 
 			c, MyPlayerState->colorPicked);*/
 
 		FScopeLock Lock(&DataGuard);
 		USkeletalMeshComponent* MyMesh = GetMesh();
-		MyMesh->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+		int CharacterIndex = MyPlayerState->characterIndex;
+		FLinearColor ColorPicked = MyPlayerState->colorPicked;
+		MyMesh->SetSkeletalMesh(CharacterBPArray[CharacterIndex]);
 
 		// Kiko
 		if (MyPlayerState->characterIndex == 0) {
@@ -1318,9 +1324,9 @@ void AMCharacter::SetPlayerSkin()
 			UMaterialInstanceDynamic* kiko_hair = MyMesh->CreateDynamicMaterialInstance(1, MyMesh->GetMaterial(1));
 			UMaterialInstanceDynamic* kiko_outfit = MyMesh->CreateDynamicMaterialInstance(2, MyMesh->GetMaterial(2));
 
-			kiko_body_customize->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_hair->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_outfit->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			kiko_body_customize->SetVectorParameterValue("color", ColorPicked);
+			kiko_hair->SetVectorParameterValue("color", ColorPicked);
+			kiko_outfit->SetVectorParameterValue("color", ColorPicked);
 
 			MyMesh->SetMaterial(0, kiko_body_customize);
 			MyMesh->SetMaterial(1, kiko_hair);
@@ -1328,9 +1334,13 @@ void AMCharacter::SetPlayerSkin()
 		}
 		else {
 			auto test = MyMesh->CreateDynamicMaterialInstance(0, MyMesh->GetMaterial(0));
-			test->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			test->SetVectorParameterValue("color", ColorPicked);
 			MyMesh->SetMaterial(0, test);
 		}
+
+		//BPF_SetPlayerSkin();
+
+		IsAlreadySetPlayerSkin = true;
 	}
 }
 
@@ -1420,7 +1430,7 @@ float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
 				retValue = LeftWeapon->CD_LeftEnergy / LeftWeapon->CD_MaxEnergy;
 			}
 		}
-		else if (RightWeapon)
+		if (RightWeapon)
 		{
 			if (RightWeapon->CD_MaxEnergy > 0)
 			{
@@ -1466,6 +1476,7 @@ void AMCharacter::OnRep_IsAllowDash()
 		// Vfx
 		if (EffectDash)
 		{
+			EffectDash->SetVisibility(true);
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
@@ -1677,14 +1688,20 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			if (!AttackerPS || !MyPS)
 				return 0.0f;
 
-			AttackerPS->addScore(0);
+			int KillerGetScore = 0;
+			AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+			if (MyGameState)
+			{
+				KillerGetScore = MyGameState->KillScore;
+			}
+			AttackerPS->addScore(KillerGetScore);
 			AttackerPS->addKill(1);
 			MyPS->addDeath(1);
 
 			Server_DeadTimes++;
 
 			// Broadcast function
-			BroadcastToAllController(EventInstigator, false);
+			BroadcastToAllController(DamageCauser, false);
 		}
 
 		return DamageTaken;
@@ -1955,18 +1972,18 @@ void AMCharacter::BeginPlay()
 		{
 			SetFollowWidgetVisibility(MyGameState->IsGameStart);
 		}
-		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-		if (MyPlayerState)
-		{
-			if (MyPlayerState->TeamIndex == 1)
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
-			}
-			else
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
-			}
-		}
+		// AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+		// if (MyPlayerState)
+		// {
+		// 	if (MyPlayerState->TeamIndex == 1)
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
+		// 	}
+		// 	else
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
+		// 	}
+		// }
 	}
 
 	if (IsLocallyControlled())
@@ -2415,7 +2432,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						AM_PlayerState* AttackerPS = Server_TheControllerApplyingLatestBurningBuff->GetPlayerState<AM_PlayerState>();
 						AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
 						// Add Scores
-						AttackerPS->addScore(5);
+						int KillerGetScore = 0;
+						AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+						if (MyGameState)
+						{
+							KillerGetScore = MyGameState->KillScore;
+						}
+						AttackerPS->addScore(KillerGetScore);
 						AttackerPS->addKill(1);
 						MyPS->addDeath(1);
 						// Broadcast burning kill
@@ -2549,42 +2572,44 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 	}
 }
 
-void AMCharacter::BroadcastToAllController(AController* AttackController, bool IsFireBuff)
+void AMCharacter::BroadcastToAllController(AActor* AttackActor, bool IsFireBuff)
 {
-	AM_PlayerState* AttackerPS = AttackController->GetPlayerState<AM_PlayerState>();
-	AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-	// Broadcast burning kill
-	AMCharacter* AttackCharacter = Cast<AMCharacter>(AttackController->GetPawn());
+	AM_PlayerState* AttackerPS = nullptr;
+	AM_PlayerState* MyPS = nullptr;
 	UTexture2D* WeaponImage = nullptr;
-	// Get Weapon Image
-	if (AttackCharacter && !IsFireBuff)
+	
+	if (IsFireBuff)
 	{
-		if (AttackCharacter->CombineWeapon)
-		{
-			WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->LeftWeapon && AttackCharacter->RightWeapon && AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
-		{
-			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->LeftWeapon != nullptr && AttackCharacter->LeftWeapon->WeaponType != EnumWeaponType::Shell)
-		{
-			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->RightWeapon != nullptr && AttackCharacter->RightWeapon->WeaponType != EnumWeaponType::Shell)
-		{
-			WeaponImage = AttackCharacter->RightWeapon->WeaponImage_Broadcast;
-		}
-	}
-	else
-	{
-		// Fire Image
+		AMPlayerController* AttackCauser = Cast<AMPlayerController>(AttackActor);
+		AttackerPS = AttackCauser->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
 		WeaponImage = FireImage;
 	}
-	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	else if (Cast<ABaseWeapon>(AttackActor))
 	{
-		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-		currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+		ABaseWeapon* AttackCauser = Cast<ABaseWeapon>(AttackActor);
+		AttackerPS = AttackCauser->PreHoldingController->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
+		WeaponImage = AttackCauser->WeaponImage_Broadcast;
+	}
+	else if (Cast<ABaseProjectile>(AttackActor))
+	{
+		ABaseProjectile* AttackCauser = Cast<ABaseProjectile>(AttackActor);
+		AttackerPS = AttackCauser->GetInstigator()->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
+		WeaponImage = AttackCauser->WeaponImage_Broadcast;
+	}
+
+	if (AttackerPS && MyPS && WeaponImage)
+	{
+		for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+		{
+			AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+			currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+		}
 	}
 }
 

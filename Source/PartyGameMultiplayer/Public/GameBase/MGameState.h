@@ -43,6 +43,9 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int LevelIndex = -1;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int KillScore = -1;
+
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 

@@ -70,7 +70,6 @@ void AWeaponShell::GetPickedUp(ACharacter* pCharacter)
 	Super::GetPickedUp(pCharacter);
 
 	SetActorEnableCollision(true);
-	PreHoldingController = pCharacter->GetController();
 }
 
 void AWeaponShell::GetThrewAway()

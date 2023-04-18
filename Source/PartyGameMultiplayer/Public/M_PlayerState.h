@@ -77,5 +77,5 @@ public:
 	FLinearColor colorPicked;
 
 	UPROPERTY(ReplicatedUsing=OnRep_PlayerSkinInformation, EditAnywhere, BlueprintReadWrite)
-	int characterIndex;
+	int characterIndex = -1;
 };

@@ -88,7 +88,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
 			if (!Server_ActorBeingHit)
 			{
-				// stretch out to the limit
+				// stretch out to the limitd
 				FVector TaserFork_CurWorldLocation = TaserForkMesh->GetComponentLocation();
 				if (FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart) < MaxLen)
 				{

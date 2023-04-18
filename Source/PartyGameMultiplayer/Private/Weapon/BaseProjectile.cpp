@@ -74,11 +74,11 @@ void ABaseProjectile::Tick(float DeltaTime)
 			Destroy();
 			return;
 		}
-		if (GetActorLocation().Z < 0)
-		{
-			Destroy();
-			return;
-		}
+		//if (GetActorLocation().Z < 0)
+		//{
+		//	Destroy();
+		//	return;
+		//}
 
 		// Explosion has started
 		if (HasExploded)
@@ -113,7 +113,8 @@ void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABaseProjectile, HasExploded);	
+	DOREPLIFETIME(ABaseProjectile, HasExploded);
+	DOREPLIFETIME(ABaseProjectile, TimePassed_SinceExplosion);	
 }
 
 

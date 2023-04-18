@@ -118,6 +118,9 @@ public:
 	UFUNCTION()
 	void SetPlayerSkin();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_SetPlayerSkin();
+
 	UFUNCTION()
 	void InitFollowWidget();
 
@@ -318,7 +321,7 @@ protected:
 
 	// Broadcast function
 	UFUNCTION()
-	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
+	void BroadcastToAllController(AActor* AttackActor, bool IsFireBuff);
 
 	void PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon);
 
@@ -531,4 +534,5 @@ protected:
 	FTimerHandle InitPlayerInformationTimer;
 
 	mutable FCriticalSection DataGuard;
+	bool IsAlreadySetPlayerSkin = false;
 };

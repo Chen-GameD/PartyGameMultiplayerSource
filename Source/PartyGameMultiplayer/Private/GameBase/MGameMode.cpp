@@ -215,7 +215,8 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpawn)
 {
 	if (MinigameDataAsset)
-	{		
+	{
+		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
 		if (bFirstTimeSpawn)
 		{
 			// SpawnMinigameObject with a certain delay after the game starts
@@ -224,7 +225,6 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
 				{
 					// Spawn the minigame object
-					CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
 					FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
 					AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
 					if (spawnActor && MinigameDataAsset)
@@ -235,7 +235,6 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 		else
 		{
 			// Spawn the minigame object
-			CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
 			FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
 			AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
 			if (spawnActor && MinigameDataAsset)
@@ -347,7 +346,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else
@@ -388,6 +387,7 @@ void AMGameMode::StartTheGame()
 		MyGameState->GameTime = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].GameTime;
 		
 		MyGameState->IsGameStart = true;
+		MyGameState->KillScore = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].KillScore;
 		MyGameState->Server_StartGame();
 	}
 
