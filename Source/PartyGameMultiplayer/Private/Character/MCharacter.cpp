@@ -277,6 +277,8 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, AnimState);
 	// Replicate SKD Array
 	DOREPLIFETIME(AMCharacter, SKDArray);
+	// Replicate death animation index
+	DOREPLIFETIME(AMCharacter, DeadAnimIndex);
 }
 #pragma endregion Replicated Properties
 
@@ -1108,6 +1110,7 @@ void AMCharacter::OnHealthUpdate()
 		{
 			AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
 			playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
+			SetHealthBarUI();
 		}
 	}
 
@@ -1169,6 +1172,7 @@ void AMCharacter::OnHealthUpdate()
 void AMCharacter::Server_ForceRespawn_Implementation(float Delay)
 {
 	IsDead = true;
+	DeadAnimIndex = FMath::RandRange(0, DeadAnimNum - 1);
 	NetMulticast_DieResult();
 	StartToRespawn(Delay);
 }

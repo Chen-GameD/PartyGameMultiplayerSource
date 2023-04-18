@@ -12,8 +12,8 @@ void UMCharacterFollowWidget::InitIsLocalControlledCharacterWidget(bool IsLocalC
 	if (IsLocalControlled)
 	{
 		HealthBar_Enemy->SetVisibility(ESlateVisibility::Hidden);
-		HealthBar_Teammate->SetVisibility(ESlateVisibility::Hidden);
-		PlayerName->SetVisibility(ESlateVisibility::Hidden);
+		HealthBar_Teammate->SetVisibility(ESlateVisibility::Visible);
+		PlayerName->SetVisibility(ESlateVisibility::Visible);
 		InGame_WeaponEnergyCanvasHolder->SetVisibility(ESlateVisibility::Visible);
 		WeaponTipCanvas->SetVisibility(ESlateVisibility::Visible);
 	}

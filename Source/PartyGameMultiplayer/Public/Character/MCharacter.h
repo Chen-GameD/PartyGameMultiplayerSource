@@ -365,6 +365,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
+	int DeadAnimIndex = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	int DeadAnimNum;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<FName> CharacterMatParamNameArray;
 
