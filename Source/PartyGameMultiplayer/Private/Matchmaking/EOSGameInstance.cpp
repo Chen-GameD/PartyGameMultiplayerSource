@@ -398,9 +398,12 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
 				CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 			}
+			else
+			{
+				isLoading = false;
+			}
 		}
 	}
-	isLoading = false;
 }
 
 void UEOSGameInstance::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error)
