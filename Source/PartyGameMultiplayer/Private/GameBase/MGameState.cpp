@@ -8,7 +8,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
-#include "GameFramework/GameSession.h"
 #include "EngineUtils.h"
 
 bool AMGameState::HasBegunPlay() const
@@ -20,18 +19,8 @@ void AMGameState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
-	{
-		ReturnGameState = gameInstance->GetReturnGameStateRef();
-	}
-
 	Team_1_Score = 0;
 	Team_2_Score = 0;
-	if(IsValid(ReturnGameState))
-	{
-		ReturnGameState->UpdateTeamScore(true, 0);
-		ReturnGameState->UpdateTeamScore(false, 0);
-	}
 	
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUObject(this, &AMGameState::GameHasBeenPlayed);
@@ -151,6 +140,10 @@ void AMGameState::OnRep_IsGameStart()
 	{
 		if (MyLocalPlayerController)
 		{
+			if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+			{
+				gameInstance->SaveEndGameState();
+			}
 			MyLocalPlayerController->StartTheGame();
 			MyLocalPlayerController->AddWeaponUI();
 			BPF_GameStartBGM(true);
@@ -160,6 +153,10 @@ void AMGameState::OnRep_IsGameStart()
 	{
 		if (MyLocalPlayerController)
 		{
+			if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+			{
+				gameInstance->SaveEndGameState();
+			}
 			MyLocalPlayerController->EndTheGame();
 			BPF_GameStartBGM(false);
 		}
@@ -214,7 +211,10 @@ void AMGameState::OnRep_Team_1_ScoreUpdate()
 			}
 		}
 	}
-	ReturnGameState->UpdateTeamScore(true, Team_1_Score);
+	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		gameInstance->SaveEndGameState();
+	}
 }
 
 void AMGameState::OnRep_Team_2_ScoreUpdate()
@@ -232,7 +232,10 @@ void AMGameState::OnRep_Team_2_ScoreUpdate()
 			}
 		}
 	}
-	ReturnGameState->UpdateTeamScore(false, Team_2_Score);
+	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		gameInstance->SaveEndGameState();
+	}
 }
 
 void AMGameState::NetMulticast_UpdateMinigameHint_Implementation(const FString& i_Hint, UTexture2D* i_HintImage)

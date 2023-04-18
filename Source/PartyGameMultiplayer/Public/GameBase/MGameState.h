@@ -16,9 +16,6 @@ class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
-	UReturnGameState* ReturnGameState;
-
 public:
 	
 	virtual bool HasBegunPlay() const override;

@@ -3,11 +3,15 @@
 
 #include "Matchmaking/EOSGameInstance.h"
 #include <string>
+
+#include "M_PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
 #include "OnlineSessionSettings.h"
 #include "Blueprint/UserWidget.h"
+#include "GameBase/MGameState.h"
+#include "GameFramework/GameState.h"
 
 const FName SESSION_NAME = FName("MAINSESSION");
 
@@ -142,6 +146,28 @@ void UEOSGameInstance::DestroySession()
 UReturnGameState* UEOSGameInstance::GetReturnGameStateRef()
 {
 	return ReturnGameState;
+}
+
+void UEOSGameInstance::SaveEndGameState()
+{
+	if(const auto gameState = Cast<AMGameState>(GetWorld()->GetGameState()))
+	{
+		ReturnGameState->UpdateTeamScore(true, gameState->Team_1_Score);
+		ReturnGameState->UpdateTeamScore(false, gameState->Team_2_Score);
+		for(auto player : gameState->PlayerArray)
+		{
+			if(const auto playerState = Cast<AM_PlayerState>(player))
+			{
+				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death);
+			}
+		}
+	}
+}
+
+void UEOSGameInstance::ClearEndGameState()
+{
+	ReturnGameState = nullptr;
+	ReturnGameState = NewObject<UReturnGameState>();
 }
 
 void UEOSGameInstance::ShowInviteUI()

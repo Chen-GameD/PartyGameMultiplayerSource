@@ -19,6 +19,7 @@
  */
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFindSessionResultsStored);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCloseEndGameMenu);
 
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
@@ -30,6 +31,9 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 protected:
 	UPROPERTY(BlueprintReadWrite)
 	UReturnGameState* ReturnGameState = nullptr;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FOnCloseEndGameMenu OnCloseEndGameMenuDelegate;
 
 public:
 	UPROPERTY(BlueprintAssignable)
@@ -61,6 +65,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UReturnGameState* GetReturnGameStateRef();
+
+	UFUNCTION(BlueprintCallable)
+	void SaveEndGameState();
+
+	UFUNCTION(BlueprintCallable)
+	void ClearEndGameState();
 
 	UFUNCTION(BlueprintCallable)
 	void ShowInviteUI();

@@ -31,9 +31,33 @@ public:
 	bool isReturningFromDisconnect = false;
 	
 	UFUNCTION(BlueprintCallable)
+	int32 GetTeamScore1();
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetTeamScore2();
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetTeam1PlayerCount();
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetTeam2PlayerCount();
+
+	/**
+	 * @brief 
+	 * @return
+	 * Returns array of strings in order of name, kills, deaths
+	 */
+	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetTeam1PlayerData(int32 index);
+	/**
+	 * @brief 
+	 * @return
+	 * Returns array of strings in order of name, kills, deaths
+	 */
+	UFUNCTION(BlueprintCallable)
+	TArray<FString> GetTeam2PlayerData(int32 index);
+	
 	void AddPlayerData(bool isTeam1, FString username, int32 kills, int32 deaths);
 	
-	void UpdatePlayerKills(bool isTeam1, FString username, int32 kills);
-	void UpdatePlayerDeaths(bool isTeam1, FString username, int32 deaths);
 	void UpdateTeamScore(bool isTeam1, int32 score);
 };
