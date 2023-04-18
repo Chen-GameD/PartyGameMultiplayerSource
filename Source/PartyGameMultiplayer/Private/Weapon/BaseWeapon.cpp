@@ -257,6 +257,7 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	}
 	SetInstigator(pCharacter);
 	SetOwner(pCharacter);
+	PreHoldingController = pCharacter->GetController();
 
 	SetActorEnableCollision(false);
 	DisplayCaseCollisionSetActive(false);

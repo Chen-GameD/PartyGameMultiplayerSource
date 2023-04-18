@@ -47,12 +47,12 @@ public:
 	bool Server_bDetectedByStatue;
 	
 protected:
-	AController* PreHoldingController;
 	UPROPERTY()
 	int ConfigIndex = -1;
 	UPROPERTY()
 	int ScoreCanGet = 0;
 
+	UPROPERTY()
 	class AShellSpotLight* pShellSpotLight;
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class AShellSpotLight> SpecificShellSpotLightClass;

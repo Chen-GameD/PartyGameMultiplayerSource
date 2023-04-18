@@ -52,6 +52,12 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UProjectileMovementComponent* ProjectileMovementComponent;
+
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Broadcast;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	UTexture2D* WeaponImage_Message;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;

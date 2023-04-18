@@ -321,7 +321,7 @@ protected:
 
 	// Broadcast function
 	UFUNCTION()
-	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
+	void BroadcastToAllController(AActor* AttackActor, bool IsFireBuff);
 
 	void PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon);
 
