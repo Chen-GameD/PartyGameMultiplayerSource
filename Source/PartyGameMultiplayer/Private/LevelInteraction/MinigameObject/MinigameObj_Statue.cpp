@@ -164,7 +164,7 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 		if(GodRayMesh_CurRelativeScale.X < 200.0f)
 			GodRayExpandSpeed = 50.0f;
 		else
-			GodRayExpandSpeed = 100.0f;
+			GodRayExpandSpeed = 75.0f;
 	}
 
 	// Dark bubble
@@ -343,7 +343,7 @@ void AMinigameObj_Statue::OnGodRayOverlapBegin(UPrimitiveComponent* OverlappedCo
 		SourceLocation.Z = MCharacterLocation.Z;
 		FVector PushDirection = MCharacterLocation - SourceLocation;
 		PushDirection.Normalize();
-		pMCharacter->LaunchCharacter(PushDirection * 800.0f, true, false);
+		pMCharacter->LaunchCharacter(PushDirection * 2000.0f, true, false);
 	}
 }
 

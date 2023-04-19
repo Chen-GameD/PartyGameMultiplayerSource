@@ -30,7 +30,8 @@ void AShellSpotLight::Tick(float DeltaTime)
 		FVector Vector_LightSource_to_Target = SourceLocation - SpotLightMesh->GetComponentLocation();
 		/*GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Vector_LightSource_to_Target.Size(): %f"), Vector_LightSource_to_Target.Size()));*/
 		SpotLightMesh->SetWorldRotation(Vector_LightSource_to_Target.Rotation());
-		FVector NewScale = FVector(2.0f * Vector_LightSource_to_Target.Size() / 2350.0f, 2.5f, 2.5f);
+		FVector NewScale = SpotLightMesh->GetComponentScale();
+		NewScale.X = 2.0f * Vector_LightSource_to_Target.Size() / 2350.0f;
 		SpotLightMesh->SetWorldScale3D(NewScale);
 	}
 }
