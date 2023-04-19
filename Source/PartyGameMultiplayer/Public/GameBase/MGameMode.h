@@ -62,7 +62,7 @@ public:
 	UFUNCTION()
 	void NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StartTheGame();
 
 	UFUNCTION()
