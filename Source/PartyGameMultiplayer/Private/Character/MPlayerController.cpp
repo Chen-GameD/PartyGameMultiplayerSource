@@ -256,14 +256,13 @@ void AMPlayerController::BeginPlay()
 		if (IsValid(MyInGameHUD))
 		{
 			// Set input mode
-			if (IsLocalPlayerController())
-			{
-				//FInputModeUIOnly inputMode;
-				FInputModeUIOnly inputMode;
-				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				this->SetInputMode(inputMode);
-				this->SetShowMouseCursor(true);
-			}
+			//FInputModeUIOnly inputMode;
+			FInputModeUIOnly inputMode;
+			inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			this->SetInputMode(inputMode);
+			this->SetShowMouseCursor(true);
+
+			CheckIfSaveFileExist();
 		}
 	}
 }
