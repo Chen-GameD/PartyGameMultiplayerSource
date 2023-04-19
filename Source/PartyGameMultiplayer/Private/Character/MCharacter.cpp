@@ -1278,6 +1278,15 @@ void AMCharacter::SetFollowWidgetHealthBarIsEnemy(bool IsEnemy)
 	}
 }
 
+void AMCharacter::SetFollowWidgetHealthBarByTeamID(int TeamID)
+{
+	UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+	if (CharacterFollowWidget)
+	{
+		CharacterFollowWidget->ShowHealthBarByTeamID(TeamID);
+	}
+}
+
 void AMCharacter::SetPlayerNameUIInformation()
 {
 	if (GetNetMode() == NM_ListenServer)
@@ -2023,14 +2032,13 @@ void AMCharacter::BeginPlay()
 			if (ABaseWeapon* pWeapon = Cast<ABaseWeapon>(OutActors[i]))
 				pWeapon->CallShowUpVfx();
 		}
-
-		// Silouette
-		GetMesh()->SetRenderCustomDepth(false);
 	}
 	
 	// Opponent Marker
 	if (UOpponentMarkerWidget* pOpponentMarkerWidget = Cast<UOpponentMarkerWidget>(OpponentMarkerWidget->GetUserWidgetObject()))
 		pOpponentMarkerWidget->SetAllMarkerVisibility(false);
+	// Silouette
+	GetMesh()->SetRenderCustomDepth(false);
 }
 
 
@@ -2474,6 +2482,11 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					Server_SetCanMove(false);
 					SetElectricShockAnimState(true);
 				}
+				float DragSpeedRatio = 0.15f;
+				FString ParName = "Paralysis_DragSpeedRatio";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				Client_MoveCharacter(Server_Direction_SelfToTaserAttacker, DragSpeedRatio);
 			}
 			else
 			{

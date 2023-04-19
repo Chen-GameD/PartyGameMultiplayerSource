@@ -59,7 +59,9 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 
 			if (AttackType != EnumAttackType::Constant)
 			{
-				if (ApplyDamageCounter == 0)
+				if (!ApplyDamageCounter.Contains(OtherActor))
+					ApplyDamageCounter.Add(OtherActor);
+				if (ApplyDamageCounter[OtherActor] == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
@@ -71,7 +73,7 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
 						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("buffPointsToAdd: %f"), buffPointsToAdd));
 					}
-					ApplyDamageCounter++;
+					ApplyDamageCounter[OtherActor]++;
 				}
 			}
 		}

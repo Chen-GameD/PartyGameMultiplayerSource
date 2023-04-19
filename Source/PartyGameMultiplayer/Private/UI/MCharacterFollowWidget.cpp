@@ -29,10 +29,15 @@ void UMCharacterFollowWidget::InitIsLocalControlledCharacterWidget(bool IsLocalC
 
 void UMCharacterFollowWidget::SetHealthToProgressBar(float percentage)
 {
-	if(IsValid(HealthBar_Enemy) && IsValid(HealthBar_Teammate))
+	//if(IsValid(HealthBar_Enemy) && IsValid(HealthBar_Teammate))
+	//{
+	//	HealthBar_Enemy->SetPercent(percentage);
+	//	HealthBar_Teammate->SetPercent(percentage);
+	//}
+	if (IsValid(HealthBar_TeamRed) && IsValid(HealthBar_TeamBlue))
 	{
-		HealthBar_Enemy->SetPercent(percentage);
-		HealthBar_Teammate->SetPercent(percentage);
+		HealthBar_TeamRed->SetPercent(percentage);
+		HealthBar_TeamBlue->SetPercent(percentage);
 	}
 }
 
@@ -45,6 +50,20 @@ void UMCharacterFollowWidget::SetIsEnemyHealthBar(bool IsEnemy)
 {
 	HealthBar_Teammate->SetVisibility(IsEnemy ? ESlateVisibility::Hidden : ESlateVisibility::Visible);
 	HealthBar_Enemy->SetVisibility(IsEnemy ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+}
+
+void UMCharacterFollowWidget::ShowHealthBarByTeamID(int TeamID)
+{
+	if (TeamID == 1 || TeamID == 2)
+	{
+		HealthBar_TeamRed->SetVisibility(TeamID == 2 ? ESlateVisibility::Hidden : ESlateVisibility::Visible);
+		HealthBar_TeamBlue->SetVisibility(TeamID == 2 ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+	}
+	else
+	{
+		HealthBar_TeamRed->SetVisibility(ESlateVisibility::Visible);
+		HealthBar_TeamBlue->SetVisibility(ESlateVisibility::Hidden);
+	}
 }
 
 void UMCharacterFollowWidget::SetHealthBarRenderOpacity(float percentage)

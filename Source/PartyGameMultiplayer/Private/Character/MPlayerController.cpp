@@ -382,7 +382,8 @@ void AMPlayerController::StartTheGame()
 			if (MyPawn && CurrentPawnPlayerState)
 			{
 				MyPawn->SetFollowWidgetVisibility(true);
-				MyPawn->SetFollowWidgetHealthBarIsEnemy(MyPlayerState->TeamIndex != CurrentPawnPlayerState->TeamIndex);
+				//MyPawn->SetFollowWidgetHealthBarIsEnemy(MyPlayerState->TeamIndex != CurrentPawnPlayerState->TeamIndex);
+				MyPawn->SetFollowWidgetHealthBarByTeamID(CurrentPawnPlayerState->TeamIndex);
 			}
 		}
 	}

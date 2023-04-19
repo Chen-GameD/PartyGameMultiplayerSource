@@ -170,7 +170,7 @@ protected:
 	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
-	int ApplyDamageCounter;
+	TMap<AActor*, int> ApplyDamageCounter;
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOn)
 		bool bAttackOn;

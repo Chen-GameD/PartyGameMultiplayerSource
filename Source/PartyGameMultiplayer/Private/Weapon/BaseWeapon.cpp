@@ -352,7 +352,8 @@ void ABaseWeapon::AttackStart(float AttackTargetDistance)
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_bAttackOn();
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	
 	if (AttackType != EnumAttackType::SpawnProjectile)
 	{
@@ -378,7 +379,8 @@ void ABaseWeapon::AttackStop()
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	AttackObjectMap.Empty();
 
 	if (AttackType == EnumAttackType::Constant)
@@ -571,20 +573,20 @@ void ABaseWeapon::OnRep_IsPickedUp()
 		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
 		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
 
-		// Show weapon silouette on teammates' end
-		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
-		if (TeammateCheckResult == 1)
-		{
-			// Exclude self
-			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
-			{
-				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
-				{
-					WeaponMesh->SetRenderCustomDepth(true);
-					WeaponMesh->SetCustomDepthStencilValue(252);
-				}				
-			}	
-		}			
+		//// Show weapon silouette on teammates' end
+		//int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		//if (TeammateCheckResult == 1)
+		//{
+		//	// Exclude self
+		//	if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+		//	{
+		//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+		//		{
+		//			WeaponMesh->SetRenderCustomDepth(true);
+		//			WeaponMesh->SetCustomDepthStencilValue(252);
+		//		}				
+		//	}	
+		//}			
 	}
 	else
 	{		
@@ -592,7 +594,7 @@ void ABaseWeapon::OnRep_IsPickedUp()
 		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
 		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
 
-		WeaponMesh->SetRenderCustomDepth(false);
+		//WeaponMesh->SetRenderCustomDepth(false);
 	}	
 
 	if (AttackOnEffect && AttackOnEffect->IsActive())
@@ -625,11 +627,13 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 			if (AttackType != EnumAttackType::Constant)
 			{
-				if (ApplyDamageCounter == 0)
+				if (!ApplyDamageCounter.Contains(OtherActor))
+					ApplyDamageCounter.Add(OtherActor);
+				if (ApplyDamageCounter[OtherActor] == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-					ApplyDamageCounter++;
+					ApplyDamageCounter[OtherActor]++;
 				}				
 			}				
 		}

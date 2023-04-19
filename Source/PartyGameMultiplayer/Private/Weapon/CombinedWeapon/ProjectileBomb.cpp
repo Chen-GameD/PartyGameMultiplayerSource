@@ -78,30 +78,30 @@ void AProjectileBomb::Tick(float DeltaTime)
 		}
 	}
 
-	if (1.5f <= TimePassed_SinceExplosion)
-	{
-		BombMesh->SetRenderCustomDepth(false);
-	}
+	//if (1.5f <= TimePassed_SinceExplosion)
+	//{
+	//	BombMesh->SetRenderCustomDepth(false);
+	//}
 }
 
 void AProjectileBomb::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Show projectile silouette on teammates' end
-	int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
-	if (TeammateCheckResult == 1)
-	{
-		// Exclude self
-		if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
-		{
-			if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
-			{
-				BombMesh->SetRenderCustomDepth(true);
-				BombMesh->SetCustomDepthStencilValue(252);
-			}
-		}
-	}
+	//// Show projectile silouette on teammates' end
+	//int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
+	//if (TeammateCheckResult == 1)
+	//{
+	//	// Exclude self
+	//	if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
+	//	{
+	//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+	//		{
+	//			BombMesh->SetRenderCustomDepth(true);
+	//			BombMesh->SetCustomDepthStencilValue(252);
+	//		}
+	//	}
+	//}
 }
 
 void AProjectileBomb::OnRep_HasExploded()

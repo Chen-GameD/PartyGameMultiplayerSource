@@ -53,7 +53,8 @@ void AWeaponFlamefork::AttackStart(float AttackTargetDistance)
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	SetActorEnableCollision(bAttackOn);
 	FTimerHandle TimerHandle;
