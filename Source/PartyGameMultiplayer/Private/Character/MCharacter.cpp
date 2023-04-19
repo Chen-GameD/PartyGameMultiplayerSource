@@ -2487,6 +2487,7 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				Client_MoveCharacter(Server_Direction_SelfToTaserAttacker, DragSpeedRatio);
+				Server_Direction_SelfToTaserAttacker = FVector::Zero();
 			}
 			else
 			{

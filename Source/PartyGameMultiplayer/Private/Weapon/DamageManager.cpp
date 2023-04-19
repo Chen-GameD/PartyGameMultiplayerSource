@@ -253,14 +253,14 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		{
 			Direction_TargetToAttacker.Normalize();
 
-			DamagedCharacter->Server_Direction_SelfToTaserAttacker = Direction_TargetToAttacker;
+			DamagedCharacter->Server_Direction_SelfToTaserAttacker += Direction_TargetToAttacker;
 			// DamagedCharacter->LaunchCharacter(Direction_TargetToAttacker * DragSpeed * DeltaTime, true, false);
 			// DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * 100.0f * DeltaTime);
 			// DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
 		}
 		else
 		{
-			DamagedCharacter->Server_Direction_SelfToTaserAttacker = FVector::Zero();
+			DamagedCharacter->Server_Direction_SelfToTaserAttacker += FVector::Zero();
 		}
 	}
 	return true;
