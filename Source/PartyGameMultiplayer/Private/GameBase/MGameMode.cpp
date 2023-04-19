@@ -111,7 +111,6 @@ void AMGameMode::Logout(AController* Exiting)
 {
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Logout-GameMode-Server"));
 	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : Logout-GameMode-Server"));
-	Super::Logout(Exiting);
 
 	CurrentPlayerNum--;
 	AM_PlayerState* PS = Exiting->GetPlayerState<AM_PlayerState>();
@@ -133,45 +132,7 @@ void AMGameMode::Logout(AController* Exiting)
 		}
 	}
 	
-	if (Exiting)
-	{
-		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
-		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
-		{
-			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(!NewPlayer->IsLocalController())
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				if(IsValid(NetConnectionRef))
-				{
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
-				}
-				else
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
-					UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
-				}
-			}
-		
-			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId != nullptr)
-			{
-				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-				bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
-				if(bRegistrationSuccess)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
-					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
-				}
-			}
-			else
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Failure UN-Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Failure UN-registration"));
-			}
-		}
-	}
+	Super::Logout(Exiting);
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)

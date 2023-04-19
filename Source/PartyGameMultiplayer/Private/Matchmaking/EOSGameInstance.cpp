@@ -106,6 +106,7 @@ void UEOSGameInstance::FindSession()
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
+				SearchSettings = nullptr;
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
 				SearchSettings->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
 				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);

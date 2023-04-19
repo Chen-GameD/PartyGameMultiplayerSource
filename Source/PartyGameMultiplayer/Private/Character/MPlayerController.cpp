@@ -280,6 +280,36 @@ void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 			GameInstanceRef->DestroySession();
 		}
 	}
+	else if(!IsLocalPlayerController() && GetNetMode() == NM_ListenServer)
+	{
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
+		{
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			UNetConnection *NetConnectionRef = Cast<UNetConnection>(this->Player);
+			if(IsValid(NetConnectionRef))
+			{
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(GetWorld());
+				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId))
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				}
+				else
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Failure UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Failure UN-registration: %d"), bRegistrationSuccess);
+				}
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
+				UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
+			}
+		}
+	}
 	Super::OnNetCleanup(Connection);
 }
 
