@@ -53,7 +53,9 @@ protected:
 	int ScoreCanGet = 0;
 
 	UPROPERTY()
-	class AShellSpotLight* pShellSpotLight;
+		class AShellSpotLight* pShellSpotLight;
+	UPROPERTY(EditAnywhere)
+		FVector SpotLightSourceLocation;
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class AShellSpotLight> SpecificShellSpotLightClass;
 };

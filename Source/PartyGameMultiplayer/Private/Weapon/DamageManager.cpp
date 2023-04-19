@@ -252,13 +252,15 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		if (100.0f < Direction_TargetToAttacker.Length())
 		{
 			Direction_TargetToAttacker.Normalize();
-			float DragSpeedRatio = 0.1f;
-			FString ParName = "Paralysis_DragSpeedRatio";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-				DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 
-			//DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * DragSpeed * DeltaTime);
-			DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
+			DamagedCharacter->Server_Direction_SelfToTaserAttacker = Direction_TargetToAttacker;
+			// DamagedCharacter->LaunchCharacter(Direction_TargetToAttacker * DragSpeed * DeltaTime, true, false);
+			// DamagedCharacter->SetActorLocation(DamagedCharacter->GetActorLocation() + Direction_TargetToAttacker * 100.0f * DeltaTime);
+			// DamagedCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
+		}
+		else
+		{
+			DamagedCharacter->Server_Direction_SelfToTaserAttacker = FVector::Zero();
 		}
 	}
 	return true;

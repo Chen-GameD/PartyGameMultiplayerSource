@@ -106,7 +106,8 @@ void AWeaponBlower::AttackStart(float AttackTargetDistance)
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_bAttackOn();
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	float ApplyDamageAndKnockbackDelay = 0.15f;
 	FTimerHandle ApplyDamageAndKnockbackTimerHandle;

@@ -193,7 +193,8 @@ void AWeaponTaser::AttackStart(float AttackTargetDistance)
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	SetActorEnableCollision(bAttackOn);
 
@@ -216,7 +217,8 @@ void AWeaponTaser::AttackStop()
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	AttackObjectMap.Empty();
 
 	if (AttackType == EnumAttackType::Constant)
@@ -335,11 +337,19 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				if (GetNetMode() == NM_ListenServer)
 					OnRep_bAttackOverlap();
 
-				if (ApplyDamageCounter == 0 && HoldingController)
+				bool HasAppliedDamageToSth = false;
+				for (auto& Elem : ApplyDamageCounter)
+				{
+					if (Elem.Value != 0)
+						HasAppliedDamageToSth = true;
+				}					
+				if (!HasAppliedDamageToSth && HoldingController)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
 					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-					ApplyDamageCounter++;
+					if (!ApplyDamageCounter.Contains(OtherActor))
+						ApplyDamageCounter.Add(OtherActor);
+					ApplyDamageCounter[OtherActor]++;
 				}
 			}
 		}
@@ -430,23 +440,23 @@ void AWeaponTaser::OnRep_IsPickedUp()
 
 	if (IsPickedUp)
 	{
-		// Show weapon silouette on teammates' end
-		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
-		if (TeammateCheckResult == 1)
-		{
-			// Exclude self
-			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
-			{
-				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
-				{
-					TaserForkMesh->SetRenderCustomDepth(true);
-					TaserForkMesh->SetCustomDepthStencilValue(252);
-				}
-			}
-		}
+		//// Show weapon silouette on teammates' end
+		//int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		//if (TeammateCheckResult == 1)
+		//{
+		//	// Exclude self
+		//	if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+		//	{
+		//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+		//		{
+		//			TaserForkMesh->SetRenderCustomDepth(true);
+		//			TaserForkMesh->SetCustomDepthStencilValue(252);
+		//		}
+		//	}
+		//}
 	}
 	else
 	{
-		TaserForkMesh->SetRenderCustomDepth(false);
+		//TaserForkMesh->SetRenderCustomDepth(false);
 	}
 }

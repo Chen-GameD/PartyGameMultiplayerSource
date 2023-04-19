@@ -70,20 +70,20 @@ void AProjectileCannon::BeginPlay()
 
 	CannonMesh->SetRelativeRotation(FVector(FMath::RandRange(0.f, 3.14f), FMath::RandRange(0.f, 3.14f), FMath::RandRange(0.f, 3.14f)).Rotation());
 	
-	// Show projectile silouette on teammates' end
-	int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
-	if (TeammateCheckResult == 1)
-	{
-		// Exclude self
-		if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
-		{
-			if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
-			{
-				CannonMesh->SetRenderCustomDepth(true);
-				CannonMesh->SetCustomDepthStencilValue(252);
-			}
-		}
-	}
+	//// Show projectile silouette on teammates' end
+	//int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
+	//if (TeammateCheckResult == 1)
+	//{
+	//	// Exclude self
+	//	if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
+	//	{
+	//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+	//		{
+	//			CannonMesh->SetRenderCustomDepth(true);
+	//			CannonMesh->SetCustomDepthStencilValue(252);
+	//		}
+	//	}
+	//}
 }
 
 void AProjectileCannon::OnRep_HasExploded()

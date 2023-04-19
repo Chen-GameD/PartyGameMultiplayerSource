@@ -108,9 +108,11 @@ public:
 	void Client_Respawn();
 	
 	UFUNCTION()
-	void SetFollowWidgetVisibility(bool IsVisible);
+		void SetFollowWidgetVisibility(bool IsVisible);
 	UFUNCTION()
-	void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
+		void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
+	UFUNCTION()
+		void SetFollowWidgetHealthBarByTeamID(int TeamID);
 
 	UFUNCTION()
 	void SetPlayerNameUIInformation();
@@ -447,6 +449,7 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
+	FVector Server_Direction_SelfToTaserAttacker;
 	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
 		bool IsInvincible;
 	UPROPERTY(Replicated)

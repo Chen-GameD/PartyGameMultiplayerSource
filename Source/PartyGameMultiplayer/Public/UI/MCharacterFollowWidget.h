@@ -31,7 +31,9 @@ public:
 	UFUNCTION()
 	void SetPlayerName(FString i_PlayerName);
 	UFUNCTION()
-	void SetIsEnemyHealthBar(bool IsEnemy);
+		void SetIsEnemyHealthBar(bool IsEnemy);
+	UFUNCTION()
+		void ShowHealthBarByTeamID(int TeamID);
 
 	UFUNCTION()
 	void SetHealthBarRenderOpacity(float percentage);
@@ -53,11 +55,15 @@ public:
 	
 protected:
 	UPROPERTY(meta = (BindWidget))
-	UProgressBar* HealthBar_Enemy;
+		UProgressBar* HealthBar_Enemy;
 	UPROPERTY(meta = (BindWidget))
-	UProgressBar* HealthBar_Teammate;
+		UProgressBar* HealthBar_Teammate;
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* PlayerName;
+		UProgressBar* HealthBar_TeamRed;
+	UPROPERTY(meta = (BindWidget))
+		UProgressBar* HealthBar_TeamBlue;
+	UPROPERTY(meta = (BindWidget))
+		UTextBlock* PlayerName;
 
 	UPROPERTY(meta = (BindWidget))
 	UCanvasPanel* WeaponTipCanvas;

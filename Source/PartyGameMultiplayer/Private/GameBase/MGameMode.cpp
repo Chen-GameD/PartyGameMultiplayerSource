@@ -181,7 +181,7 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 		if (bFirstTimeSpawn)
 		{
 			// SpawnMinigameObject with a certain delay after the game starts
-			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 7.0f;
+			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 4.5f;
 			FTimerHandle TimerHandle;
 			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
 				{
@@ -307,7 +307,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
 			}
 		}
 		else

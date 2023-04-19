@@ -84,7 +84,8 @@ void AWeaponBomb::AttackStart(float AttackTargetDistance)
 	{
 		OnRep_bAttackOn();
 	}	
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	SetActorEnableCollision(bAttackOn);
 
@@ -109,7 +110,8 @@ void AWeaponBomb::AttackStart(float AttackTargetDistance)
 //	{
 //		OnRep_bAttackOn();
 //	}
-//	ApplyDamageCounter = 0;
+//	for (auto& Elem : ApplyDamageCounter)
+//		Elem.Value = 0;
 //	AttackObjectMap.Empty();
 //
 //	SetActorEnableCollision(bAttackOn);
@@ -156,23 +158,23 @@ void AWeaponBomb::OnRep_IsPickedUp()
 
 	if (IsPickedUp)
 	{
-		// Show weapon silouette on teammates' end
-		int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
-		if (TeammateCheckResult == 1)
-		{
-			// Exclude self
-			if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
-			{
-				if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
-				{
-					WeaponMesh_WithoutBomb->SetRenderCustomDepth(true);
-					WeaponMesh_WithoutBomb->SetCustomDepthStencilValue(252);
-				}
-			}
-		}
+		//// Show weapon silouette on teammates' end
+		//int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		//if (TeammateCheckResult == 1)
+		//{
+		//	// Exclude self
+		//	if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+		//	{
+		//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+		//		{
+		//			WeaponMesh_WithoutBomb->SetRenderCustomDepth(true);
+		//			WeaponMesh_WithoutBomb->SetCustomDepthStencilValue(252);
+		//		}
+		//	}
+		//}
 	}
 	else
 	{
-		WeaponMesh_WithoutBomb->SetRenderCustomDepth(false);
+		//WeaponMesh_WithoutBomb->SetRenderCustomDepth(false);
 	}
 }
