@@ -69,7 +69,6 @@ void AWeaponBlower::Tick(float DeltaTime)
 						Elem.Value += DeltaTime;
 						if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
 						{
-							GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in blower"));
 							ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
 							Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
 						}
