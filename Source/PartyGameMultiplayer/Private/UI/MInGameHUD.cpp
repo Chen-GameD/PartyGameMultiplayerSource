@@ -242,6 +242,14 @@ void AMInGameHUD::InGame_BroadcastMinigameInformation(int KillerTeamIndex, FStri
 	}
 }
 
+void AMInGameHUD::InGame_GameEnd()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->BPF_GameEnd();
+	}
+}
+
 void AMInGameHUD::InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility)
 {
 	if (InGame_LobbyWidget)
