@@ -2482,12 +2482,12 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					Server_SetCanMove(false);
 					SetElectricShockAnimState(true);
 				}
-				float DragSpeedRatio = 0.15f;
+				/*float DragSpeedRatio = 0.15f;
 				FString ParName = "Paralysis_DragSpeedRatio";
 				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				Client_MoveCharacter(Server_Direction_SelfToTaserAttacker, DragSpeedRatio);
-				Server_Direction_SelfToTaserAttacker = FVector::Zero();
+				Server_Direction_SelfToTaserAttacker = FVector::Zero();*/
 			}
 			else
 			{

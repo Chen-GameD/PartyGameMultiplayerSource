@@ -258,7 +258,7 @@ void AMPlayerController::BeginPlay()
 			// Set input mode
 			//FInputModeUIOnly inputMode;
 			FInputModeUIOnly inputMode;
-			inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
 			this->SetInputMode(inputMode);
 			this->SetShowMouseCursor(true);
 

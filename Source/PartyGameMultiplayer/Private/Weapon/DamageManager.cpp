@@ -184,6 +184,9 @@ bool ADamageManager::AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff Att
 		float& BuffRemainedTime = pMCharacter->BuffMap[AttackBuff][1];
 		float& BuffAccumulatedTime = pMCharacter->BuffMap[AttackBuff][2];
 
+		if (AttackBuff == EnumAttackBuff::Burning && pMCharacter->IsHealing)
+			buffPointsToAdd = 0;
+
 		float OldBuffPoints = BuffPoints;
 		BuffPoints += buffPointsToAdd;
 		if (AttackBuff == EnumAttackBuff::Saltcure || AttackBuff == EnumAttackBuff::Shellheal)
@@ -319,14 +322,20 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 			{
 				Direction_TargetToAttacker.Normalize();
 
-				pMCharacter->Server_Direction_SelfToTaserAttacker += Direction_TargetToAttacker;
-				// pMCharacter->LaunchCharacter(Direction_TargetToAttacker * DragSpeed * DeltaTime, true, false);
-				// pMCharacter->SetActorLocation(pMCharacter->GetActorLocation() + Direction_TargetToAttacker * 100.0f * DeltaTime);
-				// pMCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);
+				//pMCharacter->Server_Direction_SelfToTaserAttacker += Direction_TargetToAttacker;
+
+				float DragSpeed = 2500.0f;
+				FString ParName = "Paralysis_DragSpeed";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					DragSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				pMCharacter->LaunchCharacter(Direction_TargetToAttacker * DragSpeed * DeltaTime, true, false);
+				
+				// pMCharacter->SetActorLocation(pMCharacter->GetActorLocation() + Direction_TargetToAttacker * 100.0f * DeltaTime);  // Shake
+				// pMCharacter->Client_MoveCharacter(Direction_TargetToAttacker, DragSpeedRatio);  // may not trigger stably
 			}
 			else
 			{
-				pMCharacter->Server_Direction_SelfToTaserAttacker += FVector::Zero();
+				//pMCharacter->Server_Direction_SelfToTaserAttacker += FVector::Zero();
 			}
 		}
 	}
