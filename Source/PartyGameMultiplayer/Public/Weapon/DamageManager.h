@@ -33,9 +33,9 @@ public:
 	
 
 	// Burning, Saltcure
-	static bool AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float buffPointsToAdd);
+	static bool AddBuffPoints(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AActor* BuffReceiver, float buffPointsToAdd);
 	// Knockback, Paralysis
-	static bool ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AMCharacter* DamagedCharacter, float DeltaTime);
+	static bool ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff AttackBuff, AController* AttackerController, class AActor* BuffReceiver, float DeltaTime);
 
 
 	static bool CanApplyDamageToEnemyCrab(TSubclassOf<class ABaseWeapon> EnemyCrab_SpecificWeaponClass, EnumWeaponType WeaponType);

@@ -14,7 +14,10 @@
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_TrainingRobot.h"
 #include "Character/MCharacter.h"
 #include "M_PlayerState.h"
 
@@ -100,7 +103,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			// if hit a target 
 			else
 			{					
-				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+				if (Cast<AMCharacter>(Server_ActorBeingHit) || Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
 					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
@@ -120,10 +123,19 @@ void AWeaponTaser::Tick(float DeltaTime)
 						AttackStop();
 					}
 					// Apply paralysis buff(drag towards the attacker)
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacter, DeltaTime);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, Server_ActorBeingHit, DeltaTime);
 					// Stop attack when the character is dead
-					if (pCharacter->GetIsDead())
-						AttackStop();
+					if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+					{
+						if (pCharacter->GetIsDead())
+							AttackStop();
+					}
+					// Stop attack when the robot is dead
+					if (AMinigameObj_TrainingRobot* pRobot = Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
+					{
+						if (pRobot->GetCurrentHealth() <= 0)
+							AttackStop();
+					}
 				}
 				// Stop attack when the MinigameMainObjective is dead
 				else if (AMinigameObj_Enemy* pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(Server_ActorBeingHit))
@@ -270,7 +282,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 	if (IsPickedUp && GetOwner())
 	{
 		// if hit characters / minigame objects
-		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_Enemy>(OtherActor))
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameMainObjective>(OtherActor))
 		{
 			bool bTargetCanBeAttacked = true;
 			// Check if this character can be attacked
@@ -299,6 +311,10 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					pMinigameEnemyBeingHit->NetMulticast_ShowNoDamageHint(HoldingController, 0.5f * (pMinigameEnemyBeingHit->CrabCenterMesh->GetComponentLocation() + AttackDetectComponent->GetComponentLocation()));
 				}					
 			}
+			else if (auto pMinigameStatueBeingHit = Cast<AMinigameObj_Statue>(OtherActor))
+			{
+				bTargetCanBeAttacked = false;
+			}
 
 			if (!bTargetCanBeAttacked)
 			{
@@ -308,10 +324,10 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			else
 			{
 				Server_ActorBeingHit = OtherActor;
-				if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
+				if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_TrainingRobot>(OtherActor))
 				{
 					// Apply paralysis buff
-					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
+					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, OtherActor, 1.0f);
 					Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
 				}
 				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))

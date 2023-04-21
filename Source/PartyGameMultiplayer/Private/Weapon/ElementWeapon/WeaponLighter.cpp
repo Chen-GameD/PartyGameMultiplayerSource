@@ -12,6 +12,7 @@
 
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
 
 AWeaponLighter::AWeaponLighter()
@@ -48,7 +49,7 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if ((Cast<ACharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameObj_Enemy>(OtherActor))
+			Cast<AMinigameMainObjective>(OtherActor))
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);

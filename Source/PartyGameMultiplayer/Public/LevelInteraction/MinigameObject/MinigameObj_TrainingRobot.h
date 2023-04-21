@@ -16,42 +16,44 @@ class PARTYGAMEMULTIPLAYER_API AMinigameObj_TrainingRobot : public AMinigameMain
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	AMinigameObj_TrainingRobot(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	AMinigameObj_TrainingRobot();
 
-	/** Property replication */
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
-	/** Event for taking damage. Overridden from APawn.*/
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 	
-	/**	Update HealthBar_Enemy UI for character */
 	UFUNCTION(BlueprintCallable, Category = "Health")
-	void SetHealthBarUI();
+		void SetCurrentHealth(float healthValue);
 
-	void Server_WhenDead();
+	//virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//UFUNCTION(BlueprintCallable, Category = "Health")
+		//void SetHealthBarUI();
+
+	// Buff
+	// ===================================================================
+	bool CheckBuffMap(EnumAttackBuff AttackBuff);
+	void ActByBuff_PerTick(float DeltaTime);
 
 protected:
-	
-	virtual void OnRep_CurrentHealth() override;
-	
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	//virtual void BeginPlay() override;
+	//virtual void OnRep_CurrentHealth() override;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* FollowWidget;
+	// Buff
+	// ===================================================================
+	TMap<EnumAttackBuff, TArray<float>> BuffMap;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+		class UNiagaraComponent* EffectBurn;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UStaticMeshComponent* RootMesh;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class USkeletalMeshComponent* RobotMesh;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UStaticMeshComponent* CrabCenterMesh;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UStaticMeshComponent* CollisionMesh;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	//	class UWidgetComponent* FollowWidget;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	class UStaticMeshComponent* RootMesh;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	class USkeletalMeshComponent* RobotMesh;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	class UStaticMeshComponent* CrabCenterMesh;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	//	class UStaticMeshComponent* CollisionMesh;
 };

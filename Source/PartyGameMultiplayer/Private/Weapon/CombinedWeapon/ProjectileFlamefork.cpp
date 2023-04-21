@@ -84,7 +84,7 @@ void AProjectileFlamefork::OnProjectileOverlapBegin(class UPrimitiveComponent* O
 		return;
 
 	Origin = this->GetActorLocation();
-	if(Cast<AMinigameObj_Enemy>(OtherActor))
+	if(Cast<AMinigameMainObjective>(OtherActor))
 		HasExploded = true;
 	if (GetNetMode() == NM_ListenServer)
 	{

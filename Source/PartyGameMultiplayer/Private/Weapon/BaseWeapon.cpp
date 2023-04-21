@@ -24,6 +24,7 @@
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -188,9 +189,9 @@ void ABaseWeapon::Tick(float DeltaTime)
 								if (pMCharacter->GetCurrentHealth() <= 0)
 									IsDamagedActorDead = true;
 							}
-							else if (auto pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(DamagedActor))
+							else if (auto pMinigameObj = Cast<AMinigameMainObjective>(DamagedActor))
 							{
-								if (pMinigameObj_Enemy->GetCurrentHealth() <= 0)
+								if (pMinigameObj->GetCurrentHealth() <= 0)
 									IsDamagedActorDead = true;
 							}
 							if(!IsDamagedActorDead)
@@ -616,7 +617,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameObj_Enemy>(OtherActor) )
+			Cast<AMinigameMainObjective>(OtherActor) )
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);
@@ -647,7 +648,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 	//if (IsPickedUp && GetOwner())
 	//{
 	//	if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-	//		Cast<AMinigameObj_Enemy>(OtherActor))
+	//		Cast<AMinigameMainObjective>(OtherActor))
 	//	{
 	//		if (AttackObjectMap.Contains(OtherActor))
 	//		{
