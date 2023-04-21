@@ -305,7 +305,7 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 	}
 	if(bWasSuccessful)
 	{
-		const int mapIndex = DebugLevelSelect != -1 ? DebugLevelSelect : FMath::RandRange(0, LevelText.Num()-1);
+		const int mapIndex = DebugLevelSelect != -1 ? DebugLevelSelect : FMath::RandRange(0, LevelText.Num()-2);
 		GetWorld()->ServerTravel(LevelText[mapIndex] +"?listen", true);
 	}
 	isLoading = false;
