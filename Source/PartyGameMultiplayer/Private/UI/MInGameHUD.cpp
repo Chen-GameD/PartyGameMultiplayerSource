@@ -250,6 +250,14 @@ void AMInGameHUD::InGame_GameEnd()
 	}
 }
 
+void AMInGameHUD::InGame_HideMinigameInfo()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->HideMinigameInfo();
+	}
+}
+
 void AMInGameHUD::InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility)
 {
 	if (InGame_LobbyWidget)

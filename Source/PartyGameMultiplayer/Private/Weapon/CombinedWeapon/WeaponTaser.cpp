@@ -106,7 +106,11 @@ void AWeaponTaser::Tick(float DeltaTime)
 				if (Cast<AMCharacter>(Server_ActorBeingHit) || Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
-					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
+					//TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
+					if (AMCharacter* pMCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+						TaserForkMesh->SetWorldLocation(pMCharacter->GetActorLocation() + FVector::Zero());
+					else if(AMinigameObj_TrainingRobot* pRobot = Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
+						TaserForkMesh->SetWorldLocation(pRobot->RobotCenterMesh->GetComponentLocation() + FVector::Zero());
 					// Rotation
 					if (Server_ActorBeingHit)
 					{

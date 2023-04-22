@@ -245,6 +245,14 @@ AMInGameHUD* AMPlayerController::GetInGameHUD()
 	return IsValid(MyInGameHUD) ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
 }
 
+void AMPlayerController::Tutorial_InitForPlayerController()
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_HideMinigameInfo();
+	}
+}
+
 void AMPlayerController::BeginPlay()
 {
 	Super::BeginPlay();

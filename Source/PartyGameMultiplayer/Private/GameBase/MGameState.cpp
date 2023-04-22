@@ -86,6 +86,12 @@ void AMGameState::OnRep_IsGameStart()
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
 	for (size_t i = 0; i < OutActors.Num(); i++)
 	{
+		auto Chr = Cast<AMCharacter>(OutActors[i]);
+		Chr->Teammates.Empty();
+		Chr->Opponents.Empty();
+	}
+	for (size_t i = 0; i < OutActors.Num(); i++)
+	{
 		for (size_t j = i+1; j < OutActors.Num(); j++)
 		{
 			auto Chr1 = Cast<AMCharacter>(OutActors[i]);
@@ -195,6 +201,18 @@ void AMGameState::UpdateGameTime()
 	}
 }
 
+void AMGameState::UpdateTutorialGameTimer()
+{
+	GameTime++;
+
+	FString TipInformation = FString::Printf(TEXT("Game time : %d"), GameTime);
+	
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateGameStartTimerUI();
+	}
+}
+
 void AMGameState::OnRep_Team_1_ScoreUpdate()
 {
 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
@@ -260,5 +278,14 @@ void AMGameState::Server_StartGame_Implementation()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
+	OnRep_IsGameStart();
+}
+
+
+void AMGameState::Server_StartTutorialGame_Implementation()
+{
+	FString TipInformation = FString::Printf(TEXT("Start Tutorial timer!"));
+	
+	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateTutorialGameTimer, 1, true);
 	OnRep_IsGameStart();
 }
