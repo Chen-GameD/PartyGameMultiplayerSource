@@ -94,12 +94,12 @@ void AProjectileFlamefork::OnProjectileOverlapBegin(class UPrimitiveComponent* O
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 	//// Apply knockback buff
-	//ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
+	//ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, OtherActor, 0);
 	// Add burning buff points
 	FString ParName = "Flamefork_Burning_PointsToAdd_PerHit";
 	if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 	{
 		float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, Controller, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
+		ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, Controller, OtherActor, buffPointsToAdd);
 	}
 }
