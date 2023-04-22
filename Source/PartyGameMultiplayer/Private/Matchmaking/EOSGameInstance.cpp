@@ -8,7 +8,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Interfaces/OnlineIdentityInterface.h"
 #include "Interfaces/OnlineExternalUIInterface.h"
-#include "OnlineSessionSettings.h"
 #include "Blueprint/UserWidget.h"
 #include "GameBase/MGameState.h"
 #include "GameFramework/GameState.h"
@@ -373,36 +372,34 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 			{
 				if(IOnlineSessionPtr OnlineSessionPtr = OnlineSubsystem->GetSessionInterface())
 				{
-					int32 index = (CurrentlyJoiningSessionIndex == -1) ? 0 : CurrentlyJoiningSessionIndex;
-					OnlineSessionPtr->GetResolvedConnectString(SearchSettings->SearchResults[index], NAME_GamePort, JoinURL);
-					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
-					if(!JoinURL.IsEmpty())
+					if(JoiningViaInvite)
 					{
-						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_MAPNAME))
-						{
-							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_MAPNAME);
-							int32 mapIndex = -999;
-							val->Data.GetValue(mapIndex);
-							UE_LOG(LogTemp, Warning, TEXT("index MapKeys : %d"), mapIndex);
-						}
-						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_SESSIONKEY))
-						{
-							auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_SESSIONKEY);
-							UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *val->ToString());
-						}
+						OnlineSessionPtr->GetResolvedConnectString(*InviteResultRef, NAME_GamePort, JoinURL);
 					}
+					else
+					{
+						int32 index = (CurrentlyJoiningSessionIndex == -1) ? 0 : CurrentlyJoiningSessionIndex;
+						OnlineSessionPtr->GetResolvedConnectString(SearchSettings->SearchResults[index], NAME_GamePort, JoinURL);
+					}
+					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
 					OnlineSessionPtr->ClearOnJoinSessionCompleteDelegates(this);
 				}
 			}
+			if(JoiningViaInvite)
+			{
+				InviteResultRef = nullptr;
+				JoiningViaInvite = false;
+			}
 			if(!JoinURL.IsEmpty())
 			{
+				
 				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
-				CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 			}
 			else
 			{
 				isLoading = false;
 			}
+			CurrentlyJoiningSessionIndex = -1;  //reset as joining process finished
 		}
 	}
 }
@@ -417,6 +414,27 @@ void UEOSGameInstance::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, 
 		{
 			Identity->ClearOnLoginCompleteDelegates(0, this);
 		}
+		if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+		{
+			SessionPtr->OnSessionUserInviteAcceptedDelegates.AddUObject(this, &UEOSGameInstance::OnSessionUserInviteAccepted);
+		}
 	}
 	bIsLoggedIn = bWasSuccessful;
+}
+
+void UEOSGameInstance::OnSessionUserInviteAccepted(bool bWasSuccessful, int32 LocalUserNum, TSharedPtr<const FUniqueNetId> UniqueNetId, const FOnlineSessionSearchResult& InviteResult)
+{
+	if(bIsLoggedIn && bWasSuccessful)
+	{
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+		{
+			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			{
+				InviteResultRef = &InviteResult;
+				JoiningViaInvite = true;
+				SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
+				SessionPtr->JoinSession(0, SESSION_NAME, InviteResult);
+			}
+		}
+	}
 }

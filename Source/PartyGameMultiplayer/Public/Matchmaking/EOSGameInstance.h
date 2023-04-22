@@ -113,10 +113,13 @@ public:
 
 	UPROPERTY(VisibleAnywhere)
 	int32 CurrentlyJoiningSessionIndex = -1;
+	bool JoiningViaInvite = false;
+	const FOnlineSessionSearchResult* InviteResultRef = nullptr;
 
 	void OnCreateSessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnDestroySessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnFindSessionComplete(bool bWasSuccessful);
 	void OnJoinSessionComplete(FName sessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);
+	void OnSessionUserInviteAccepted(bool bWasSuccessful, int32 LocalUserNum, TSharedPtr<const FUniqueNetId> UniqueNetId, const FOnlineSessionSearchResult& InviteResult);
 };
