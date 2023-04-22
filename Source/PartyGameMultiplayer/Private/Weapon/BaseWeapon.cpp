@@ -503,16 +503,20 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Ignore);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 
-		InnerDisplayCase->SetBoxExtent(FVector3d(45.0f, 45.0f, 45.0f));
-		InnerDisplayCase->SetCollisionProfileName(TEXT("Custom"));
-		InnerDisplayCase->SetCollisionObjectType(ECC_Destructible);
-		InnerDisplayCase->SetSimulatePhysics(false);
-		InnerDisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		InnerDisplayCase->SetCollisionResponseToAllChannels(ECR_Ignore);
-		InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Block);
+		InnerDisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
+		//InnerDisplayCase->SetBoxExtent(FVector3d(45.0f, 45.0f, 45.0f));
+		//InnerDisplayCase->SetCollisionProfileName(TEXT("Custom"));
+		//InnerDisplayCase->SetCollisionObjectType(ECC_Destructible);
+		//InnerDisplayCase->SetSimulatePhysics(true);
+		//InnerDisplayCase->SetEnableGravity(false);
+		//InnerDisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		//InnerDisplayCase->SetCollisionResponseToAllChannels(ECR_Ignore);
+		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Ignore);
+		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Block);
 	}
 	else
 	{
@@ -523,7 +527,7 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 		//InnerDisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
 		//InnerDisplayCase->SetSimulatePhysics(false);
 		//InnerDisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
+		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
 	}
 }
 

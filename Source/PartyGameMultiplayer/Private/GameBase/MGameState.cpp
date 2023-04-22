@@ -86,6 +86,12 @@ void AMGameState::OnRep_IsGameStart()
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
 	for (size_t i = 0; i < OutActors.Num(); i++)
 	{
+		auto Chr = Cast<AMCharacter>(OutActors[i]);
+		Chr->Teammates.Empty();
+		Chr->Opponents.Empty();
+	}
+	for (size_t i = 0; i < OutActors.Num(); i++)
+	{
 		for (size_t j = i+1; j < OutActors.Num(); j++)
 		{
 			auto Chr1 = Cast<AMCharacter>(OutActors[i]);
