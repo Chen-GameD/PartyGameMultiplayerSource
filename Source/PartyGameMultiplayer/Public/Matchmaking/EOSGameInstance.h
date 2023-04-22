@@ -6,7 +6,6 @@
 #include "OnlineSessionSettings.h"
 #include "Engine/GameInstance.h"
 #include "Interfaces/OnlineSessionInterface.h"
-#include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "ReturnGameState.h"
 #include "SessionEntry.h"
@@ -72,6 +71,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ClearEndGameState();
 
+	void SetSessionStateStarted();
+
 	UFUNCTION(BlueprintCallable)
 	void ShowInviteUI();
 
@@ -114,7 +115,7 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	int32 CurrentlyJoiningSessionIndex = -1;
 	bool JoiningViaInvite = false;
-	const FOnlineSessionSearchResult* InviteResultRef = nullptr;
+	FString InviteJoinURL;
 
 	void OnCreateSessionComplete(FName sessionName, bool bWasSuccessful);
 	void OnDestroySessionComplete(FName sessionName, bool bWasSuccessful);
