@@ -195,6 +195,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* DisplayCase;
 
+	// Used to seperate weapons
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UBoxComponent* InnerDisplayCase;
+
 	// Static Mesh used to provide a visual representation of the object.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* WeaponMesh;
