@@ -82,6 +82,9 @@ public:
 	// Broadcasting Mini game system
 	UFUNCTION()
 	void InGame_BroadcastMinigameInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation);
+	// Game End
+	UFUNCTION(BlueprintCallable)
+	void InGame_GameEnd();
 
 	// Show or Hide InGame_LobbyWidget
 	UFUNCTION()

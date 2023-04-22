@@ -53,6 +53,10 @@ public:
 	void UpdateAndShowMiniBroadcastingInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation);
 	UFUNCTION(BlueprintImplementableEvent)
 	void BroadcastingMiniAnimationEvent();
+
+	// Game End
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_GameEnd();
 	
 
 protected:
@@ -67,9 +71,9 @@ protected:
 	UTextBlock* GameTimer;
 
 	// Minigame Information
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UTextBlock* MinigameInfo;
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UImage* MinigameInfoImage;
 
 	// Broadcasting System Information

@@ -36,8 +36,8 @@ public:
 	void ActByBuff_PerTick(float DeltaTime);
 
 protected:
-	//virtual void BeginPlay() override;
-	//virtual void OnRep_CurrentHealth() override;
+	virtual void BeginPlay() override;
+	virtual void OnRep_CurrentHealth() override;
 
 public:
 	// Buff
@@ -46,14 +46,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectBurn;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	//	class UWidgetComponent* FollowWidget;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//	class UStaticMeshComponent* RootMesh;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//	class USkeletalMeshComponent* RobotMesh;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//	class UStaticMeshComponent* CrabCenterMesh;
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//	class UStaticMeshComponent* CollisionMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* FollowWidget;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* RootMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class USkeletalMeshComponent* RobotMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		class UStaticMeshComponent* CollisionMesh;
 };

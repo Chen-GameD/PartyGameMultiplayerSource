@@ -320,6 +320,12 @@ void AMGameMode::CheckGameStart()
 		CanStart = false;
 	}
 
+	if (LevelIndex == TutorialLevelIndex)
+	{
+		CanStart = true;
+		StartTheGame();
+	}
+
 	if (!CanStart)
 	{
 		GetWorldTimerManager().ClearTimer(StartGameCountDownTimerHandle);

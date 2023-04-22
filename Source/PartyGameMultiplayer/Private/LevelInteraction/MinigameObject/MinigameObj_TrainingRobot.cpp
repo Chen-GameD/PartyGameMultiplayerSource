@@ -5,9 +5,29 @@
 #include "Weapon/WeaponDataHelper.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Components/WidgetComponent.h"
+#include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_TrainingRobot::AMinigameObj_TrainingRobot()
 {
+	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));	
+	RootMesh->SetupAttachment(RootComponent);
+	RootMesh->SetCollisionProfileName(TEXT("NoCollision"));
+
+	RobotMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CrabMesh"));
+	RobotMesh->SetupAttachment(RootMesh);
+	RobotMesh->SetCollisionProfileName(TEXT("Custom"));
+
+	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CollisionMesh"));
+	CollisionMesh->SetupAttachment(RobotMesh);
+	CollisionMesh->SetCollisionProfileName(TEXT("Custom"));
+
+	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
+	FollowWidget->SetupAttachment(RootMesh);
+
+	MaxHealth = 100.0f;
+	CurrentHealth = MaxHealth;
+	
 	EffectBurn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBurn"));
 	EffectBurn->SetupAttachment(RootComponent);
 	EffectBurn->bAutoActivate = false;
@@ -78,6 +98,33 @@ void AMinigameObj_TrainingRobot::ActByBuff_PerTick(float DeltaTime)
 			}
 		}
 	}
+}
+
+void AMinigameObj_TrainingRobot::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+	{
+		pFollowWidget->SetHealthByPercentage(1);
+		FollowWidget->SetVisibility(true);
+	}	
+}
+
+void AMinigameObj_TrainingRobot::OnRep_CurrentHealth()
+{
+	Super::OnRep_CurrentHealth();
+
+	if (CurrentHealth <= 0)
+	{
+		// Respawn robot
+		// TODO
+		
+	}
+
+	// Set UI: Health Bar
+	if(UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
+		pFollowWidget->SetHealthByPercentage(CurrentHealth / MaxHealth);
 }
 
 
