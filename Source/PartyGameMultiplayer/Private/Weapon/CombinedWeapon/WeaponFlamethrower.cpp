@@ -64,7 +64,7 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 					Elem.Value += DeltaTime;
 					if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
 					{
-						ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
+						ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Elem.Key, DeltaTime);
 						Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
 					}
 					// Add burning buff points
@@ -72,7 +72,7 @@ void AWeaponFlamethrower::Tick(float DeltaTime)
 					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					{
 						float buffPointsToAdd = DeltaTime * AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(Elem.Key), buffPointsToAdd);
+						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Elem.Key, buffPointsToAdd);
 					}
 				}
 			}

@@ -366,7 +366,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				if (!HasAppliedDamageToSth && HoldingController)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, OtherActor, 0);
 					if (!ApplyDamageCounter.Contains(OtherActor))
 						ApplyDamageCounter.Add(OtherActor);
 					ApplyDamageCounter[OtherActor]++;
@@ -393,8 +393,8 @@ void AWeaponTaser::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp,
 	if (Server_ActorBeingHit == OtherActor)
 	{
 		Server_ActorBeingHit = nullptr;
-		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
-			ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pMCharacter, -1.0f);
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_TrainingRobot>(OtherActor))
+			ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, OtherActor, -1.0f);
 	}
 
 	if (AttackObjectMap.Contains(OtherActor))
