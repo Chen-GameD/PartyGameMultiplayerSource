@@ -58,5 +58,9 @@ public:
 	float RespawnDelay;
 
 	// Animation
+	UPROPERTY(BlueprintReadOnly)
 	bool IsDead;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsShock;
 };

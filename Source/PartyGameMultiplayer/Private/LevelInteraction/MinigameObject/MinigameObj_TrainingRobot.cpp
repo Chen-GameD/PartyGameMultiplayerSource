@@ -39,6 +39,7 @@ AMinigameObj_TrainingRobot::AMinigameObj_TrainingRobot()
 	EffectBurn->bAutoActivate = false;
 	
 	IsDead = false;
+	IsShock = false;
 }
 
 void AMinigameObj_TrainingRobot::Tick(float DeltaTime)
@@ -98,11 +99,12 @@ void AMinigameObj_TrainingRobot::ActByBuff_PerTick(float DeltaTime)
 			//  Is Paralyzed
 			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				
+				IsShock = true;
 			}
 			// Is Not Paralyzed
 			else
 			{
+				IsShock = false;
 			}
 		}
 	}
