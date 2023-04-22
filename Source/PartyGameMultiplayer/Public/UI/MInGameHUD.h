@@ -85,6 +85,9 @@ public:
 	// Game End
 	UFUNCTION(BlueprintCallable)
 	void InGame_GameEnd();
+	// Hide Game Status MinigameInfo Image
+	UFUNCTION()
+	void InGame_HideMinigameInfo();
 
 	// Show or Hide InGame_LobbyWidget
 	UFUNCTION()

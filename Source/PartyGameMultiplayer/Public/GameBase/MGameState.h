@@ -49,6 +49,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 
+	UFUNCTION(Server, Reliable)
+	void Server_StartTutorialGame();
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_GameStartBGM(bool isBroadcast);
 
@@ -60,6 +63,9 @@ public:
 
 	UFUNCTION()
 	void UpdateGameTime();
+
+	UFUNCTION()
+	void UpdateTutorialGameTimer();
 
 	// UFUNCTION()
 	// void OnRep_UpdateTeam1Array();

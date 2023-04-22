@@ -22,13 +22,10 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	void Server_WhenDead();
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
-		void SetCurrentHealth(float healthValue);
-
-	//virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	//UFUNCTION(BlueprintCallable, Category = "Health")
-		//void SetHealthBarUI();
+	void SetCurrentHealth(float healthValue);
 
 	// Buff
 	// ===================================================================
@@ -47,11 +44,19 @@ public:
 		class UNiagaraComponent* EffectBurn;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		class UWidgetComponent* FollowWidget;
+	class UWidgetComponent* FollowWidget;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UStaticMeshComponent* RootMesh;
+	class UStaticMeshComponent* RootMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class USkeletalMeshComponent* RobotMesh;
+	class USkeletalMeshComponent* RobotMesh;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		class UStaticMeshComponent* CollisionMesh;
+	class UStaticMeshComponent* RobotCenterMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UStaticMeshComponent* CollisionMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float RespawnDelay;
+
+	// Animation
+	bool IsDead;
 };

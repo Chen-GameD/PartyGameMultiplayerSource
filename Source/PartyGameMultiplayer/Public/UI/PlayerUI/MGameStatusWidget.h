@@ -39,6 +39,8 @@ public:
 	void ShowMinigameInfoAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowTimerAnimation();
+	UFUNCTION()
+	void HideMinigameInfo();
 
 	// Broadcasting System
 	UFUNCTION()

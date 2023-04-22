@@ -98,6 +98,14 @@ public:
 	// HUD getter
 	UFUNCTION(BlueprintCallable)
 	AMInGameHUD* GetInGameHUD();
+
+	// For tutorial level only
+	//////////////////////////////////////////////////////
+	/// this is hard code right now, sorry for this!!!!!!!!!!!
+	//////////////////////////////////////////////////////
+	UFUNCTION()
+	void Tutorial_InitForPlayerController();
+	
 	
 protected:
 

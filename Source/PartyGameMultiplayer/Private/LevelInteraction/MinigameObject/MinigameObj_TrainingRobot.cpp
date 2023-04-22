@@ -13,24 +13,32 @@ AMinigameObj_TrainingRobot::AMinigameObj_TrainingRobot()
 	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));	
 	RootMesh->SetupAttachment(RootComponent);
 	RootMesh->SetCollisionProfileName(TEXT("NoCollision"));
-
-	RobotMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CrabMesh"));
+	
+	RobotMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RobotMesh"));
 	RobotMesh->SetupAttachment(RootMesh);
 	RobotMesh->SetCollisionProfileName(TEXT("Custom"));
-
+	
+	RobotCenterMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RobotCenterMesh"));
+	RobotCenterMesh->SetupAttachment(RobotMesh);
+	RobotCenterMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	
 	CollisionMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CollisionMesh"));
 	CollisionMesh->SetupAttachment(RobotMesh);
 	CollisionMesh->SetCollisionProfileName(TEXT("Custom"));
-
+	
 	FollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	FollowWidget->SetupAttachment(RootMesh);
-
+	
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
+	
+	RespawnDelay = 5.0f;
 	
 	EffectBurn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBurn"));
 	EffectBurn->SetupAttachment(RootComponent);
 	EffectBurn->bAutoActivate = false;
+	
+	IsDead = false;
 }
 
 void AMinigameObj_TrainingRobot::Tick(float DeltaTime)
@@ -119,7 +127,7 @@ void AMinigameObj_TrainingRobot::OnRep_CurrentHealth()
 	{
 		// Respawn robot
 		// TODO
-		
+		IsDead = true;
 	}
 
 	// Set UI: Health Bar
@@ -149,8 +157,17 @@ float AMinigameObj_TrainingRobot::TakeDamage(float DamageTaken, struct FDamageEv
 
 	if (CurrentHealth <= 0)
 	{
+		// Respawn
+		Server_WhenDead();
 	}
 	return 0.0f;
+}
+
+void AMinigameObj_TrainingRobot::Server_WhenDead()
+{
+	// Respawn(Destroy)
+	FTimerHandle RespawnMinigameObjectTimerHandle;
+	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_TrainingRobot::StartToRespawnActor, RespawnDelay, false);
 }
 
 

@@ -323,7 +323,12 @@ void AMGameMode::CheckGameStart()
 	if (LevelIndex == TutorialLevelIndex)
 	{
 		CanStart = true;
-		StartTheGame();
+		GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+		AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+		if (MyPlayerController)
+		{
+			MyPlayerController->Tutorial_InitForPlayerController();
+		}
 	}
 
 	if (!CanStart)
@@ -355,7 +360,14 @@ void AMGameMode::StartTheGame()
 		
 		MyGameState->IsGameStart = true;
 		MyGameState->KillScore = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].KillScore;
-		MyGameState->Server_StartGame();
+		if (LevelIndex != TutorialLevelIndex)
+		{
+			MyGameState->Server_StartGame();
+		}
+		else
+		{
+			MyGameState->Server_StartTutorialGame();
+		}
 	}
 
 	//Server_RearrangeWeapons();

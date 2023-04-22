@@ -195,6 +195,18 @@ void AMGameState::UpdateGameTime()
 	}
 }
 
+void AMGameState::UpdateTutorialGameTimer()
+{
+	GameTime++;
+
+	FString TipInformation = FString::Printf(TEXT("Game time : %d"), GameTime);
+	
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateGameStartTimerUI();
+	}
+}
+
 void AMGameState::OnRep_Team_1_ScoreUpdate()
 {
 	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
@@ -260,5 +272,14 @@ void AMGameState::Server_StartGame_Implementation()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
+	OnRep_IsGameStart();
+}
+
+
+void AMGameState::Server_StartTutorialGame_Implementation()
+{
+	FString TipInformation = FString::Printf(TEXT("Start Tutorial timer!"));
+	
+	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateTutorialGameTimer, 1, true);
 	OnRep_IsGameStart();
 }

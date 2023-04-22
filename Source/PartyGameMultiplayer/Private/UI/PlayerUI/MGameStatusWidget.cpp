@@ -89,6 +89,11 @@ void UMGameStatusWidget::UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoIm
 	ShowMinigameInfoAnimation();
 }
 
+void UMGameStatusWidget::HideMinigameInfo()
+{
+	MinigameInfoImage->SetVisibility(ESlateVisibility::Hidden);
+}
+
 void UMGameStatusWidget::UpdateAndShowBroadcastingInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage)
 {
 	KillerName->SetColorAndOpacity(FSlateColor(KillerTeamIndex == 1 ? Team1Color : Team2Color));
