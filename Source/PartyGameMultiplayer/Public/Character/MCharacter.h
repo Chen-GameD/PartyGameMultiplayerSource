@@ -457,7 +457,8 @@ public:
 	UPROPERTY(Replicated)
 		bool IsSaltCure;
 	float InvincibleTimer;
-	float InvincibleMaxTime;
+	UPROPERTY(EditAnywhere)
+		float InvincibleMaxTime;
 	
 	// Effects
 	// =============================

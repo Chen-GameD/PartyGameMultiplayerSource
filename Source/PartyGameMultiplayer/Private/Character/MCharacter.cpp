@@ -183,7 +183,7 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsInvincible = false;
 	InvincibleTimer = 0;
-	InvincibleMaxTime = 999.0f;
+	InvincibleMaxTime = 15.0f;
 
 	// Anti-Cheat lol: prevent use double Q/E to refresh the Combine Weapon CD
 	Server_LastDitchCombineWeaponType = EnumWeaponType::None;
