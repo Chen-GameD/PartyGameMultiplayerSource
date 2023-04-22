@@ -14,11 +14,11 @@ class PARTYGAMEMULTIPLAYER_API UReturnGameState : public UObject
 {
 	GENERATED_BODY()
 
-	//Team1 data - name, kills, deaths
+	//Team1 data - name, kills, deaths, score
 	TMap<FString, TArray<int32>> playerDataT1;
 	int32 teamScore1;
 
-	//Team1 data - name, kills, deaths
+	//Team1 data - name, kills, deaths, score
 	TMap<FString, TArray<int32>> playerDataT2;
 	int32 teamScore2;
 	
@@ -45,19 +45,19 @@ public:
 	/**
 	 * @brief 
 	 * @return
-	 * Returns array of strings in order of name, kills, deaths
+	 * Returns array of strings in order of name, kills, deaths, score
 	 */
 	UFUNCTION(BlueprintCallable)
 	TArray<FString> GetTeam1PlayerData(int32 index);
 	/**
 	 * @brief 
 	 * @return
-	 * Returns array of strings in order of name, kills, deaths
+	 * Returns array of strings in order of name, kills, deaths, score
 	 */
 	UFUNCTION(BlueprintCallable)
 	TArray<FString> GetTeam2PlayerData(int32 index);
 	
-	void AddPlayerData(bool isTeam1, FString username, int32 kills, int32 deaths);
+	void AddPlayerData(bool isTeam1, FString username, int32 kills, int32 deaths, int32 score);
 	
 	void UpdateTeamScore(bool isTeam1, int32 score);
 };
