@@ -77,7 +77,7 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 				SessionSettings.bAllowJoinViaPresenceFriendsOnly = IsPrivate;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bAllowJoinInProgress = false;
+				SessionSettings.bAllowJoinInProgress = true;
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
