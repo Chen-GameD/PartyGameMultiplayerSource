@@ -38,11 +38,11 @@ AMinigameObj_TrainingRobot::AMinigameObj_TrainingRobot()
 	Server_LastTime_CallGetHitSfxVfx = -1.0f;
 	
 	EffectBurn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBurn"));
-	EffectBurn->SetupAttachment(RootComponent);
+	EffectBurn->SetupAttachment(RootMesh);
 	EffectBurn->bAutoActivate = false;
 
 	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
-	EffectGetHit->SetupAttachment(RootComponent);
+	EffectGetHit->SetupAttachment(RootMesh);
 	EffectGetHit->bAutoActivate = false;
 	
 	IsDead = false;

@@ -348,7 +348,7 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 			AttackingDirection.Z = 0.0f;
 			AttackingDirection.Normalize();
 			//pMCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection; // Deprecated
-			float Knockback_MoveSpeed = 70.0f;
+			float Knockback_MoveSpeed = 20.0f;
 			// FString ParName = "";
 			// ParName = "Knockback_MoveSpeed";
 			// if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
