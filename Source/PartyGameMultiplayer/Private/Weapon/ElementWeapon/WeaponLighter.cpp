@@ -65,13 +65,13 @@ void AWeaponLighter::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedC
 				if (ApplyDamageCounter[OtherActor] == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, OtherActor, 0);
 					// Add burning buff points
 					FString ParName = "Lighter_Burning_PointsToAdd_PerHit";
 					if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
 					{
 						float buffPointsToAdd = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, Cast<AMCharacter>(OtherActor), buffPointsToAdd);
+						ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Burning, HoldingController, OtherActor, buffPointsToAdd);
 						GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("buffPointsToAdd: %f"), buffPointsToAdd));
 					}
 					ApplyDamageCounter[OtherActor]++;

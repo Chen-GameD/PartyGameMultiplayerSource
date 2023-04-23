@@ -34,11 +34,19 @@ AMinigameObj_TrainingRobot::AMinigameObj_TrainingRobot()
 	
 	RespawnDelay = 5.0f;
 	
+	Server_CallGetHitSfxVfx_MinInterval = 0.5f;
+	Server_LastTime_CallGetHitSfxVfx = -1.0f;
+	
 	EffectBurn = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectBurn"));
 	EffectBurn->SetupAttachment(RootComponent);
 	EffectBurn->bAutoActivate = false;
+
+	EffectGetHit = CreateDefaultSubobject<UNiagaraComponent>(TEXT("EffectGetHit"));
+	EffectGetHit->SetupAttachment(RootComponent);
+	EffectGetHit->bAutoActivate = false;
 	
 	IsDead = false;
+	IsShock = false;
 }
 
 void AMinigameObj_TrainingRobot::Tick(float DeltaTime)
@@ -98,11 +106,12 @@ void AMinigameObj_TrainingRobot::ActByBuff_PerTick(float DeltaTime)
 			//  Is Paralyzed
 			if (1.0f <= BuffPoints && 0 < CurrentHealth)
 			{
-				
+				IsShock = true;
 			}
 			// Is Not Paralyzed
 			else
 			{
+				IsShock = false;
 			}
 		}
 	}
@@ -128,6 +137,7 @@ void AMinigameObj_TrainingRobot::OnRep_CurrentHealth()
 		// Respawn robot
 		// TODO
 		IsDead = true;
+		Server_WhenDead();
 	}
 
 	// Set UI: Health Bar
@@ -155,15 +165,21 @@ float AMinigameObj_TrainingRobot::TakeDamage(float DamageTaken, struct FDamageEv
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_CurrentHealth();
 
+	// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
+	if (Server_LastTime_CallGetHitSfxVfx < 0 || Server_CallGetHitSfxVfx_MinInterval <= GetWorld()->TimeSeconds - Server_LastTime_CallGetHitSfxVfx)
+	{
+		EffectGetHit->Activate();
+		Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
+	}
+
 	if (CurrentHealth <= 0)
 	{
-		// Respawn
-		Server_WhenDead();
+		
 	}
 	return 0.0f;
 }
 
-void AMinigameObj_TrainingRobot::Server_WhenDead()
+void AMinigameObj_TrainingRobot::Server_WhenDead_Implementation()
 {
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;

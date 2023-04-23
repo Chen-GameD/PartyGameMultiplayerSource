@@ -22,6 +22,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	UFUNCTION(Server, Reliable)
 	void Server_WhenDead();
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -32,6 +33,10 @@ public:
 	bool CheckBuffMap(EnumAttackBuff AttackBuff);
 	void ActByBuff_PerTick(float DeltaTime);
 
+	// Movement
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateRobotMovement(FVector i_MoveDir, bool isShock);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnRep_CurrentHealth() override;
@@ -41,7 +46,9 @@ public:
 	// ===================================================================
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* EffectBurn;
+	class UNiagaraComponent* EffectBurn;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	class UNiagaraComponent* EffectGetHit;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* FollowWidget;
@@ -58,5 +65,12 @@ public:
 	float RespawnDelay;
 
 	// Animation
+	UPROPERTY(BlueprintReadOnly)
 	bool IsDead;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool IsShock;
+
+	float Server_CallGetHitSfxVfx_MinInterval;
+	float Server_LastTime_CallGetHitSfxVfx;
 };

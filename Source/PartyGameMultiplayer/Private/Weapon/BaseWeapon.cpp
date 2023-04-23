@@ -652,7 +652,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				if (ApplyDamageCounter[OtherActor] == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, OtherActor, 0);
 					ApplyDamageCounter[OtherActor]++;
 				}				
 			}				
