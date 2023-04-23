@@ -191,6 +191,7 @@ void AM_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	//Replicate current health
 	DOREPLIFETIME(AM_PlayerState, kill);
+	DOREPLIFETIME(AM_PlayerState, killAssist);
 	DOREPLIFETIME(AM_PlayerState, death);
 	DOREPLIFETIME(AM_PlayerState, PlayerNameString);
 	DOREPLIFETIME(AM_PlayerState, TeamIndex);
@@ -219,6 +220,11 @@ void AM_PlayerState::addScore(float i_scoreToAdd) {
 void AM_PlayerState::addKill(int i_killToAdd)
 {
 	kill += i_killToAdd;
+}
+
+void AM_PlayerState::addKillAssist(int i_killAssistToAdd)
+{
+	killAssist += i_killAssistToAdd;
 }
 
 void AM_PlayerState::addDeath(int i_deathToAdd)
