@@ -313,6 +313,9 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SessionPtr->ClearOnCreateSessionCompleteDelegates(this);
+				auto res = SessionPtr->GetSessionState(SESSION_NAME);
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString(EOnlineSessionState::ToString(res)));
+				UE_LOG(LogTemp, Warning, TEXT("STATE : %d"), int32(res));
 			}
 		}
 	}
@@ -397,6 +400,9 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 					}
 					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
 					OnlineSessionPtr->ClearOnJoinSessionCompleteDelegates(this);
+					auto res = OnlineSessionPtr->GetSessionState(SESSION_NAME);
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString(EOnlineSessionState::ToString(res)));
+					UE_LOG(LogTemp, Warning, TEXT("STATE : %d"), int32(res));
 				}
 			}
 			if(JoiningViaInvite)
@@ -439,6 +445,7 @@ void UEOSGameInstance::OnSessionUserInviteAccepted(bool bWasSuccessful, int32 Lo
 {
 	if(bIsLoggedIn && bWasSuccessful)
 	{
+		isLoading = true;
 		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
