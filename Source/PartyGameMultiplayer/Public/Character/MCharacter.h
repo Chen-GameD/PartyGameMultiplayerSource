@@ -203,6 +203,9 @@ public:
 	void Server_GiveShellToStatue(class AWeaponShell* pShell);
 	void Server_EnableEffectByCrabBubble(bool bEnable);
 
+	UFUNCTION(BlueprintCallable)
+		FString Server_GetHoldingWeaponType(int WeaponFlag);  // WeaponFlag 0: leftweapon, 1 rightweapon, 2 combineweapon
+
 protected:
 
 	// Health

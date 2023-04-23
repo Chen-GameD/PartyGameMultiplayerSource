@@ -2740,3 +2740,24 @@ void AMCharacter::PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pComb
 		Server_LastDitchCombineWeapon_CD_LeftEnergy = pCombineWeapon->CD_LeftEnergy;
 	}
 }
+
+FString AMCharacter::Server_GetHoldingWeaponType(int WeaponFlag)
+{
+	FString ret = "";
+	if (WeaponFlag == 0)
+	{
+		if (LeftWeapon)
+			ret = LeftWeapon->GetWeaponName();
+	}
+	else if(WeaponFlag == 1)
+	{
+		if (RightWeapon)
+			ret = RightWeapon->GetWeaponName();
+	}
+	else if (WeaponFlag == 2)
+	{
+		if (CombineWeapon)
+			ret = CombineWeapon->GetWeaponName();
+	}
+	return ret;
+}

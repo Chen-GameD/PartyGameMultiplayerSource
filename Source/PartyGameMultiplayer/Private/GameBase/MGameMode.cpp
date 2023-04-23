@@ -35,6 +35,7 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 
 	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
 
+	//if(MapName == "FormalLevel_Crabs_Landscape" || MapName == "FormalLevel_Museum")
 	Server_RearrangeWeapons();
 }
 
