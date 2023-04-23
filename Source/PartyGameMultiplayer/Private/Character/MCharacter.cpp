@@ -1230,6 +1230,7 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		AttackedRecord.Empty();
 		InvincibleTimer = 0;
 	}
 
@@ -1687,6 +1688,10 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 		}
 
+		if (!AttackedRecord.Contains(EventInstigator))
+			AttackedRecord.Add(EventInstigator);
+		AttackedRecord[EventInstigator] = GetWorld()->TimeSeconds;
+
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1709,6 +1714,22 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			}
 			AttackerPS->addScore(KillerGetScore);
 			AttackerPS->addKill(1);
+			// Record Kill Assists
+			float TimeNow = GetWorld()->TimeSeconds;
+			float MaxTimeCountingAsKA = 3.0f;
+			auto AttackedRecordCopy = AttackedRecord;
+			for (auto& Elem : AttackedRecordCopy)
+			{
+				if (!Elem.Key)
+					continue;
+				if (TimeNow - Elem.Value <= MaxTimeCountingAsKA)
+				{
+					if (AM_PlayerState* AssistAttackerPS = Elem.Key->GetPlayerState<AM_PlayerState>())
+					{
+						AssistAttackerPS->addKillAssist(1);
+					}
+				}
+			}
 			MyPS->addDeath(1);
 
 			Server_DeadTimes++;

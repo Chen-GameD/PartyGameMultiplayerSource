@@ -459,6 +459,8 @@ public:
 	float InvincibleTimer;
 	UPROPERTY(EditAnywhere)
 		float InvincibleMaxTime;
+
+	TMap<class AController*, float> AttackedRecord;
 	
 	// Effects
 	// =============================

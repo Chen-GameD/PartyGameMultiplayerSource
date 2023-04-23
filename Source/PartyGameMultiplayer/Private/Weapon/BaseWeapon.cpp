@@ -46,15 +46,14 @@ ABaseWeapon::ABaseWeapon()
 	DisplayCase->SetupAttachment(RootComponent);
 	DisplayCase->SetBoxExtent(FVector3d(90.0f, 90.0f, 90.0f));
 	
+	InnerCase = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InnerCase"));
+	InnerCase->SetupAttachment(DisplayCase);
+
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(DisplayCase);
 	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));	
 	WeaponMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	WeaponMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
-
-	InnerDisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("InnerDisplayCase"));
-	InnerDisplayCase->SetupAttachment(WeaponMesh);
-	InnerDisplayCase->SetBoxExtent(FVector3d(45.0f, 45.0f, 45.0f));
 
 	SpawnProjectilePointMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SpawnProjectilePointMesh"));
 	SpawnProjectilePointMesh->SetupAttachment(WeaponMesh);
@@ -266,8 +265,9 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	SetOwner(pCharacter);
 	PreHoldingController = pCharacter->GetController();
 
+	InnerCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetActorEnableCollision(false);
-	DisplayCaseCollisionSetActive(false);
+	DisplayCaseCollisionSetActive(false);	
 
 	IsPickedUp = true;
 	if (GetNetMode() == NM_ListenServer)
@@ -289,6 +289,7 @@ void ABaseWeapon::GetThrewAway()
 	SetOwner(nullptr);
 
 	SetActorEnableCollision(true);
+	InnerCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	if (!IsBigWeapon)
 	{
 		//  Set DisplayCaseCollision to active
@@ -308,6 +309,7 @@ void ABaseWeapon::GetThrewAway()
 				Server_BigWeaponShouldSink = true;
 			}, SinkDelay, false);		
 	}	
+
 	IsPickedUp = false;
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_IsPickedUp();
@@ -436,7 +438,14 @@ void ABaseWeapon::BeginPlay()
 	// Server: Register collision callback functions
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		//  Set DisplayCaseCollision to active
+		// Set InnerCase
+		InnerCase->SetCollisionProfileName(TEXT("Custom"));
+		InnerCase->SetCollisionObjectType(ECC_Destructible);
+		InnerCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		InnerCase->SetCollisionResponseToAllChannels(ECR_Block);
+		InnerCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		InnerCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+		// Set DisplayCaseCollision to active
 		DisplayCaseCollisionSetActive(true);		
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);
 
@@ -498,36 +507,20 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 	if (IsActive)
 	{
 		DisplayCase->SetCollisionProfileName(TEXT("Custom"));
-		DisplayCase->SetCollisionObjectType(ECC_Vehicle);
-		DisplayCase->SetSimulatePhysics(true);
+		DisplayCase->SetCollisionObjectType(ECC_Vehicle);		
+		DisplayCase->SetSimulatePhysics(true);		
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Ignore);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
-
-		InnerDisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
-		//InnerDisplayCase->SetBoxExtent(FVector3d(45.0f, 45.0f, 45.0f));
-		//InnerDisplayCase->SetCollisionProfileName(TEXT("Custom"));
-		//InnerDisplayCase->SetCollisionObjectType(ECC_Destructible);
-		//InnerDisplayCase->SetSimulatePhysics(true);
-		//InnerDisplayCase->SetEnableGravity(false);
-		//InnerDisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		//InnerDisplayCase->SetCollisionResponseToAllChannels(ECR_Ignore);
-		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Ignore);
-		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Block);
 	}
 	else
 	{
-		DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
-		DisplayCase->SetSimulatePhysics(false);
+		DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));			
+		DisplayCase->SetSimulatePhysics(false);		
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-		//InnerDisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
-		//InnerDisplayCase->SetSimulatePhysics(false);
-		//InnerDisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		//InnerDisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
 	}
 }
 

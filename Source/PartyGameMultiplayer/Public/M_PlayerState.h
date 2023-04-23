@@ -54,7 +54,10 @@ public:
 	void OnRep_UpdateReadyInformation();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated)
-	int kill;
+		int kill;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated)
+		int killAssist;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated)
 	int death;
@@ -67,7 +70,10 @@ public:
 	void addScore(float i_scoreToAdd);
 
 	UFUNCTION(BlueprintCallable, Category = "SKD")
-	void addKill(int i_killToAdd);
+		void addKill(int i_killToAdd);
+
+	UFUNCTION(BlueprintCallable, Category = "SKD")
+		void addKillAssist(int i_killAssistToAdd);
 
 	UFUNCTION(BlueprintCallable, Category = "SKD")
 	void addDeath(int i_deathToAdd);
