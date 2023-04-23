@@ -25,6 +25,8 @@ void AMGameState::BeginPlay()
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUObject(this, &AMGameState::GameHasBeenPlayed);
 	GetWorldTimerManager().SetTimer(HasBeenPlayedTimerHandle, TimerDelegate, 1, true);
+
+	IsStartBroadcastCountdown = false;
 }
 
 void AMGameState::RemovePlayerState(APlayerState* PlayerState)
@@ -174,6 +176,15 @@ void AMGameState::UpdateGameStartTimerUI()
 	if (MyLocalPlayerController)
 	{
 		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);
+		if (GameTime <= CountdownTime)
+		{
+			MyLocalPlayerController->GetInGameHUD()->InGame_CountdownAnimation();
+			if (!IsStartBroadcastCountdown)
+			{
+				BPF_CountdownSFX();
+				IsStartBroadcastCountdown = true;
+			}
+		}
 	}
 }
 

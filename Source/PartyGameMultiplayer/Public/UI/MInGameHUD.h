@@ -88,6 +88,8 @@ public:
 	// Hide Game Status MinigameInfo Image
 	UFUNCTION()
 	void InGame_HideMinigameInfo();
+	UFUNCTION()
+	void InGame_CountdownAnimation();
 
 	// Show or Hide InGame_LobbyWidget
 	UFUNCTION()

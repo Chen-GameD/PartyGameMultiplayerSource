@@ -32,6 +32,8 @@ public:
 
 	UFUNCTION()
 	void UpdateGameTimer(int i_GameTime);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_CountdownAnimation();
 
 	UFUNCTION()
 	void UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoImage);
@@ -69,7 +71,7 @@ protected:
 	UTextBlock* Team_2_Score;
 
 	// Game Timer
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UTextBlock* GameTimer;
 
 	// Minigame Information

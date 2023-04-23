@@ -39,6 +39,8 @@ public:
 	// 300 sec by default
 	UPROPERTY(ReplicatedUsing=UpdateGameStartTimerUI, BlueprintReadWrite)
 	int GameTime = 300;
+	UPROPERTY(BlueprintReadWrite)
+	int CountdownTime = 10;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int LevelIndex = -1;
@@ -54,6 +56,8 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_GameStartBGM(bool isBroadcast);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_CountdownSFX();
 
 	UFUNCTION()
 	void OnRep_IsGameStart();
@@ -100,4 +104,7 @@ public:
 
 	// Has Been Played Timer Handler
 	FTimerHandle HasBeenPlayedTimerHandle;
+
+	// Countdown SFX
+	bool IsStartBroadcastCountdown;
 };

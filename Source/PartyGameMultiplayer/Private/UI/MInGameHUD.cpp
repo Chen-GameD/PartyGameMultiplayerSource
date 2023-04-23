@@ -258,6 +258,14 @@ void AMInGameHUD::InGame_HideMinigameInfo()
 	}
 }
 
+void AMInGameHUD::InGame_CountdownAnimation()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->BPF_CountdownAnimation();
+	}
+}
+
 void AMInGameHUD::InGame_SetVisibilityLobbyWidget(ESlateVisibility n_Visibility)
 {
 	if (InGame_LobbyWidget)
