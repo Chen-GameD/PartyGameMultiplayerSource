@@ -12,7 +12,7 @@
 #include "GameBase/MGameState.h"
 #include "GameFramework/GameState.h"
 
-const FName SESSION_NAME = FName("MAINSESSION");
+const FName SESSION_NAME = NAME_GameSession;
 
 void UEOSGameInstance::Init()
 {
@@ -77,11 +77,10 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 				SessionSettings.bAllowJoinViaPresenceFriendsOnly = IsPrivate;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bAllowJoinInProgress = true;
+				SessionSettings.bAllowJoinInProgress = false;
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
-				DebugLevelSelect = MapReference;
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
 				SessionPtr->CreateSession(0, SESSION_NAME, SessionSettings);
@@ -158,7 +157,7 @@ void UEOSGameInstance::SaveEndGameState()
 		{
 			if(const auto playerState = Cast<AM_PlayerState>(player))
 			{
-				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death, playerState->GetScore());
+				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death, playerState->GetScore(), playerState->killAssist);
 			}
 		}
 	}
@@ -182,6 +181,21 @@ void UEOSGameInstance::SetSessionStateStarted()
 			}
 		}
 	}
+}
+
+EOnlineSessionState::Type UEOSGameInstance::GetCurrentSessionState()
+{
+	if(bIsLoggedIn)
+	{
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+		{
+			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			{
+				return SessionPtr->GetSessionState(SESSION_NAME);
+			}
+		}
+	}
+	return EOnlineSessionState::NoSession;
 }
 
 void UEOSGameInstance::ShowInviteUI()
@@ -313,9 +327,7 @@ void UEOSGameInstance::OnCreateSessionComplete(FName sessionName, bool bWasSucce
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
 				SessionPtr->ClearOnCreateSessionCompleteDelegates(this);
-				auto res = SessionPtr->GetSessionState(SESSION_NAME);
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString(EOnlineSessionState::ToString(res)));
-				UE_LOG(LogTemp, Warning, TEXT("STATE : %d"), int32(res));
+				SessionPtr->GetSessionSettings(sessionName)->Get(SETTING_MAPNAME, DebugLevelSelect);
 			}
 		}
 	}
@@ -382,6 +394,7 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 
 	if(Result == EOnJoinSessionCompleteResult::Success)
 	{
+		isLoading = true;
 		if(APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(),0))
 		{
 			FString JoinURL;
@@ -400,9 +413,6 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 					}
 					UE_LOG(LogTemp, Warning, TEXT("JoinURL : %s"), *JoinURL);
 					OnlineSessionPtr->ClearOnJoinSessionCompleteDelegates(this);
-					auto res = OnlineSessionPtr->GetSessionState(SESSION_NAME);
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, FString(EOnlineSessionState::ToString(res)));
-					UE_LOG(LogTemp, Warning, TEXT("STATE : %d"), int32(res));
 				}
 			}
 			if(JoiningViaInvite)
@@ -412,7 +422,7 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 			}
 			if(!JoinURL.IsEmpty())
 			{
-				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute, true);
+				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute, false);
 			}
 			else
 			{

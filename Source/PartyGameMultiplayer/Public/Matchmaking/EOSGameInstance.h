@@ -9,6 +9,7 @@
 #include "OnlineSubsystemUtils.h"
 #include "ReturnGameState.h"
 #include "SessionEntry.h"
+#include "EnvironmentQuery/EnvQueryTypes.h"
 #include "EOSGameInstance.generated.h"
 
 
@@ -72,7 +73,8 @@ public:
 	void ClearEndGameState();
 
 	void SetSessionStateStarted();
-
+	EOnlineSessionState::Type GetCurrentSessionState();
+	
 	UFUNCTION(BlueprintCallable)
 	void ShowInviteUI();
 
