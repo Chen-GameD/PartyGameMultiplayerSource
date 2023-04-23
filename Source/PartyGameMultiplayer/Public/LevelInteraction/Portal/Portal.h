@@ -15,6 +15,11 @@ public:
 	APortal();
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_CallPortalSfx();
+	UFUNCTION(BlueprintImplementableEvent)
+		void CallPortalSfx();
+
 protected:
 	virtual void BeginPlay() override;
 

@@ -10,6 +10,7 @@
 APortal::APortal()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 
 	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));
 	RootMesh->SetupAttachment(RootComponent);
@@ -57,15 +58,6 @@ void APortal::OnPortalTriggerOverlapBegin(class UPrimitiveComponent* OverlappedC
 	{
 		//MyPortalManager->StartToPort(this, pMCharacter);
 
-		// Recover
-		float CharacterCurHealth = pMCharacter->GetCurrentHealth();
-		float HealthToRecover = 25.0f;
-		FString ParName = "PortalHealth";
-		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			HealthToRecover = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-		pMCharacter->SetCurrentHealth(CharacterCurHealth + HealthToRecover);
-
-		// Port
 		int32 Size = PortalExits.Num();
 		int32 StartID = 0;
 		int32 EndId = Size - 1;
@@ -92,6 +84,15 @@ void APortal::OnPortalTriggerOverlapBegin(class UPrimitiveComponent* OverlappedC
 		if (!bFindValidPort)
 			return;
 
+		// Recover
+		float CharacterCurHealth = pMCharacter->GetCurrentHealth();
+		float HealthToRecover = 25.0f;
+		FString ParName = "PortalHealth";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			HealthToRecover = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+		pMCharacter->SetCurrentHealth(CharacterCurHealth + HealthToRecover);
+
+		// Port
 		auto& PortalExit = PortalExits[TargetPortalID];
 		PortalExit->Server_LastExitTime = GetWorld()->TimeSeconds;
 		FVector NewWorldLocation = PortalExit->LaunchPointMesh->GetComponentLocation();
@@ -108,5 +109,15 @@ void APortal::OnPortalTriggerOverlapBegin(class UPrimitiveComponent* OverlappedC
 					pMCharacter->LaunchCharacter(RotationVector * 500.0f, true, false);
 
 			}, LaunchDelay, false);
+
+		// Sfx
+		NetMulticast_CallPortalSfx();
+		PortalExit->NetMulticast_CallPortalSfx();
 	}
+}
+
+
+void APortal::NetMulticast_CallPortalSfx_Implementation()
+{
+	CallPortalSfx();
 }
