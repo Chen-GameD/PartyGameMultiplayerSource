@@ -253,6 +253,20 @@ void AMPlayerController::Tutorial_InitForPlayerController()
 	}
 }
 
+void AMPlayerController::SetHudInitTimerFunction()
+{
+	MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
+	
+	if (IsValid(MyInGameHUD))
+	{
+		if (MyInGameHUD->IsFinishedInit)
+		{
+			IsHudInit = MyInGameHUD->IsFinishedInit;
+			GetWorldTimerManager().ClearTimer(HudInitTimerHandle);
+		}
+	}
+}
+
 void AMPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
@@ -271,6 +285,8 @@ void AMPlayerController::BeginPlay()
 			this->SetShowMouseCursor(true);
 
 			CheckIfSaveFileExist();
+
+			GetWorldTimerManager().SetTimer(HudInitTimerHandle, this, &AMPlayerController::SetHudInitTimerFunction, 0.5, true);
 		}
 	}
 }

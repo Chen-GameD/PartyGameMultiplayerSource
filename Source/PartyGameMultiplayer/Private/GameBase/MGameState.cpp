@@ -66,6 +66,25 @@ void AMGameState::Server_StartSyncForNewPlayer_Implementation()
 	}
 }
 
+void AMGameState::OnRep_LevelIndex()
+{
+	GetWorldTimerManager().SetTimer(SetLobbyUIVisibilityTimerHandler, this, &AMGameState::SetLobbyInformationUIVisibilityTimerFunction, 0.5, true);
+}
+
+void AMGameState::SetLobbyInformationUIVisibilityTimerFunction()
+{
+	// Check the level index, If its tutorial level, should hide lobby information UI
+	if (LevelIndex != TutorialLevelIndex)
+	{
+		AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+		if (MyPlayerController->IsHudInit)
+		{
+			MyPlayerController->GetInGameHUD()->InGame_SetVisibilityLobbyWidget(ESlateVisibility::Visible);
+			GetWorldTimerManager().ClearTimer(SetLobbyUIVisibilityTimerHandler);
+		}
+	}
+}
+
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);

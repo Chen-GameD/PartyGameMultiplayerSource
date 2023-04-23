@@ -30,6 +30,11 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_StartSyncForNewPlayer();
 
+	UFUNCTION()
+	void OnRep_LevelIndex();
+	UFUNCTION()
+	void SetLobbyInformationUIVisibilityTimerFunction();
+
 	/** Property replication */
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
@@ -42,7 +47,7 @@ public:
 	UPROPERTY(BlueprintReadWrite)
 	int CountdownTime = 10;
 
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(ReplicatedUsing=OnRep_LevelIndex, BlueprintReadOnly)
 	int LevelIndex = -1;
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int TutorialLevelIndex;
@@ -81,6 +86,7 @@ public:
 	// void OnRep_UpdateUndecidedArray();
 
 	FTimerHandle GameStartTimerHandle;
+	FTimerHandle SetLobbyUIVisibilityTimerHandler;
 
 	// Team Score Section
 	UFUNCTION()

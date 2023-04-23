@@ -105,6 +105,8 @@ public:
 	//////////////////////////////////////////////////////
 	UFUNCTION()
 	void Tutorial_InitForPlayerController();
+	UFUNCTION()
+	void SetHudInitTimerFunction();
 	
 	
 protected:
@@ -147,6 +149,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	bool CanMove = true;
 
+	UPROPERTY()
+	bool IsHudInit = false;
+
 // Members
 // ==============================================================
 private:
@@ -156,5 +161,6 @@ private:
 	
 	FTimerHandle UpdateLobbyTimerHandle;
 	FTimerHandle UpdatePlayerStateHandle;
+	FTimerHandle HudInitTimerHandle;
 	
 };

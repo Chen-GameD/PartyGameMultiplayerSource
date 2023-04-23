@@ -392,6 +392,11 @@ void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
 		{
 			MyGameState->LevelIndex = LevelIndex;
 			MyGameState->TutorialLevelIndex = TutorialLevelIndex;
+
+			if (GetNetMode() == NM_ListenServer)
+			{
+				MyGameState->OnRep_LevelIndex();
+			}
 		}
 	}
 }

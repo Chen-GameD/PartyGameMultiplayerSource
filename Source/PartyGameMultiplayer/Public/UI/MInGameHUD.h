@@ -140,4 +140,8 @@ private:
 
 	UPROPERTY()
 	UMLobbyWidget* InGame_LobbyWidget;
+
+public:
+	UPROPERTY()
+	bool IsFinishedInit = false;
 };

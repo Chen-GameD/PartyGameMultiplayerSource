@@ -63,10 +63,12 @@ void AMInGameHUD::BeginPlay()
 			if (InGame_LobbyWidget)
 			{
 				InGame_LobbyWidget->AddToViewport();
-				InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+				InGame_LobbyWidget->SetVisibility(ESlateVisibility::Hidden);
 			}
 		}
 	}
+
+	IsFinishedInit = true;
 }
 
 void AMInGameHUD::Tick(float DeltaSeconds)
