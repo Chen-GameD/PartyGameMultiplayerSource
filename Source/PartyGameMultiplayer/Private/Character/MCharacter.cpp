@@ -1716,7 +1716,7 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			AttackerPS->addKill(1);
 			// Record Kill Assists
 			float TimeNow = GetWorld()->TimeSeconds;
-			float MaxTimeCountingAsKA = 2.0f;
+			float MaxTimeCountingAsKA = 3.0f;
 			auto AttackedRecordCopy = AttackedRecord;
 			for (auto& Elem : AttackedRecordCopy)
 			{
