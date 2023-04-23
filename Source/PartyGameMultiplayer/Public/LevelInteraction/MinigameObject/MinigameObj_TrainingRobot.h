@@ -46,7 +46,9 @@ public:
 	// ===================================================================
 	TMap<EnumAttackBuff, TArray<float>> BuffMap;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
-		class UNiagaraComponent* EffectBurn;
+	class UNiagaraComponent* EffectBurn;
+	UPROPERTY(EditAnywhere, Category = "Effects")
+	class UNiagaraComponent* EffectGetHit;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* FollowWidget;
@@ -68,4 +70,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	bool IsShock;
+
+	float Server_CallGetHitSfxVfx_MinInterval;
+	float Server_LastTime_CallGetHitSfxVfx;
 };
