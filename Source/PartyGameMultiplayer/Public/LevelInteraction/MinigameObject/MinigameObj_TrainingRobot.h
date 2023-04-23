@@ -22,6 +22,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	UFUNCTION(Server, Reliable)
 	void Server_WhenDead();
 	
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -31,6 +32,10 @@ public:
 	// ===================================================================
 	bool CheckBuffMap(EnumAttackBuff AttackBuff);
 	void ActByBuff_PerTick(float DeltaTime);
+
+	// Movement
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateRobotMovement(FVector i_MoveDir, bool isShock);
 
 protected:
 	virtual void BeginPlay() override;

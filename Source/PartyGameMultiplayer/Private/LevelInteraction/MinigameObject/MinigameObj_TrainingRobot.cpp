@@ -130,6 +130,7 @@ void AMinigameObj_TrainingRobot::OnRep_CurrentHealth()
 		// Respawn robot
 		// TODO
 		IsDead = true;
+		Server_WhenDead();
 	}
 
 	// Set UI: Health Bar
@@ -159,13 +160,12 @@ float AMinigameObj_TrainingRobot::TakeDamage(float DamageTaken, struct FDamageEv
 
 	if (CurrentHealth <= 0)
 	{
-		// Respawn
-		Server_WhenDead();
+		
 	}
 	return 0.0f;
 }
 
-void AMinigameObj_TrainingRobot::Server_WhenDead()
+void AMinigameObj_TrainingRobot::Server_WhenDead_Implementation()
 {
 	// Respawn(Destroy)
 	FTimerHandle RespawnMinigameObjectTimerHandle;

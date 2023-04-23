@@ -344,20 +344,22 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 		/* Knockback */
 		if (AttackBuff == EnumAttackBuff::Knockback && AttackerController->GetPawn())
 		{
-			//FVector AttackingDirection = AttackerController->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
-			//AttackingDirection.Z = 0.0f;
-			//AttackingDirection.Normalize();
+			FVector AttackingDirection = AttackerController->GetPawn()->GetControlRotation().RotateVector(FVector3d::ForwardVector);
+			AttackingDirection.Z = 0.0f;
+			AttackingDirection.Normalize();
 			//pMCharacter->KnockbackDirection_SinceLastApplyBuff = AttackingDirection; // Deprecated
-			//float Knockback_MoveSpeed = 0.0f;
-			//FString ParName = "";
-			//ParName = "Knockback_MoveSpeed";
-			//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			//	Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			//ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_Knockback_MoveSpeed";
-			//if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
-			//	Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
-			//AttackingDirection *= Knockback_MoveSpeed;
+			float Knockback_MoveSpeed = 70.0f;
+			// FString ParName = "";
+			// ParName = "Knockback_MoveSpeed";
+			// if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			// 	Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			// ParName = AWeaponDataHelper::WeaponEnumToString_Map[WeaponType] + "_Knockback_MoveSpeed";
+			// if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+			// 	Knockback_MoveSpeed = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+			AttackingDirection *= Knockback_MoveSpeed;
 			//pMCharacter->LaunchCharacter(AttackingDirection, true, false);
+			//AttackingDirection.Normalize();
+			pRobot->UpdateRobotMovement(AttackingDirection, false);
 		}
 		/* Paralysis */
 		else if (AttackBuff == EnumAttackBuff::Paralysis && AttackerController->GetPawn())
@@ -367,6 +369,7 @@ bool ADamageManager::ApplyOneTimeBuff(EnumWeaponType WeaponType, EnumAttackBuff 
 			{
 				Direction_TargetToAttacker.Normalize();
 				//pRobot->LaunchCharacter(Direction_TargetToAttacker * 200.0f * DeltaTime, true, false);
+				pRobot->UpdateRobotMovement(Direction_TargetToAttacker * 200.0f * DeltaTime, true);
 			}
 		}
 	}
