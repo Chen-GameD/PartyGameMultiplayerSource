@@ -299,7 +299,7 @@ void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 				TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
 				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(GetWorld());
 				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId))
+				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(NAME_GameSession, *UniqueNetId))
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
 					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);

@@ -78,7 +78,7 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				return;
 			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
 			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
+			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(NAME_GameSession, *UniqueNetId, false);
 			if(bRegistrationSuccess)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
@@ -363,6 +363,7 @@ void AMGameMode::StartTheGame()
 		if (LevelIndex != TutorialLevelIndex)
 		{
 			MyGameState->Server_StartGame();
+			Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
 		}
 		else
 		{
