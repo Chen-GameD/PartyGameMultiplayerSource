@@ -157,7 +157,7 @@ void UEOSGameInstance::SaveEndGameState()
 		{
 			if(const auto playerState = Cast<AM_PlayerState>(player))
 			{
-				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death, playerState->GetScore());
+				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death, playerState->GetScore(), playerState->killAssist);
 			}
 		}
 	}

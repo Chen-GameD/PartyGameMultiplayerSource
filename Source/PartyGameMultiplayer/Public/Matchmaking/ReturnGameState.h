@@ -45,19 +45,19 @@ public:
 	/**
 	 * @brief 
 	 * @return
-	 * Returns array of strings in order of name, kills, deaths, score
+	 * Returns array of strings in order of name, kills, deaths, score, assists
 	 */
 	UFUNCTION(BlueprintCallable)
 	TArray<FString> GetTeam1PlayerData(int32 index);
 	/**
 	 * @brief 
 	 * @return
-	 * Returns array of strings in order of name, kills, deaths, score
+	 * Returns array of strings in order of name, kills, deaths, score, assists
 	 */
 	UFUNCTION(BlueprintCallable)
 	TArray<FString> GetTeam2PlayerData(int32 index);
 	
-	void AddPlayerData(bool isTeam1, FString username, int32 kills, int32 deaths, int32 score);
+	void AddPlayerData(bool isTeam1, FString username, int32 kills, int32 deaths, int32 score, int32 assists);
 	
 	void UpdateTeamScore(bool isTeam1, int32 score);
 };
