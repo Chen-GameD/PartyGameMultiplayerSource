@@ -170,6 +170,20 @@ void UEOSGameInstance::ClearEndGameState()
 	ReturnGameState = NewObject<UReturnGameState>();
 }
 
+void UEOSGameInstance::SetSessionStateStarted()
+{
+	if(bIsLoggedIn)
+	{
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+		{
+			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			{
+				SessionPtr->StartSession(SESSION_NAME);
+			}
+		}
+	}
+}
+
 void UEOSGameInstance::ShowInviteUI()
 {
 	if(bIsLoggedIn)
@@ -374,7 +388,7 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 				{
 					if(JoiningViaInvite)
 					{
-						OnlineSessionPtr->GetResolvedConnectString(*InviteResultRef, NAME_GamePort, JoinURL);
+						JoinURL = InviteJoinURL;
 					}
 					else
 					{
@@ -387,13 +401,12 @@ void UEOSGameInstance::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCo
 			}
 			if(JoiningViaInvite)
 			{
-				InviteResultRef = nullptr;
+				InviteJoinURL = "";
 				JoiningViaInvite = false;
 			}
 			if(!JoinURL.IsEmpty())
 			{
-				
-				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute);
+				PlayerController->ClientTravel(JoinURL, ETravelType::TRAVEL_Absolute, true);
 			}
 			else
 			{
@@ -430,7 +443,7 @@ void UEOSGameInstance::OnSessionUserInviteAccepted(bool bWasSuccessful, int32 Lo
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
-				InviteResultRef = &InviteResult;
+				SessionPtr->GetResolvedConnectString(InviteResult, NAME_GamePort, InviteJoinURL);
 				JoiningViaInvite = true;
 				SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
 				SessionPtr->JoinSession(0, SESSION_NAME, InviteResult);
