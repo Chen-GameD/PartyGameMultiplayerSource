@@ -390,6 +390,7 @@ void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
 		if (MyGameState)
 		{
 			MyGameState->LevelIndex = LevelIndex;
+			MyGameState->TutorialLevelIndex = TutorialLevelIndex;
 		}
 	}
 }

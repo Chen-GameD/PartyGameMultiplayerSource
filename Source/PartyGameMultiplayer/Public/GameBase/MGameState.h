@@ -44,6 +44,8 @@ public:
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int LevelIndex = -1;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int TutorialLevelIndex;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 	int KillScore = -1;

@@ -76,6 +76,7 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, Team_1_Score);
 	DOREPLIFETIME(AMGameState, Team_2_Score);
 	DOREPLIFETIME(AMGameState, LevelIndex);
+	DOREPLIFETIME(AMGameState, TutorialLevelIndex);
 }
 
 void AMGameState::OnRep_IsGameStart()
@@ -176,7 +177,7 @@ void AMGameState::UpdateGameStartTimerUI()
 	if (MyLocalPlayerController)
 	{
 		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);
-		if (GameTime <= CountdownTime)
+		if (GameTime <= CountdownTime && LevelIndex != TutorialLevelIndex)
 		{
 			MyLocalPlayerController->GetInGameHUD()->InGame_CountdownAnimation();
 			if (!IsStartBroadcastCountdown)
