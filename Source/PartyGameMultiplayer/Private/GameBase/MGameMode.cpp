@@ -26,7 +26,7 @@
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
-	Super::InitGame(MapName, Options, ErrorMessage);
+	Super::InitGame(MapName, Options, ErrorMessage); 
 	
 	/*if (UJsonFactory::InitJsonObject_1())
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("GameMode Init JsonObject_1 succeeded"));
@@ -35,8 +35,9 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 
 	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
 
-	//if(MapName == "FormalLevel_Crabs_Landscape" || MapName == "FormalLevel_Museum")
-	Server_RearrangeWeapons();
+	//"UEDPIE_0_FormalLevel_Crabs_Landscape"   "UEDPIE_0_FormalLevel_Museum"
+	if( MapName.Contains("FormalLevel_Crabs_Landscape") || MapName.Contains("FormalLevel_Museum") )
+		Server_RearrangeWeapons();
 }
 
 void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
