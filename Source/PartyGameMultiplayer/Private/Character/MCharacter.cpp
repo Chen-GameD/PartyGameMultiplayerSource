@@ -1726,7 +1726,8 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 				{
 					if (AM_PlayerState* AssistAttackerPS = Elem.Key->GetPlayerState<AM_PlayerState>())
 					{
-						AssistAttackerPS->addKillAssist(1);
+						if(AssistAttackerPS != AttackerPS)
+							AssistAttackerPS->addKillAssist(1);
 					}
 				}
 			}
