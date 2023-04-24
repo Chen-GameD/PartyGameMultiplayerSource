@@ -8,7 +8,7 @@ public class PartyGameMultiplayer : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "Niagara", "Water", "UMG", "OnlineSubsystem", "OnlineSubsystemEOS", "OnlineSubsystemUtils" ,"Json", "JsonUtilities", "SlateCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "HeadMountedDisplay", "Niagara", "Water", "UMG", "OnlineSubsystem", "OnlineSubsystemSteam", "OnlineSubsystemUtils" ,"Json", "JsonUtilities", "SlateCore" });
 
 		//PublicIncludePaths.AddRange(new string[] { Path.Combine(ModuleDirectory, "Niagara") });
 	}

@@ -12,7 +12,7 @@
 #include "GameBase/MGameState.h"
 #include "GameFramework/GameState.h"
 
-const FName SESSION_NAME = NAME_GameSession;
+const FName SESSION_NAME = FName("CBGameSession");
 
 void UEOSGameInstance::Init()
 {
@@ -77,7 +77,7 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 				SessionSettings.bAllowJoinViaPresenceFriendsOnly = IsPrivate;
 				SessionSettings.bUseLobbiesIfAvailable = true;
 				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bAllowJoinInProgress = true;
+				SessionSettings.bAllowJoinInProgress = false;
 				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
 				SessionSettings.Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
