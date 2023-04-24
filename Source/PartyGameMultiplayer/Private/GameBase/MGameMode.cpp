@@ -24,8 +24,6 @@
 #include "Weapon/ElementWeapon/WeaponFork.h"
 #include "Weapon/ElementWeapon/WeaponLighter.h"
 
-const FName SESSION_NAME = FName("CBGameSession");
-
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage); 
@@ -82,7 +80,7 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				return;
 			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
 			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(SESSION_NAME, *UniqueNetId, false);
+			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("CBGameSession"), *UniqueNetId, false);
 			if(bRegistrationSuccess)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));

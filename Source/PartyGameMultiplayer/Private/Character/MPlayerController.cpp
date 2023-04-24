@@ -18,8 +18,6 @@
 #include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
 
-const FName SESSION_NAME = FName("CBGameSession");
-
 // Constructor
 // ===================================================
 #pragma region Constructor
@@ -316,7 +314,7 @@ void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 				TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
 				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(GetWorld());
 				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(SESSION_NAME, *UniqueNetId))
+				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("CBGameSession"), *UniqueNetId))
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
 					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
