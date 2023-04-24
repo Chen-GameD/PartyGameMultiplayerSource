@@ -501,16 +501,17 @@ protected:
 
 	// Action
 	bool IsOnGround;
-	float OriginalMaxWalkSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float OriginalMaxWalkSpeed;
 	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
-	bool IsAllowDash;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashDistance;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashTime;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashCoolDown;
+		bool IsAllowDash;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashDistance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashCoolDown;
 	FTimerHandle DashingTimer;
 
 	// buff
