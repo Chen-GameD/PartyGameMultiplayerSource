@@ -180,7 +180,7 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 	if (MinigameDataAsset)
 	{
 		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-		if (bFirstTimeSpawn)
+		if (bFirstTimeSpawn && LevelIndex != TutorialLevelIndex)
 		{
 			// SpawnMinigameObject with a certain delay after the game starts
 			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 4.5f;
@@ -309,7 +309,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else
