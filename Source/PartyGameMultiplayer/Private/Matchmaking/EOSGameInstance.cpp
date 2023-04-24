@@ -66,24 +66,28 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 		{
 			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
 			{
-				FOnlineSessionSettings SessionSettings;
-				SessionSettings.bIsDedicated = IsDedicatedServer;
-				SessionSettings.bUsesPresence = true;
-				SessionSettings.bAllowInvites = true;
-				SessionSettings.bIsLANMatch = IsLanServer;
-				SessionSettings.NumPublicConnections = IsPrivate ? 0 : NumberOfPublicConnections;
-				SessionSettings.NumPrivateConnections = !IsPrivate ? 0 : NumberOfPublicConnections;
-				SessionSettings.bAllowJoinViaPresence = !IsPrivate;
-				SessionSettings.bAllowJoinViaPresenceFriendsOnly = IsPrivate;
-				SessionSettings.bUseLobbiesIfAvailable = true;
-				SessionSettings.bShouldAdvertise = true;
-				SessionSettings.bAllowJoinInProgress = false;
-				SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
-				SessionSettings.Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
-				SessionSettings.Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings = nullptr;
+				SessionSettings = MakeShareable(new FOnlineSessionSettings());
+				SessionSettings->bIsDedicated = false;
+				SessionSettings->bUsesPresence = true;
+				SessionSettings->bAllowInvites = true;
+				SessionSettings->bIsLANMatch = IsLanServer;
+				SessionSettings->NumPublicConnections = IsPrivate ? 0 : NumberOfPublicConnections;
+				SessionSettings->NumPrivateConnections = !IsPrivate ? 0 : NumberOfPublicConnections;
+				SessionSettings->bAllowJoinViaPresence = !IsPrivate;
+				SessionSettings->bAllowJoinViaPresenceFriendsOnly = IsPrivate;
+				SessionSettings->bUseLobbiesIfAvailable = true;
+				SessionSettings->bShouldAdvertise = true;
+				SessionSettings->bAllowJoinInProgress = true;
+				//SessionSettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineDataAdvertisementType::ViaOnlineService);
+				RoomName = (RoomName.Len()>1) ? RoomName : GetPlayerUsername();
+				SessionSettings->Set(SETTING_MAPNAME, MapReference, EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings->Set(SETTING_SESSIONKEY, RoomName, EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings->Set(SETTING_ALLOWBROADCASTING, true, EOnlineDataAdvertisementType::ViaOnlineService);
+				SessionSettings->Set(SETTING_NUMBOTS, 1, EOnlineDataAdvertisementType::ViaOnlineService);
 
 				SessionPtr->OnCreateSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnCreateSessionComplete);
-				SessionPtr->CreateSession(0, SESSION_NAME, SessionSettings);
+				SessionPtr->CreateSession(0, SESSION_NAME, *SessionSettings);
 			}
 		}
 	}
@@ -91,6 +95,25 @@ void UEOSGameInstance::CreateSession(bool IsDedicatedServer, bool IsLanServer, i
 	{
 		isLoading = false;
 		UE_LOG(LogTemp, Error, TEXT("Not logged IN"));
+	}
+}
+
+void UEOSGameInstance::UpdateSession(int32 currentPlayerCount, bool bIsJoinAllowed)
+{
+	if(bIsLoggedIn)
+	{
+		if(IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(this->GetWorld()))
+		{
+			if(IOnlineSessionPtr SessionPtr = OnlineSubsystem->GetSessionInterface())
+			{
+				if(SessionSettings != nullptr)
+				{
+					SessionSettings->Set(SETTING_ALLOWBROADCASTING, bIsJoinAllowed, EOnlineDataAdvertisementType::ViaOnlineService);
+					SessionSettings->Set(SETTING_NUMBOTS, currentPlayerCount, EOnlineDataAdvertisementType::ViaOnlineService);
+					SessionPtr->UpdateSession(SESSION_NAME, *SessionSettings, true);
+				}
+			}
+		}
 	}
 }
 
@@ -107,7 +130,7 @@ void UEOSGameInstance::FindSession()
 				SearchSettings = nullptr;
 				SearchSettings = MakeShareable(new FOnlineSessionSearch());
 				SearchSettings->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
-				SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
+				//SearchSettings->QuerySettings.Set(SEARCH_KEYWORDS, FString("CBLobby"), EOnlineComparisonOp::Equals);
 				SearchSettings->MaxSearchResults = 100;
 				
 				SessionPtr->OnFindSessionsCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnFindSessionComplete);
@@ -157,7 +180,7 @@ void UEOSGameInstance::SaveEndGameState()
 		{
 			if(const auto playerState = Cast<AM_PlayerState>(player))
 			{
-				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill, playerState->death, playerState->GetScore(), playerState->killAssist);
+				ReturnGameState->AddPlayerData(playerState->TeamIndex == 1 ? true : false, playerState->PlayerNameString, playerState->kill+playerState->killAssist, playerState->death, playerState->GetScore(), playerState->killAssist);
 			}
 		}
 	}
@@ -180,6 +203,7 @@ void UEOSGameInstance::SetSessionStateStarted()
 				SessionPtr->StartSession(SESSION_NAME);
 			}
 		}
+		UpdateSession(6, false);
 	}
 }
 
@@ -238,18 +262,38 @@ TArray<USessionEntry*> UEOSGameInstance::GetSessionsList()
 			if(session.Session.SessionSettings.Settings.Contains(SETTING_SESSIONKEY))
 			{
 				const auto val = session.Session.SessionSettings.Settings.Find(SETTING_SESSIONKEY);
-				UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *val->ToString());
 				sessionNameString = val->Data.ToString();
 			}
 			if(sessionNameString.IsEmpty())
 			{
-				sessionNameString = session.GetSessionIdStr();
+				sessionNameString = session.Session.OwningUserName;
+			}
+			UE_LOG(LogTemp, Warning, TEXT("strRoomName : %s"), *sessionNameString);
+
+			if(session.Session.SessionSettings.Settings.Contains(SETTING_NUMBOTS))
+			{
+				const auto val = session.Session.SessionSettings.Settings.Find(SETTING_NUMBOTS);
+				int32 currentPlayersInRoom;
+				val->Data.GetValue(currentPlayersInRoom);
+				UE_LOG(LogTemp, Warning, TEXT("strNumPlayers : %d"), currentPlayersInRoom);
+				minPlayers = currentPlayersInRoom;
+			}
+
+			if(session.Session.SessionSettings.Settings.Contains(SETTING_ALLOWBROADCASTING))
+			{
+				bool allowJoin;
+				const auto val = session.Session.SessionSettings.Settings.Find(SETTING_ALLOWBROADCASTING);
+				val->Data.GetValue(allowJoin);
+				UE_LOG(LogTemp, Warning, TEXT("strNumPlayers : %d"), allowJoin);
+				if(allowJoin)
+				{
+					newEntry->SetSessionData(sessionNameString, maxPlayers, minPlayers, isSessionPrivate);
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sessions in search result"));
+					UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *sessionNameString);
+					sessions.Add(newEntry);
+				}
 			}
 			
-			newEntry->SetSessionData(sessionNameString, maxPlayers, minPlayers, isSessionPrivate);
-			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Sessions in search result"));
-			UE_LOG(LogTemp, Warning, TEXT("Sessions in search result : %s"), *sessionNameString);
-			sessions.Add(newEntry);
 		}
 	}
 	return sessions;

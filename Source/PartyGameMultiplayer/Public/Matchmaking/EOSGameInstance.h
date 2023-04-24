@@ -55,6 +55,9 @@ public:
 	void CreateSession(bool IsDedicatedServer, bool IsLanServer, int32 NumberOfPublicConnections, bool IsPrivate, FString RoomName, int MapIndex);
 
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void UpdateSession(int32 currentPlayerCount, bool bIsJoinAllowed);
+
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void FindSession();
 
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
@@ -87,6 +90,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GetIsLoggedIn();
 
+	TSharedPtr<FOnlineSessionSettings> SessionSettings = nullptr;
 	TSharedPtr<FOnlineSessionSearch> SearchSettings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

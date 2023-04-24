@@ -92,6 +92,11 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		MyPlayerState->Client_SetPlayerNameFromGameInstance();
 		MyPlayerState->Client_SetPlayerSkinFromGameInstance();
 		CurrentPlayerNum++;
+		AMGameState* MyGameState = GetGameState<AMGameState>();
+		if (MyGameState)
+		{
+			Cast<UEOSGameInstance>(GetGameInstance())->UpdateSession(CurrentPlayerNum, !MyGameState->IsGameStart);
+		}
 
 		if (NewPlayer->IsLocalPlayerController())
 		{
@@ -115,6 +120,11 @@ void AMGameMode::Logout(AController* Exiting)
 	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : Logout-GameMode-Server"));
 
 	CurrentPlayerNum--;
+	AMGameState* MyGameState = GetGameState<AMGameState>();
+	if (MyGameState)
+	{
+		Cast<UEOSGameInstance>(GetGameInstance())->UpdateSession(CurrentPlayerNum, !MyGameState->IsGameStart);
+	}
 	AM_PlayerState* PS = Exiting->GetPlayerState<AM_PlayerState>();
 	if (PS)
 	{
