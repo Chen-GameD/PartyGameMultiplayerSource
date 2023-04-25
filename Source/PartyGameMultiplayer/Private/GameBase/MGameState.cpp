@@ -9,6 +9,7 @@
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
 #include "EngineUtils.h"
+#include "GameBase/MGameMode.h"
 
 bool AMGameState::HasBegunPlay() const
 {
@@ -184,6 +185,13 @@ void AMGameState::OnRep_IsGameStart()
 			{
 				gameInstance->SaveEndGameState();
 			}
+
+			// Clean all timer of all pawn
+			for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(*PawnItr);
+			}
+			
 			MyLocalPlayerController->EndTheGame();
 			BPF_GameStartBGM(false);
 		}
@@ -224,6 +232,16 @@ void AMGameState::UpdateGameTime()
 			OnRep_IsGameStart();
 		}
 		GetWorldTimerManager().ClearTimer(GameStartTimerHandle);
+
+		// Try to clean the timer on the minigame obj;
+		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
+		if (MyGameMode)
+		{
+			if (MyGameMode->CurrentMinigameObj)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(MyGameMode->CurrentMinigameObj);
+			}
+		}
 	}
 	
 	if (GetNetMode() == NM_ListenServer)

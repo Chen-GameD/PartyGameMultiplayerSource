@@ -75,6 +75,9 @@ protected:
 	UFUNCTION()
 	void InitMinigame_ShellObject();
 
+	UFUNCTION()
+	void SpawnMinigameObj();
+
 	
 // Members
 // ==============================================================
@@ -96,6 +99,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int TutorialLevelIndex = 2;
+
+	UPROPERTY()
+	AMinigameMainObjective* CurrentMinigameObj;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)

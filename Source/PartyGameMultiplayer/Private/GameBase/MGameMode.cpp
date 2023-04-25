@@ -105,6 +105,9 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			{
 				MyPawn->OnRep_PlayerState();
 			}
+
+			// Set the host
+			MyPlayerState->IsHost = true;
 		}
 	}
 }
@@ -195,23 +198,12 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 			// SpawnMinigameObject with a certain delay after the game starts
 			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 4.5f;
 			FTimerHandle TimerHandle;
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-				{
-					// Spawn the minigame object
-					FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-					AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-					if (spawnActor && MinigameDataAsset)
-						spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
-
-				}, DelaySpawnMinigameObjectAtStart, false);
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AMGameMode::SpawnMinigameObj, DelaySpawnMinigameObjectAtStart, false);
 		}
 		else
 		{
 			// Spawn the minigame object
-			FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-			AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-			if (spawnActor && MinigameDataAsset)
-				spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+			SpawnMinigameObj();
 		}
 		
 
@@ -232,6 +224,18 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 		{
 			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHintImage);
 		}
+	}
+}
+
+void AMGameMode::SpawnMinigameObj()
+{
+	// Spawn the minigame object
+	FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+	if (spawnActor && MinigameDataAsset)
+	{
+		CurrentMinigameObj = spawnActor;
+		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
 	}
 }
 

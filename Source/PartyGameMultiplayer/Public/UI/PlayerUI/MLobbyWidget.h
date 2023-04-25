@@ -22,6 +22,7 @@ struct FLobbyInformationStruct
 	FString PlayerName;
 	int TeamIndex;
 	bool IsReady;
+	bool IsHost;
 };
 
 UCLASS()
@@ -56,39 +57,69 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_1_Player1;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Team_1_HostImage1;
+	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_1_Player2;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Team_1_HostImage2;
+	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_1_Player3;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Team_1_HostImage3;
 
 	// Team2
 	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_2_Player1;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Team_2_HostImage1;
+	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_2_Player2;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Team_2_HostImage2;
+	UPROPERTY(meta = (BindWidget))
 	URichTextBlock* Team_2_Player3;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Team_2_HostImage3;
 
 	// Undecided
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player1;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage1;
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player2;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage2;
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player3;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage3;
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player4;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage4;
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player5;
 	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage5;
+	UPROPERTY(meta = (BindWidget))
 	UTextBlock* Undecided_Player6;
+	UPROPERTY(meta = (BindWidget))
+	UImage* Undecided_HostImage6;
 
 	// Information Container
 	UPROPERTY()
 	TMap<int, URichTextBlock*> Team1TextContainer;
 	UPROPERTY()
+	TMap<int, UImage*> Team1HostImageContainer;
+	UPROPERTY()
 	TMap<int, URichTextBlock*> Team2TextContainer;
 	UPROPERTY()
+	TMap<int, UImage*> Team2HostImageContainer;
+	UPROPERTY()
 	TMap<int, UTextBlock*> UndecidedTextContainer;
+	UPROPERTY()
+	TMap<int, UImage*> UndecidedHostImageContainer;
 
 	// Game Start Condition
 	UPROPERTY(meta = (BindWidget))

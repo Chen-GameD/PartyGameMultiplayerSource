@@ -84,4 +84,7 @@ public:
 
 	UPROPERTY(ReplicatedUsing=OnRep_PlayerSkinInformation, EditAnywhere, BlueprintReadWrite)
 	int characterIndex = -1;
+
+	UPROPERTY(Replicated)
+	bool IsHost = false;
 };

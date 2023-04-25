@@ -60,6 +60,7 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 				newStruct.PlayerName = CurrentPlayerState->PlayerNameString;
 				newStruct.TeamIndex = CurrentPlayerState->TeamIndex;
 				newStruct.IsReady = CurrentPlayerState->IsReady;
+				newStruct.IsHost = CurrentPlayerState->IsHost;
 				switch (newStruct.TeamIndex)
 				{
 				case 0:

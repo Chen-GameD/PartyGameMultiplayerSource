@@ -198,6 +198,7 @@ void AM_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AM_PlayerState, IsReady);
 	DOREPLIFETIME(AM_PlayerState, colorPicked);
 	DOREPLIFETIME(AM_PlayerState, characterIndex);
+	DOREPLIFETIME(AM_PlayerState, IsHost);
 }
 #pragma endregion Replicated Properties
 

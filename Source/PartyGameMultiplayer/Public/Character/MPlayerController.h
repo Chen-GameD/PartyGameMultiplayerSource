@@ -52,7 +52,7 @@ public:
 	void Client_SyncCharacters();
 
 	UFUNCTION(BlueprintImplementableEvent)
-		void CheckIfSaveFileExist();
+	void CheckIfSaveFileExist();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
