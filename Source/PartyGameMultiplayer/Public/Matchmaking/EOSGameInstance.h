@@ -20,6 +20,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFindSessionResultsStored);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnCloseEndGameMenu);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnFailJoinRoomUIRefresh);
 
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
@@ -27,6 +28,8 @@ class PARTYGAMEMULTIPLAYER_API UEOSGameInstance : public UGameInstance
 	GENERATED_BODY()
 
 	bool bIsLoggedIn = false;
+	UPROPERTY()
+	FString joinAttemptRoomID;
 
 protected:
 	UPROPERTY(BlueprintReadWrite)
@@ -34,6 +37,9 @@ protected:
 
 	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FOnCloseEndGameMenu OnCloseEndGameMenuDelegate;
+
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FOnCloseEndGameMenu OnFailJoinRoomUIRefreshDelegate;
 
 public:
 	UPROPERTY(BlueprintAssignable)
@@ -62,6 +68,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void JoinSession(int32 index);
+
+	UFUNCTION(BlueprintCallable, Category="EOS Functions")
+	void SetJoiningSession(int32 index);
 	
 	UFUNCTION(BlueprintCallable, Category="EOS Functions")
 	void DestroySession();

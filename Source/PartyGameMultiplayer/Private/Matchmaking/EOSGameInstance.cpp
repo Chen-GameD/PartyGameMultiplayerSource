@@ -339,11 +339,71 @@ void UEOSGameInstance::JoinSession(int32 index)
 			{
 				if(SearchSettings->SearchResults.Num() > 0)
 				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
-					SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
-					UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *SearchSettings->SearchResults[index].Session.OwningUserName);
-					CurrentlyJoiningSessionIndex = index;  //set index of search result to join
-					SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[index]);
+					if(index != -1)
+					{
+						if(SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Contains(SETTING_ALLOWBROADCASTING))
+						{
+							bool allowJoin;
+							const auto val = SearchSettings->SearchResults[index].Session.SessionSettings.Settings.Find(SETTING_ALLOWBROADCASTING);
+							val->Data.GetValue(allowJoin);
+							if(allowJoin)
+							{
+								GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
+								SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
+								UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *SearchSettings->SearchResults[index].Session.OwningUserName);
+								CurrentlyJoiningSessionIndex = index;  //set index of search result to join
+								SessionPtr->JoinSession(0, SESSION_NAME, SearchSettings->SearchResults[index]);
+							}
+							else
+							{
+								isLoading = false;
+								OnFailJoinRoomUIRefreshDelegate.Broadcast();
+							}
+						}
+						else
+						{
+							isLoading = false;
+							OnFailJoinRoomUIRefreshDelegate.Broadcast();
+						}
+					}
+					else
+					{
+						for(auto searchResultSession : SearchSettings->SearchResults)
+						{
+							if(searchResultSession.GetSessionIdStr() == joinAttemptRoomID)
+							{
+								if(searchResultSession.Session.SessionSettings.Settings.Contains(SETTING_ALLOWBROADCASTING))
+								{
+									bool allowJoin;
+									const auto val = searchResultSession.Session.SessionSettings.Settings.Find(SETTING_ALLOWBROADCASTING);
+									val->Data.GetValue(allowJoin);
+									if(allowJoin)
+									{
+										GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("JOINING A SESSION NOW..."));
+										SessionPtr->OnJoinSessionCompleteDelegates.AddUObject(this, &UEOSGameInstance::OnJoinSessionComplete);
+										UE_LOG(LogTemp, Warning, TEXT("Joining session : %s"), *searchResultSession.Session.OwningUserName);
+										JoiningViaInvite = true;
+										SessionPtr->GetResolvedConnectString(searchResultSession, NAME_GamePort, InviteJoinURL);
+										SessionPtr->JoinSession(0, SESSION_NAME, searchResultSession);
+									}
+									else
+									{
+										isLoading = false;
+										OnFailJoinRoomUIRefreshDelegate.Broadcast();
+									}
+								}
+								else
+								{
+									isLoading = false;
+									OnFailJoinRoomUIRefreshDelegate.Broadcast();
+								}
+								break;
+							}
+						}
+						isLoading = false;
+						OnFailJoinRoomUIRefreshDelegate.Broadcast();
+					}
+					
 				}
 				else
 				{
@@ -357,6 +417,14 @@ void UEOSGameInstance::JoinSession(int32 index)
 	{
 		isLoading = false;
 		UE_LOG(LogTemp, Error, TEXT("Not logged IN"));
+	}
+}
+
+void UEOSGameInstance::SetJoiningSession(int32 index)
+{
+	if(IsSessionsListAvailable)
+	{
+		joinAttemptRoomID = SearchSettings->SearchResults[index].GetSessionIdStr();
 	}
 }
 
