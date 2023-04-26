@@ -2458,6 +2458,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				float TargetCurrentHealth = CurrentHealth - DeltaTime * BurningBuffDamagePerSecond;
 				SetCurrentHealth(TargetCurrentHealth);
+				// Update AttackedRecord
+				if (Server_TheControllerApplyingLatestBurningBuff)
+				{
+					if (!AttackedRecord.Contains(Server_TheControllerApplyingLatestBurningBuff))
+						AttackedRecord.Add(Server_TheControllerApplyingLatestBurningBuff);
+					AttackedRecord[Server_TheControllerApplyingLatestBurningBuff] = GetWorld()->TimeSeconds;
+				}				
 				if (TargetCurrentHealth <= 0.0f)
 				{
 					auto MyController = GetController();
@@ -2474,6 +2481,23 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						}
 						AttackerPS->addScore(KillerGetScore);
 						AttackerPS->addKill(1);
+						// Record Kill Assists
+						float TimeNow = GetWorld()->TimeSeconds;
+						float MaxTimeCountingAsKA = 3.0f;
+						auto AttackedRecordCopy = AttackedRecord;
+						for (auto& Elem : AttackedRecordCopy)
+						{
+							if (!Elem.Key)
+								continue;
+							if (TimeNow - Elem.Value <= MaxTimeCountingAsKA)
+							{
+								if (AM_PlayerState* AssistAttackerPS = Elem.Key->GetPlayerState<AM_PlayerState>())
+								{
+									if (AssistAttackerPS != AttackerPS)
+										AssistAttackerPS->addKillAssist(1);
+								}
+							}
+						}
 						MyPS->addDeath(1);
 						// Broadcast burning kill
 						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
