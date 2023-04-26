@@ -385,6 +385,7 @@ void UEOSGameInstance::JoinSession(int32 index)
 										JoiningViaInvite = true;
 										SessionPtr->GetResolvedConnectString(searchResultSession, NAME_GamePort, InviteJoinURL);
 										SessionPtr->JoinSession(0, SESSION_NAME, searchResultSession);
+										return;
 									}
 									else
 									{
