@@ -323,6 +323,7 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
+				Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
 				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
@@ -379,7 +380,7 @@ void AMGameMode::StartTheGame()
 		if (LevelIndex != TutorialLevelIndex)
 		{
 			MyGameState->Server_StartGame();
-			Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
+			//Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
 		}
 		else
 		{
