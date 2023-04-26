@@ -2223,15 +2223,15 @@ void AMCharacter::Tick(float DeltaTime)
 			pPlayerController->GetViewportSize(viewport_x, viewport_y);
 		if (Success_GetSelfScreenPos && pOpponentMarkerWidget && pPlayerController)
 		{
-			// Let Widget know my TeamId
-			if (pOpponentMarkerWidget->TeamID != 1 || pOpponentMarkerWidget->TeamID != 2)
+			// Let Widget know my TeamId			
+			if (AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>())
 			{
-				if (AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>())
+				if (pOpponentMarkerWidget->TeamID != MyPS->TeamIndex)
 				{
 					pOpponentMarkerWidget->TeamID = MyPS->TeamIndex;
 					pOpponentMarkerWidget->ResetMarkers();
-				}					
-			}			
+				}
+			}							
 			int MaxPeopleInTeam = 3;
 			for (size_t i = 0; i < MaxPeopleInTeam; i++)
 			{
