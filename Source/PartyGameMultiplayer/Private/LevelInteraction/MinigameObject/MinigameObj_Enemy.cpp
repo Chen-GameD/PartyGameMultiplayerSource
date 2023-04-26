@@ -212,12 +212,22 @@ void AMinigameObj_Enemy::Server_WhenDead()
 	FTimerHandle DropWeaponTimerHandle;
 	GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
 		{
-			FVector spawnLocation = Server_SpawnBigWeaponLocation;
-			FRotator spawnRotation = Server_SpawnBigWeaponRotation;
-			FActorSpawnParameters spawnParameters;
-			spawnParameters.Instigator = nullptr;
-			spawnParameters.Owner = nullptr;
-			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+			if (this)
+			{
+				FVector spawnLocation = Server_SpawnBigWeaponLocation;
+				if (this)
+				{
+					FRotator spawnRotation = Server_SpawnBigWeaponRotation;
+					FActorSpawnParameters spawnParameters;
+					spawnParameters.Instigator = nullptr;
+					spawnParameters.Owner = nullptr;
+					if (this)
+					{
+						auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+					}
+				}
+			}
+		
 		}, DropWeaponDelay, false);
 
 	//// Spawn the little crab that walks into the ocean.
@@ -292,13 +302,25 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 		FTimerHandle HideCrabTimerHandle;
 		GetWorldTimerManager().SetTimer(HideCrabTimerHandle, [this]
 			{
-				SetActorEnableCollision(false);
-				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-				if (FollowWidget)
-					FollowWidget->SetVisibility(false);
-				// little crab
-				BPF_BroadcastCrabAnimation();
-				CallLittleCrabFleeSfx();
+				if (this)
+				{
+					SetActorEnableCollision(false);
+					if (this)
+					{
+						SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+						if (FollowWidget)
+							FollowWidget->SetVisibility(false);
+						// little crab
+						if (this)
+						{
+							BPF_BroadcastCrabAnimation();
+							if (this)
+							{
+								CallLittleCrabFleeSfx();
+							}
+						}
+					}
+				}
 			}, DropWeaponDelay, false);
 
 		// Vfx

@@ -1614,7 +1614,7 @@ void AMCharacter::OnRep_IsInvincible()
 		FTimerHandle ShowBubbleOnVfxTimerHandle;
 		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
 			{
-				if (EffectBubbleOn && IsInvincible)
+				if (EffectBubbleOn && IsInvincible && this)
 				{
 					if (!EffectBubbleOn->IsActive())
 						EffectBubbleOn->Activate();

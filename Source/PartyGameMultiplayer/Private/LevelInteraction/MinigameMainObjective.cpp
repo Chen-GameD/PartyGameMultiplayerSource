@@ -51,7 +51,8 @@ void AMinigameMainObjective::StartToRespawnActor()
 	{
 		MyGameMode->Server_RespawnMinigameObject();
 	}
-	Destroy(true, true);
+	if (this)
+		Destroy(true, true);
 }
 
 void AMinigameMainObjective::UpdateScoreCanGet(int n_Score)

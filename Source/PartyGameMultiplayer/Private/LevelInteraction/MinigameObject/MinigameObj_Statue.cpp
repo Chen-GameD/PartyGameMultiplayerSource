@@ -363,8 +363,14 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 		FTimerHandle HideStatueTimerHandle;
 		GetWorldTimerManager().SetTimer(HideStatueTimerHandle, [this]
 			{
-				SetActorEnableCollision(false);
-				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+				if (this)
+				{
+					SetActorEnableCollision(false);
+					if (this)
+					{
+						SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+					}
+				}
 				/*if(FollowWidget)
 					FollowWidget->SetVisibility(false);*/
 
