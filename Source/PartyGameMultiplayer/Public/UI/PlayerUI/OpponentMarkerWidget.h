@@ -18,13 +18,14 @@ class PARTYGAMEMULTIPLAYER_API UOpponentMarkerWidget : public UUserWidget
 public:
 	UOpponentMarkerWidget(const FObjectInitializer& ObjectInitializer);
 
+	void ResetMarkers();
 	void SetMarkerVisibility(int id, bool bVisible);
 	void SetAllMarkerVisibility(bool bVisible);
 	void SetMarkerTranslation(int id, FVector2D Tran);
 	void SetMarkerTranslation(int id, float TranX, float TranY);
 	void SetMarkerOffsetAngle(int id, float OffsetAngle_InDegree);
 protected:
-	void ResetMarkers();
+	
 
 public:
 	int TeamID;
