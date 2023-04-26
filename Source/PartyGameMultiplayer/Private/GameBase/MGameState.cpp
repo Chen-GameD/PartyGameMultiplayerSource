@@ -191,6 +191,11 @@ void AMGameState::OnRep_IsGameStart()
 			{
 				GetWorldTimerManager().ClearAllTimersForObject(*PawnItr);
 			}
+			// Clean all timer of all minigame object
+			for (TActorIterator<AMinigameMainObjective> MiniObjItr(GetWorld()); MiniObjItr; ++MiniObjItr)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(*MiniObjItr);
+			}
 			
 			MyLocalPlayerController->EndTheGame();
 			BPF_GameStartBGM(false);
