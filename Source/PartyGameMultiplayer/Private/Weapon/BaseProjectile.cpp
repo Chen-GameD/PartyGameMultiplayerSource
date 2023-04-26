@@ -39,6 +39,8 @@ ABaseProjectile::ABaseProjectile()
 		StaticMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	}	
 
+	AttackDetectComponent = StaticMesh;
+
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
 
@@ -141,7 +143,7 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
+		AttackDetectComponent->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
 	// Client
 	else

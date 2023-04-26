@@ -61,6 +61,8 @@ public:
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UStaticMeshComponent* StaticMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
+		class UPrimitiveComponent* AttackDetectComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* AttackHitEffect_NSComponent;
 	UPROPERTY(EditAnywhere, Category = "Effects")
