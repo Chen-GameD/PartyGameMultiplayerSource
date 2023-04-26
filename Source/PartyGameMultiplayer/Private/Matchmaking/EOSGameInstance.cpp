@@ -495,7 +495,7 @@ void UEOSGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 			}
 		}
 	}
-	isLoading = false;
+	//isLoading = false;
 	OnFindSessionsDelegate.Broadcast();
 }
 
