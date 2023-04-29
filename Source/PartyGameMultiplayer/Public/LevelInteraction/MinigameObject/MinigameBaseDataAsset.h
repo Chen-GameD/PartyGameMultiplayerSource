@@ -84,6 +84,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
 	TArray<FMinigameRuleStruct> MinigameConfigTable;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Minigame Config")
+	int KillScore;
 };
 
 UCLASS(BlueprintType)

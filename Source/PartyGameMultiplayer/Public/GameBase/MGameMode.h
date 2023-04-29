@@ -62,7 +62,7 @@ public:
 	UFUNCTION()
 	void NotifyAllClientPlayerControllerUpdateReadyState(bool IsAllReady);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StartTheGame();
 
 	UFUNCTION()
@@ -74,6 +74,9 @@ public:
 protected:
 	UFUNCTION()
 	void InitMinigame_ShellObject();
+
+	UFUNCTION()
+	void SpawnMinigameObj();
 
 	
 // Members
@@ -94,6 +97,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int LevelIndex = -1;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int TutorialLevelIndex = 2;
+
+	UPROPERTY()
+	AMinigameMainObjective* CurrentMinigameObj;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TArray<APlayerStart*> Team_1_SpawnPoints;
@@ -108,9 +117,6 @@ protected:
 	TSubclassOf<ACharacter> CharaterBPType;
 	
 	FTimerHandle StartGameCountDownTimerHandle;
-
-	// UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	// FTransform MinigameObjectSpawnTransform;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AMinigameMainObjective> MinigameObjectClass;

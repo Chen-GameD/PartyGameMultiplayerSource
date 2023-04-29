@@ -24,6 +24,7 @@
 #include "Character/MCharacter.h"
 #include "../PartyGameMultiplayerCharacter.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 
 ABaseWeapon::ABaseWeapon()
 {
@@ -31,6 +32,7 @@ ABaseWeapon::ABaseWeapon()
 	PrimaryActorTick.bCanEverTick = true;  // Can turn this off to improve performance if you don't need it.
 
 	IsPickedUp = false;
+	Server_BigWeaponShouldSink = false;
 	HasBeenCombined = false;
 	IsBigWeapon = false;
 	WeaponType = EnumWeaponType::None;
@@ -38,11 +40,15 @@ ABaseWeapon::ABaseWeapon()
 	AttackType = EnumAttackType::OneHit;  // default is one-hit
 	bAttackOn = false;
 	bAttackOverlap = false;
+	HoldingController = nullptr;
 
 	DisplayCase = CreateDefaultSubobject<UBoxComponent>(TEXT("Box_DisplayCase"));
 	DisplayCase->SetupAttachment(RootComponent);
 	DisplayCase->SetBoxExtent(FVector3d(90.0f, 90.0f, 90.0f));
 	
+	InnerCase = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("InnerCase"));
+	InnerCase->SetupAttachment(DisplayCase);
+
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(DisplayCase);
 	WeaponMesh->SetCollisionProfileName(TEXT("Trigger"));	
@@ -74,10 +80,10 @@ ABaseWeapon::ABaseWeapon()
 	DamageType = UDamageType::StaticClass();
 	//Damage = 0.0f;
 	//DamageGenerationCounter = 0;
-	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = 0.0f;
+	CD_MaxEnergy = CD_LeftEnergy = CD_DropSpeed = CD_RecoverSpeed = CD_RecoverDelay = 0.0f;
 	CD_CanRecover = true;
 	TimePassed_SinceAttackStop = 0.0f;
-	LastTime_DisplayCaseTransformBeenReplicated = 0;
+	LastTime_DisplayCaseTransformBeenReplicated = -1.0f;
 
 	MiniGameDamageType = UDamageTypeToCharacter::StaticClass();
 	//MiniGameDamage = 0.0f;
@@ -109,6 +115,20 @@ void ABaseWeapon::Tick(float DeltaTime)
 			DisplayCaseLocation = DisplayCase->GetComponentLocation();
 			DisplayCaseRotation = DisplayCase->GetComponentRotation();
 			DisplayCaseScale = DisplayCase->GetComponentScale();
+
+			if (CD_LeftEnergy < CD_MaxEnergy && CD_CanRecover)
+			{
+				CD_LeftEnergy += CD_RecoverSpeed * DeltaTime;
+				CD_LeftEnergy = FMath::Min(CD_LeftEnergy, CD_MaxEnergy);
+			}
+
+			if (IsBigWeapon && Server_BigWeaponShouldSink)
+			{
+				float SinkSpeed = 75.0f;
+				SetActorLocation(GetActorLocation() + FVector::DownVector * DeltaTime * SinkSpeed);
+				if (GetActorLocation().Z < -250.0f)
+					Destroy();
+			}
 		}
 		// being picked up
 		else
@@ -151,10 +171,6 @@ void ABaseWeapon::Tick(float DeltaTime)
 					}
 					if (!CD_CanRecover)
 					{
-						float CD_RecoverDelay = 0.0f;
-						FString ParName =  WeaponName + "_CD_RecoverDelay";
-						if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
-							CD_RecoverDelay = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 						if (CD_RecoverDelay < TimePassed_SinceAttackStop)
 							CD_CanRecover = true;
 					}
@@ -162,8 +178,11 @@ void ABaseWeapon::Tick(float DeltaTime)
 				// Apply constant damage
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
-					for (auto& Elem : AttackObjectMap)
-					{					
+					// Prevent AttackObjectMap from getting written by the overlap functions during the iteration
+					FScopeLock Lock(&DataGuard);
+					auto CopiedAttackObjectMap = AttackObjectMap;					
+					for (auto Elem : CopiedAttackObjectMap)
+					{			
 						AActor* DamagedActor = Elem.Key;						
 						if (DamagedActor)
 						{
@@ -173,9 +192,9 @@ void ABaseWeapon::Tick(float DeltaTime)
 								if (pMCharacter->GetCurrentHealth() <= 0)
 									IsDamagedActorDead = true;
 							}
-							else if (auto pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(DamagedActor))
+							else if (auto pMinigameObj = Cast<AMinigameMainObjective>(DamagedActor))
 							{
-								if (pMinigameObj_Enemy->GetCurrentHealth() <= 0)
+								if (pMinigameObj->GetCurrentHealth() <= 0)
 									IsDamagedActorDead = true;
 							}
 							if(!IsDamagedActorDead)
@@ -205,6 +224,7 @@ void ABaseWeapon::Tick(float DeltaTime)
 		else
 			TimePassed_SinceAttackStop = tmpVal;
 	}
+
 }
 
 
@@ -216,10 +236,9 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ABaseWeapon, CD_LeftEnergy);
 	DOREPLIFETIME(ABaseWeapon, bAttackOn);
 	DOREPLIFETIME(ABaseWeapon, bAttackOverlap);
-	DOREPLIFETIME(ABaseWeapon, IsPickedUp);
+	DOREPLIFETIME(ABaseWeapon, IsPickedUp); 
 	DOREPLIFETIME(ABaseWeapon, HasBeenCombined);	
 	DOREPLIFETIME(ABaseWeapon, MovementComponent);
-	//DOREPLIFETIME(ABaseWeapon, DamageGenerationCounter);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseLocation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseRotation);
 	DOREPLIFETIME(ABaseWeapon, DisplayCaseScale);
@@ -228,9 +247,9 @@ void ABaseWeapon::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& OutLife
 
 void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 {
-	IsPickedUp = true;
-	if (GetNetMode() == NM_ListenServer)
-		OnRep_IsPickedUp();
+	if (IsPickedUp)
+		return;
+
 	if (!pCharacter)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Unexpected situation in ABaseWeapon::GetPickedUp"));
@@ -244,29 +263,71 @@ void ABaseWeapon::GetPickedUp(ACharacter* pCharacter)
 	}
 	SetInstigator(pCharacter);
 	SetOwner(pCharacter);
+	PreHoldingController = pCharacter->GetController();
 
+	InnerCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetActorEnableCollision(false);
-	DisplayCaseCollisionSetActive(false);
+	DisplayCaseCollisionSetActive(false);	
+
+	IsPickedUp = true;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 }
 
 
+// only will be called on element weapons
 void ABaseWeapon::GetThrewAway()
 {
+	if (!IsPickedUp)
+		return;
+
 	AttackStop();
 
-	IsPickedUp = false;
-	if (GetNetMode() == NM_ListenServer)
-		OnRep_IsPickedUp();
 	HasBeenCombined = false;
 	HoldingController = nullptr;
 	SetInstigator(nullptr);
 	SetOwner(nullptr);
 
 	SetActorEnableCollision(true);
-	//  Set DisplayCaseCollision to active
-	DisplayCaseCollisionSetActive(true);
+	InnerCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	if (!IsBigWeapon)
+	{
+		//  Set DisplayCaseCollision to active
+		DisplayCaseCollisionSetActive(true);
+	}
+	else
+	{
+		DisplayCaseCollisionSetActive(true);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		FTimerHandle TimerHandle;
+		float SinkDelay = 3.0f;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+			{
+				DisplayCase->SetSimulatePhysics(false);
+				DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));			
+				Server_BigWeaponShouldSink = true;
+			}, SinkDelay, false);		
+	}	
+
+	IsPickedUp = false;
+	if (GetNetMode() == NM_ListenServer)
+		OnRep_IsPickedUp();
 }
 
+void ABaseWeapon::SafeDestroyWhenGetThrew()
+{
+	AttackStop();
+	SetActorEnableCollision(false);
+	SetActorHiddenInGame(true);
+
+	FTimerHandle TimerHandle;
+	float Delay = 1.0f;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
+		{
+			Destroy();
+		}, Delay, false);
+}
 
 void ABaseWeapon::AttackStart(float AttackTargetDistance)
 {
@@ -294,7 +355,8 @@ void ABaseWeapon::AttackStart(float AttackTargetDistance)
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_bAttackOn();
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	
 	if (AttackType != EnumAttackType::SpawnProjectile)
 	{
@@ -320,7 +382,8 @@ void ABaseWeapon::AttackStop()
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	AttackObjectMap.Empty();
 
 	if (AttackType == EnumAttackType::Constant)
@@ -355,6 +418,9 @@ void ABaseWeapon::BeginPlay()
 		ParName = ThisWeaponName + "_" + "CD_RecoverSpeed";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 			CD_RecoverSpeed = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
+		ParName = ThisWeaponName + "_" + "CD_RecoverDelay";
+		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
+			CD_RecoverDelay = AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map[ParName];
 		ParName = ThisWeaponName + "_" + "CD_MinEnergyToAttak";
 		if (AWeaponDataHelper::DamageManagerDataAsset->CoolDown_Map.Contains(ParName))
 		{
@@ -372,10 +438,17 @@ void ABaseWeapon::BeginPlay()
 	// Server: Register collision callback functions
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		//  Set DisplayCaseCollision to active
-		DisplayCaseCollisionSetActive(true);
+		// Set InnerCase
+		InnerCase->SetCollisionProfileName(TEXT("Custom"));
+		InnerCase->SetCollisionObjectType(ECC_Destructible);
+		InnerCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		InnerCase->SetCollisionResponseToAllChannels(ECR_Block);
+		InnerCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		InnerCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+		// Set DisplayCaseCollision to active
+		DisplayCaseCollisionSetActive(true);		
 		DisplayCase->OnComponentBeginOverlap.AddDynamic(this, &ABaseWeapon::OnDisplayCaseOverlapBegin);
-		
+
 		if (AttackDetectComponent)
 		{
 			AttackDetectComponent->SetCollisionProfileName(TEXT("Trigger"));
@@ -397,6 +470,8 @@ void ABaseWeapon::BeginPlay()
 void ABaseWeapon::Destroyed()
 {
 	Super::Destroyed();
+
+	//AttackStop();
 }
 
 
@@ -417,7 +492,7 @@ void ABaseWeapon::PlayAnimationWhenNotBeingPickedUp(float DeltaTime)
 	TimePassed_SinceGetThrewAway += DeltaTime;
 	if (HaloEffect_NSComponent && !HaloEffect_NSComponent->IsActive())
 	{
-		if (0.2f < TimePassed_SinceGetThrewAway && 0.2f < GetWorld()->TimeSeconds - LastTime_DisplayCaseTransformBeenReplicated)
+		if (0.2f < TimePassed_SinceGetThrewAway && 0 < LastTime_DisplayCaseTransformBeenReplicated && 0.2f < GetWorld()->TimeSeconds - LastTime_DisplayCaseTransformBeenReplicated)
 		{
 			HaloEffect_NSComponent->Activate();
 			HaloEffect_NSComponent->SetVisibility(true);
@@ -432,16 +507,19 @@ void ABaseWeapon::DisplayCaseCollisionSetActive(bool IsActive)
 	if (IsActive)
 	{
 		DisplayCase->SetCollisionProfileName(TEXT("Custom"));
-		DisplayCase->SetSimulatePhysics(true);
+		DisplayCase->SetCollisionObjectType(ECC_Vehicle);		
+		DisplayCase->SetSimulatePhysics(true);		
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		DisplayCase->SetCollisionResponseToAllChannels(ECR_Block);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Vehicle, ECR_Ignore);
+		DisplayCase->SetCollisionResponseToChannel(ECC_Destructible, ECR_Ignore);
 		DisplayCase->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 		DisplayCase->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
 	}
 	else
 	{
-		DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));
-		DisplayCase->SetSimulatePhysics(false);
+		DisplayCase->SetCollisionProfileName(TEXT("NoCollision"));			
+		DisplayCase->SetSimulatePhysics(false);		
 		DisplayCase->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
@@ -507,12 +585,29 @@ void ABaseWeapon::OnRep_IsPickedUp()
 
 		WeaponMesh->SetRelativeLocation(FVector::ZeroVector);
 		WeaponMesh->SetRelativeRotation(FRotator::ZeroRotator);
+
+		//// Show weapon silouette on teammates' end
+		//int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		//if (TeammateCheckResult == 1)
+		//{
+		//	// Exclude self
+		//	if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+		//	{
+		//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+		//		{
+		//			WeaponMesh->SetRenderCustomDepth(true);
+		//			WeaponMesh->SetCustomDepthStencilValue(252);
+		//		}				
+		//	}	
+		//}			
 	}
 	else
 	{		
 		TimePassed_SinceGetThrewAway = 0;	
 		WeaponMesh->SetRelativeLocation(WeaponMeshDefaultRelativeLocation);
 		WeaponMesh->SetRelativeRotation(WeaponMeshDefaultRelativeRotation);
+
+		//WeaponMesh->SetRenderCustomDepth(false);
 	}	
 
 	if (AttackOnEffect && AttackOnEffect->IsActive())
@@ -534,7 +629,7 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 	if (IsPickedUp && HoldingController && GetOwner())
 	{
 		if( (Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-			Cast<AMinigameObj_Enemy>(OtherActor) )
+			Cast<AMinigameMainObjective>(OtherActor) )
 		{
 			if (!AttackObjectMap.Contains(OtherActor))
 				AttackObjectMap.Add(OtherActor);
@@ -545,11 +640,13 @@ void ABaseWeapon::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp
 
 			if (AttackType != EnumAttackType::Constant)
 			{
-				if ((!IsBigWeapon && ApplyDamageCounter == 0) || IsBigWeapon)
+				if (!ApplyDamageCounter.Contains(OtherActor))
+					ApplyDamageCounter.Add(OtherActor);
+				if (ApplyDamageCounter[OtherActor] == 0)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-					ApplyDamageCounter++;
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, OtherActor, 0);
+					ApplyDamageCounter[OtherActor]++;
 				}				
 			}				
 		}
@@ -563,7 +660,7 @@ void ABaseWeapon::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 	//if (IsPickedUp && GetOwner())
 	//{
 	//	if ((Cast<AMCharacter>(OtherActor) && OtherActor != GetOwner()) ||
-	//		Cast<AMinigameObj_Enemy>(OtherActor))
+	//		Cast<AMinigameMainObjective>(OtherActor))
 	//	{
 	//		if (AttackObjectMap.Contains(OtherActor))
 	//		{

@@ -61,13 +61,15 @@ void AWeaponBlower::Tick(float DeltaTime)
 			{
 				if (AttackType == EnumAttackType::Constant && bAttackOn && CD_MinEnergyToAttak <= CD_LeftEnergy)
 				{
+					// Cannot used CopiedAttackObjectMap this time because we need to change the value of AttackObjectMap
+					FScopeLock Lock(&DataGuard);
 					for (auto& Elem : AttackObjectMap)
 					{
 						// Apply knockback buff at a fixed frequency
 						Elem.Value += DeltaTime;
 						if (AWeaponDataHelper::interval_ConstantWeaponApplyKnockback <= Elem.Value)
 						{
-							ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(Elem.Key), DeltaTime);
+							ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Elem.Key, DeltaTime);
 							Elem.Value -= AWeaponDataHelper::interval_ConstantWeaponApplyKnockback;
 						}
 					}
@@ -103,7 +105,8 @@ void AWeaponBlower::AttackStart(float AttackTargetDistance)
 	// Listen server
 	if (GetNetMode() == NM_ListenServer)
 		OnRep_bAttackOn();
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	float ApplyDamageAndKnockbackDelay = 0.15f;
 	FTimerHandle ApplyDamageAndKnockbackTimerHandle;

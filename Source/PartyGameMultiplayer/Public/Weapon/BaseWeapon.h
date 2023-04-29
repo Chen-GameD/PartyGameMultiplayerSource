@@ -30,6 +30,7 @@ public:
 	// should only be called on server
 	UFUNCTION(BlueprintCallable)
 		virtual void GetThrewAway();
+	virtual void SafeDestroyWhenGetThrew();
 	// should only be called on server
 	virtual void AttackStart(float AttackTargetDistance);
 	// should only be called on server
@@ -136,6 +137,7 @@ public:
 	float CD_LeftEnergy;	
 	float CD_DropSpeed;
 	float CD_RecoverSpeed;
+	float CD_RecoverDelay;
 	bool CD_CanRecover;
 	float TimePassed_SinceAttackStop;
 	float TimePassed_SinceGetThrewAway;
@@ -143,14 +145,17 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsPickedUp)
 		bool IsPickedUp;
+	bool Server_BigWeaponShouldSink;
 
 	float CurDeltaTime;
+
+	UPROPERTY()
+	AController* PreHoldingController;
 
 protected:
 	// Might be necessary if there are multiple weapons of the same type
 	size_t ID;
 
-	// don't replicate pointers
 	AController* HoldingController;
 
 	UPROPERTY(ReplicatedUsing = OnRep_DisplayCaseTransform)
@@ -165,7 +170,7 @@ protected:
 	FVector WeaponMeshDefaultRelativeScale;
 
 	// check if ApplyDamage has happend during one AttackOn round, if happened, OneHit type weapon won't apply damage again.
-	int ApplyDamageCounter;
+	TMap<AActor*, int> ApplyDamageCounter;
 
 	UPROPERTY(ReplicatedUsing = OnRep_bAttackOn)
 		bool bAttackOn;
@@ -189,6 +194,10 @@ protected:
 	// Sphere component used to make sure the weapon could be on the ground after threw away.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 		class UBoxComponent* DisplayCase;
+
+	// Used to seperate weapons
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStaticMeshComponent* InnerCase;
 
 	// Static Mesh used to provide a visual representation of the object.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -227,6 +236,8 @@ protected:
 
 	//WeaponName
 	FString WeaponName;
+
+	mutable FCriticalSection DataGuard;
 
 private:
 

@@ -18,12 +18,18 @@
 #include "Matchmaking/EOSGameInstance.h"
 #include "UI/MInGameHUD.h"
 
-
 // Constructor
 // ===================================================
 #pragma region Constructor
 AMPlayerController::AMPlayerController()
 {
+}
+
+void AMPlayerController::Destroyed()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Destroyed-PlayerController"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : DestroyedPlayerController"));
+	Super::Destroyed();
 }
 
 void AMPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -41,29 +47,34 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 	TArray<FLobbyInformationStruct> arrTeam2;
 	TArray<FLobbyInformationStruct> arrUndecided;
 
-	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState)
 	{
-		AMCharacter* MyPawn = Cast<AMCharacter>(*PawnItr);
-		AM_PlayerState* CurrentPawnPlayerState = Cast<AM_PlayerState>(MyPawn->GetPlayerState());
-		if (CurrentPawnPlayerState)
+		TArray<TObjectPtr<APlayerState>> PlayerArray = MyGameState->PlayerArray;
+		for (TObjectPtr<APlayerState> CurrentPlayer : PlayerArray)
 		{
-			FLobbyInformationStruct newStruct;
-			newStruct.PlayerName = CurrentPawnPlayerState->PlayerNameString;
-			newStruct.TeamIndex = CurrentPawnPlayerState->TeamIndex;
-			newStruct.IsReady = CurrentPawnPlayerState->IsReady;
-			switch (newStruct.TeamIndex)
+			AM_PlayerState* CurrentPlayerState = Cast<AM_PlayerState>(CurrentPlayer);
+			if (CurrentPlayerState)
 			{
-			case 0:
-				arrUndecided.Add(newStruct);
-				break;
-			case 1:
-				arrTeam1.Add(newStruct);
-				break;
-			case 2:
-				arrTeam2.Add(newStruct);
-				break;
+				FLobbyInformationStruct newStruct;
+				newStruct.PlayerName = CurrentPlayerState->PlayerNameString;
+				newStruct.TeamIndex = CurrentPlayerState->TeamIndex;
+				newStruct.IsReady = CurrentPlayerState->IsReady;
+				newStruct.IsHost = CurrentPlayerState->IsHost;
+				switch (newStruct.TeamIndex)
+				{
+				case 0:
+					arrUndecided.Add(newStruct);
+					break;
+				case 1:
+					arrTeam1.Add(newStruct);
+					break;
+				case 2:
+					arrTeam2.Add(newStruct);
+					break;
 				default:
 					break;
+				}
 			}
 		}
 	}
@@ -76,7 +87,7 @@ void AMPlayerController::UI_UpdateLobbyInformation()
 
 void AMPlayerController::Timer_CheckUpdateLobby(TArray<FLobbyInformationStruct> arrTeam1, TArray<FLobbyInformationStruct> arrTeam2, TArray<FLobbyInformationStruct> arrUndecided)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_UpdateLobbyInformation(arrTeam1, arrTeam2, arrUndecided);
 		GetWorldTimerManager().ClearTimer(UpdateLobbyTimerHandle);
@@ -170,23 +181,6 @@ void AMPlayerController::Client_SyncLobbyInformation_Implementation()
 	}
 }
 
-// void AMPlayerController::NetMulticast_LoginInit_Implementation()
-// {
-// 	if (GetNetMode() == NM_ListenServer)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("ListenServer"));
-// 	}
-// 	else if (GetNetMode() == NM_Client)
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("Client"));
-// 	}
-// 	if (IsLocalPlayerController())
-// 	{
-// 		GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, TEXT("UpdateUI"));
-// 		UI_UpdateLobbyMenu();
-// 	}
-// }
-
 void AMPlayerController::JoinATeam_Implementation(int i_TeamIndex)
 {
 	AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
@@ -216,7 +210,7 @@ void AMPlayerController::Server_SetCanMove_Implementation(bool i_CanMove)
 
 void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_UpdatePlayerHealth(percentage);
 	}
@@ -224,7 +218,7 @@ void AMPlayerController::UI_InGame_UpdateHealth(float percentage)
 
 void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_OnSkillUse(UseSkill, CoolDownTotalTime);
 	}
@@ -232,15 +226,45 @@ void AMPlayerController::UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDown
 
 void AMPlayerController::UI_InGame_BroadcastInformation_Implementation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage)
 {
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		MyInGameHUD->InGame_BroadcastInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
 	}
 }
 
+void AMPlayerController::UI_InGame_BroadcastMiniInformation_Implementation(int KillerTeamIndex, const FString& i_KillerName, const FString& i_MinigameInformation)
+{
+	if (IsValid(MyInGameHUD))
+	{
+		MyInGameHUD->InGame_BroadcastMinigameInformation(KillerTeamIndex, i_KillerName, i_MinigameInformation);
+	}
+}
+
 AMInGameHUD* AMPlayerController::GetInGameHUD()
 {
-	return MyInGameHUD ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
+	return IsValid(MyInGameHUD) ? MyInGameHUD : Cast<AMInGameHUD>(GetHUD());
+}
+
+void AMPlayerController::Tutorial_InitForPlayerController()
+{
+	if (MyInGameHUD)
+	{
+		MyInGameHUD->InGame_HideMinigameInfo();
+	}
+}
+
+void AMPlayerController::SetHudInitTimerFunction()
+{
+	MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
+	
+	if (IsValid(MyInGameHUD))
+	{
+		if (MyInGameHUD->IsFinishedInit)
+		{
+			IsHudInit = MyInGameHUD->IsFinishedInit;
+			GetWorldTimerManager().ClearTimer(HudInitTimerHandle);
+		}
+	}
 }
 
 void AMPlayerController::BeginPlay()
@@ -249,33 +273,64 @@ void AMPlayerController::BeginPlay()
 
 	if (IsLocalPlayerController())
 	{
-		//UI_ShowLobbyMenu();
 		MyInGameHUD = Cast<AMInGameHUD>(GetHUD());
-		check(MyInGameHUD);
 
-		if (MyInGameHUD)
+		if (IsValid(MyInGameHUD))
 		{
 			// Set input mode
-			if (IsLocalPlayerController())
-			{
-				//FInputModeUIOnly inputMode;
-				FInputModeUIOnly inputMode;
-				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				this->SetInputMode(inputMode);
-				this->SetShowMouseCursor(true);
-			}
+			//FInputModeUIOnly inputMode;
+			FInputModeUIOnly inputMode;
+			inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+			this->SetInputMode(inputMode);
+			this->SetShowMouseCursor(true);
+
+			CheckIfSaveFileExist();
+
+			GetWorldTimerManager().SetTimer(HudInitTimerHandle, this, &AMPlayerController::SetHudInitTimerFunction, 0.5, true);
 		}
 	}
 }
 
 void AMPlayerController::OnNetCleanup(UNetConnection* Connection)
 {
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : OnNetCleanup"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : OnNetCleanup"));
 	if(IsLocalPlayerController() && GetNetMode() == NM_Client)
 	{
 		UEOSGameInstance* GameInstanceRef = Cast<UEOSGameInstance>(GetWorld()->GetGameInstance());
 		if(GameInstanceRef)
 		{
 			GameInstanceRef->DestroySession();
+		}
+	}
+	else if(!IsLocalPlayerController() && GetNetMode() == NM_ListenServer)
+	{
+		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
+		{
+			FUniqueNetIdRepl UniqueNetIdRepl;
+			UNetConnection *NetConnectionRef = Cast<UNetConnection>(this->Player);
+			if(IsValid(NetConnectionRef))
+			{
+				UniqueNetIdRepl = NetConnectionRef->PlayerId;
+				TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
+				IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(GetWorld());
+				IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
+				if(const bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("CBGameSession"), *UniqueNetId))
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
+				}
+				else
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Failure UN-Registration"));
+					UE_LOG(LogTemp, Warning, TEXT("Failure UN-registration: %d"), bRegistrationSuccess);
+				}
+			}
+			else
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
+				UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
+			}
 		}
 	}
 	Super::OnNetCleanup(Connection);
@@ -290,36 +345,6 @@ void AMPlayerController::SetupInputComponent()
 	
 	InputComponent->BindAxis("Move Forward / Backward", this, &AMPlayerController::MoveForward);
 	InputComponent->BindAxis("Move Right / Left", this, &AMPlayerController::MoveRight);
-
-	// handle touch devices
-	InputComponent->BindTouch(IE_Pressed, this, &AMPlayerController::TouchStarted);
-	InputComponent->BindTouch(IE_Released, this, &AMPlayerController::TouchStopped);
-
-	// Test
-	//InputComponent->BindAction("TestKey", IE_Released, this, &AMPlayerController::Test);
-}
-
-void AMPlayerController::UI_ShowLobbyMenu()
-{
-	if (WB_LobbyMenuClass)
-	{
-		if (!WB_LobbyMenu)
-		{
-			// Create menu on client
-			if (IsLocalPlayerController())
-			{
-				WB_LobbyMenu = CreateWidget<UUserWidget>(this, WB_LobbyMenuClass);
-				//CreateWidget(GetFirstLocalPlayerController(), WB_MainMenuClass->StaticClass());
-                
-				WB_LobbyMenu->AddToViewport();
-				//FInputModeUIOnly inputMode;
-				FInputModeUIOnly inputMode;
-				inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				this->SetInputMode(inputMode);
-				this->SetShowMouseCursor(true);
-			}
-		}
-	}
 }
 
 void AMPlayerController::GetNotifyPlayerControllerUpdateReadyState_Implementation(bool IsAllReady)
@@ -341,16 +366,7 @@ void AMPlayerController::Client_RefreshWeaponUI_Implementation()
 
 void AMPlayerController::StartTheGame()
 {
-	// Hide the lobby menu
-	// if (WB_LobbyMenu)
-	// {
-	// 	if (WB_LobbyMenu->IsVisible())
-	// 	{
-	// 		WB_LobbyMenu->SetVisibility(ESlateVisibility::Hidden);
-	// 	}
-	// }
-	
-	if (MyInGameHUD)
+	if (IsValid(MyInGameHUD))
 	{
 		// Hide the lobby menu
 		MyInGameHUD->InGame_SetVisibilityLobbyWidget(ESlateVisibility::Hidden);
@@ -374,6 +390,13 @@ void AMPlayerController::StartTheGame()
 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
 	if (MyPlayerState)
 	{
+		// Update Player Direction Indicator
+		AMCharacter* MyCharacter = Cast<AMCharacter>(GetPawn());
+		if (MyCharacter)
+		{
+			MyCharacter->BPF_SetPlayerDirectionIndicatorWidget(MyPlayerState->TeamIndex);
+		}
+		
 		// Update All Pawn's FollowWidget status
 		for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
 		{
@@ -382,7 +405,8 @@ void AMPlayerController::StartTheGame()
 			if (MyPawn && CurrentPawnPlayerState)
 			{
 				MyPawn->SetFollowWidgetVisibility(true);
-				MyPawn->SetFollowWidgetHealthBarIsEnemy(MyPlayerState->TeamIndex != CurrentPawnPlayerState->TeamIndex);
+				//MyPawn->SetFollowWidgetHealthBarIsEnemy(MyPlayerState->TeamIndex != CurrentPawnPlayerState->TeamIndex);
+				MyPawn->SetFollowWidgetHealthBarByTeamID(CurrentPawnPlayerState->TeamIndex);
 			}
 		}
 	}
@@ -390,19 +414,11 @@ void AMPlayerController::StartTheGame()
 
 void AMPlayerController::Server_RequestRespawn_Implementation()
 {
-	// Delete current controlled character
-	//GetPawn()->Destroy();
-	
 	AMGameMode* myGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
 
 	if (myGameMode)
 	{
 		myGameMode->Server_RespawnPlayer(this);
-		// AMGameState* myGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		// if (myGameState)
-		// {
-		// 	Client_SetGameUIVisibility(myGameState->IsGameStart);
-		// }
 	}
 }
 
@@ -452,51 +468,6 @@ void AMPlayerController::MoveRight(float Value)
 		}
 	}
 	
-}
-
-void AMPlayerController::TurnAtRate(float Rate)
-{
-}
-
-void AMPlayerController::LookUpAtRate(float Rate)
-{
-}
-
-void AMPlayerController::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-}
-
-void AMPlayerController::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-}
-
-void AMPlayerController::Test_Implementation()
-{
-	// if (IsLocalPlayerController())
-	// {
-	// 	UI_ShowLobbyMenu();
- //        
-	// 	// Get Name and update to playerstate
-	// 	AM_PlayerState* MyPlayerState = GetPlayerState<AM_PlayerState>();
-	// 	UMGameInstance* MyGameInstance = Cast<UMGameInstance>(GetGameInstance());
-	// 	if (MyPlayerState && MyGameInstance)
-	// 	{
-	// 		MyPlayerState->UpdatePlayerName(MyGameInstance->PlayerName);
-	// 		MyPlayerState->UpdateTeamIndex();
-	// 	}
-	// 	//GetPlayerState<AM_PlayerState>()->UpdatePlayerName(Cast<UMGameInstance>(GetGameInstance())->PlayerName);
- //        
-	// 	//GetPlayerState<AM_PlayerState>()->UpdateTeamIndex();
-	// }
-
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
-		if (MyGameMode)
-		{
-			MyGameMode->TestRestartLevel();
-		}
-	}
 }
 
 #pragma endregion Input

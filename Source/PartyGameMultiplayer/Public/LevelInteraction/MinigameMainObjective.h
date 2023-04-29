@@ -7,7 +7,7 @@
 #include "MinigameMainObjective.generated.h"
 
 /**
- * 
+ * This Class's only duty: Manage the get, set, sync of health-realated variables
  */
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AMinigameMainObjective : public AInteractable
@@ -19,22 +19,6 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	// Effects
-	// =============================
-	UFUNCTION(BlueprintImplementableEvent)
-		void CallGetHitSfx();
-	UFUNCTION(BlueprintImplementableEvent)
-		void CallDeathSfx();
-
-protected:
-	virtual void BeginPlay() override;
-	UFUNCTION()
-	virtual void OnRep_CurrentHealth();
-
-	UFUNCTION()
-	void StartToRespawnActor();
-
-public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float GetCurrentHealth() const { return CurrentHealth; }
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -46,14 +30,23 @@ public:
 	UFUNCTION()
 	void UpdateScoreCanGet(int n_Score);
 
+protected:
+	virtual void BeginPlay() override;
+	UFUNCTION()
+	virtual void OnRep_CurrentHealth();
+
+	UFUNCTION()
+	void StartToRespawnActor();
+
 public:
 
 	// Effects
 	// =============================
-	float CallGetHitSfxVfx_MinInterval;
-	float LastTime_CallGetHitSfxVfx;
 	UPROPERTY(EditAnywhere)
 		TSubclassOf<class UCameraShakeBase> CameraShakeTriggered;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	FString MinigameInformation;
 
 protected:
 	UPROPERTY(EditAnywhere, Category = "Health")

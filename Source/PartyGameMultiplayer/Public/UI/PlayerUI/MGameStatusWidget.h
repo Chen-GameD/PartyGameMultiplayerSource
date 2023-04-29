@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Components/CanvasPanel.h"
 #include "Components/Image.h"
+#include "Components/RichTextBlock.h"
 #include "Components/TextBlock.h"
 #include "MGameStatusWidget.generated.h"
 
@@ -22,6 +23,8 @@ public:
 
 	virtual void NativeConstruct() override;
 
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 	UFUNCTION()
 	void UpdateTeam_1_Score(int i_Score);
 	UFUNCTION()
@@ -29,6 +32,8 @@ public:
 
 	UFUNCTION()
 	void UpdateGameTimer(int i_GameTime);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_CountdownAnimation();
 
 	UFUNCTION()
 	void UpdateMinigameInfo(FString i_Info, UTexture2D* i_InfoImage);
@@ -36,6 +41,8 @@ public:
 	void ShowMinigameInfoAnimation();
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowTimerAnimation();
+	UFUNCTION()
+	void HideMinigameInfo();
 
 	// Broadcasting System
 	UFUNCTION()
@@ -44,6 +51,16 @@ public:
 	void UpdateKillBoardInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
 	UFUNCTION(BlueprintImplementableEvent)
 	void BroadcastingAnimationEvent();
+
+	// Broadcasting Mini game System
+	UFUNCTION()
+	void UpdateAndShowMiniBroadcastingInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BroadcastingMiniAnimationEvent();
+
+	// Game End
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_GameEnd();
 	
 
 protected:
@@ -54,13 +71,13 @@ protected:
 	UTextBlock* Team_2_Score;
 
 	// Game Timer
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UTextBlock* GameTimer;
 
 	// Minigame Information
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UTextBlock* MinigameInfo;
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
 	UImage* MinigameInfoImage;
 
 	// Broadcasting System Information
@@ -82,5 +99,17 @@ protected:
 	float BroadcastTimer = 0;
 	UPROPERTY(BlueprintReadWrite)
 	bool IsNeedShowBroadcast = false;
+
+	// Broadcasting Mini game System Information
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	UCanvasPanel* Mini_BroadcastCanvas;
+	UPROPERTY(meta = (BindWidget), BlueprintReadWrite)
+	URichTextBlock* Mini_Information;
+	UPROPERTY(BlueprintReadWrite)
+	float Mini_BroadcastTotalTime = 3;
+	UPROPERTY(BlueprintReadWrite)
+	float Mini_BroadcastTimer = 0;
+	UPROPERTY(BlueprintReadWrite)
+	bool Mini_IsNeedShowBroadcast = false;
 	
 };

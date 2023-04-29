@@ -36,6 +36,7 @@
 #include "GameBase/MGameState.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "UI/MCharacterFollowWidget.h"
+#include "UI/PlayerUI/OpponentMarkerWidget.h"
 
 // Constructor
 // ===================================================
@@ -95,6 +96,9 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	PlayerFollowWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("FollowWidget"));
 	PlayerFollowWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
+	OpponentMarkerWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OpponentMarkerWidget"));
+	OpponentMarkerWidget->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
@@ -107,7 +111,6 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	Server_DeadTimes = 0;
 
 	IsAllowDash = true;
-	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 	DashDistance = 300.0f;
 	DashTime = 0.2f;
 	DashCoolDown = 5.0f;
@@ -180,7 +183,12 @@ AMCharacter::AMCharacter(const FObjectInitializer& ObjectInitializer) : Super(Ob
 
 	IsInvincible = false;
 	InvincibleTimer = 0;
-	InvincibleMaxTime = 10.0f;
+	InvincibleMaxTime = 15.0f;
+
+	// Anti-Cheat lol: prevent use double Q/E to refresh the Combine Weapon CD
+	Server_LastDitchCombineWeaponType = EnumWeaponType::None;
+	Server_LastDitchCombineWeaponTime = -1.0f;
+	Server_LastDitchCombineWeapon_CD_LeftEnergy = 0.0f;
 }
 
 void AMCharacter::Restart()
@@ -189,8 +197,8 @@ void AMCharacter::Restart()
 
 	if (IsLocallyControlled())
 	{
-		AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
-		playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
+		if(AMPlayerController* playerController = Cast<AMPlayerController>(Controller))
+			playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
 	}
 }
 
@@ -269,6 +277,8 @@ void AMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMCharacter, AnimState);
 	// Replicate SKD Array
 	DOREPLIFETIME(AMCharacter, SKDArray);
+	// Replicate death animation index
+	DOREPLIFETIME(AMCharacter, DeadAnimIndex);
 }
 #pragma endregion Replicated Properties
 
@@ -442,6 +452,7 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 {
 	FString ParName = "";
 	int CntShellHeld = 0;
+	bool HoldingBigWeapon = false;
 	if (CombineWeapon)
 		ParName = CombineWeapon->GetWeaponName();
 	else
@@ -451,15 +462,21 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 			ParName = LeftWeapon->GetWeaponName();
 			if (LeftWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (LeftWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 		if (RightWeapon)
 		{
 			ParName = RightWeapon->GetWeaponName();
 			if (RightWeapon->WeaponType == EnumWeaponType::Shell)
 				CntShellHeld++;
+			if (RightWeapon->IsBigWeapon)
+				HoldingBigWeapon = true;
 		}
 	}
-	if (1 == CntShellHeld)
+	if(HoldingBigWeapon)
+		ParName = "BigWeapon";
+	else if (1 == CntShellHeld)
 		ParName = "OneShell";
 	else if (2 == CntShellHeld)
 		ParName = "TwoShells";
@@ -472,36 +489,38 @@ float AMCharacter::Server_GetMaxWalkSpeedRatioByWeapons()
 
 
 void AMCharacter::NetMulticast_AdjustMaxWalkSpeed_Implementation(float MaxWalkSpeedRatio)
-{
-	if(0 < MaxWalkSpeedRatio)
-		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
-	else
-	{
-		float MaxWalkSpeedRatioByWeapon = 1.0f;
-		float MaxWalkSpeedRatioBySaltCure = 1.0f;		
-		float MaxWalkSpeedRatioByCrabBubble = 1.0f;
-		// Weapon Effect
-		MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
-		MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
-		// Sea Effect
-		if (IsSaltCure)
-		{
-			FString ParName = "Saltcure";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-				MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-			MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
-		}		
-		// Crab Bubble Effect
-		if (IsAffectedByCrabBubble)
-		{
-			FString ParName = "CrabBubble";
-			if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
-				MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
-			MaxWalkSpeedRatio = MaxWalkSpeedRatioByCrabBubble;
-		}	
-		Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
-	}
+{	
+	Server_MaxWalkSpeed = OriginalMaxWalkSpeed * MaxWalkSpeedRatio;
 	GetCharacterMovement()->MaxWalkSpeed = Server_MaxWalkSpeed;
+}
+
+void AMCharacter::Server_SetMaxWalkSpeed()
+{
+	float MaxWalkSpeedRatio = 1.0f;
+	float MaxWalkSpeedRatioByWeapon = 1.0f;
+	float MaxWalkSpeedRatioBySaltCure = 1.0f;
+	float MaxWalkSpeedRatioByCrabBubble = 1.0f;
+	// Weapon Effect
+	MaxWalkSpeedRatioByWeapon = Server_GetMaxWalkSpeedRatioByWeapons();
+	MaxWalkSpeedRatio = MaxWalkSpeedRatioByWeapon;
+	// Sea Effect
+	if (IsSaltCure)
+	{
+		FString ParName = "Saltcure";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+			MaxWalkSpeedRatioBySaltCure = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+		MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioBySaltCure);
+	}
+	// Crab Bubble Effect
+	if (IsAffectedByCrabBubble)
+	{
+		FString ParName = "CrabBubble";
+		if (AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map.Contains(ParName))
+			MaxWalkSpeedRatioByCrabBubble = AWeaponDataHelper::DamageManagerDataAsset->Character_MaxWalkSpeed_Map[ParName];
+		MaxWalkSpeedRatio = FMath::Min(MaxWalkSpeedRatio, MaxWalkSpeedRatioByCrabBubble);
+	}
+	
+	NetMulticast_AdjustMaxWalkSpeed(MaxWalkSpeedRatio);
 }
 
 void AMCharacter::NetMulticast_SetHealingBubbleStatus_Implementation(bool i_bBubbleOn, bool i_bDoubleSize)
@@ -576,7 +595,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
@@ -590,7 +610,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				DropOffWeapon(isLeft);
@@ -639,7 +660,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				LeftWeapon->NetMulticast_CallPickedUpSfx();
@@ -709,7 +731,8 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 				// Drop off combine weapon
 				if (CombineWeapon)
 				{
-					CombineWeapon->Destroy();
+					PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+					CombineWeapon->SafeDestroyWhenGetThrew();
 					CombineWeapon = nullptr;
 				}
 				RightWeapon->NetMulticast_CallPickedUpSfx();
@@ -773,7 +796,7 @@ void AMCharacter::PickUp_Implementation(bool isLeft)
 	}
 
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -853,8 +876,15 @@ void AMCharacter::DropOffWeapon(bool isLeft, bool bDropToReplace)
 			LeftWeapon->HasBeenCombined = false;
 		}
 	}
+
+	// UI
+	// ======================================================================
+	// Set Inventory UI
+	if (GetNetMode() == NM_ListenServer)
+		SetTextureInUI();
+
 	// Adjust the walking speed according to the holding weapon
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 
 	// Check Shellheal buff if holding any shells
 	Server_CheckBubble();
@@ -869,7 +899,8 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 	{
 		if (CombineWeapon)
 		{
-			CombineWeapon->Destroy();
+			PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+			CombineWeapon->SafeDestroyWhenGetThrew();
 			CombineWeapon = nullptr;
 			//SetTextureInUI(Main, nullptr);
 		}
@@ -907,12 +938,16 @@ void AMCharacter::OnCombineWeapon(bool bJustPickedLeft)
 		CombineWeapon->GetPickedUp(this);
 		CombineWeapon->NetMulticast_CallPickedUpSfx();
 		spawnedCombineWeapon->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetIncludingScale, WeaponConfig::GetInstance()->GetWeaponSocketName(spawnedCombineWeapon->GetWeaponName()));
+		if (CombineWeapon && CombineWeapon->WeaponType == Server_LastDitchCombineWeaponType && GetWorld()->TimeSeconds - Server_LastDitchCombineWeaponTime < 3.0f)
+			CombineWeapon->CD_LeftEnergy = Server_LastDitchCombineWeapon_CD_LeftEnergy;
 
 		//Hide left and right weapon
 		LeftWeapon->SetActorHiddenInGame(true);
 		LeftWeapon->HasBeenCombined = true;
+		LeftWeapon->AttackStop();
 		RightWeapon->SetActorHiddenInGame(true);
 		RightWeapon->HasBeenCombined = true;
+		RightWeapon->AttackStop();
 
 		// If combine successfully, always set isLeftHeld Anim State to false, 
 		// this will be reset to true when picking up new item in PickUp_Implementation
@@ -986,7 +1021,7 @@ void AMCharacter::RefreshDash()
 	FTimerHandle tempHandle;
 	GetWorld()->GetTimerManager().SetTimer(tempHandle, this, &AMCharacter::SetDash, DashCoolDown, false);
 
-	NetMulticast_AdjustMaxWalkSpeed();
+	Server_SetMaxWalkSpeed();
 }
 
 void AMCharacter::SetDash()
@@ -1075,6 +1110,7 @@ void AMCharacter::OnHealthUpdate()
 		{
 			AMPlayerController* playerController = Cast<AMPlayerController>(Controller);
 			playerController->UI_InGame_UpdateHealth(CurrentHealth / MaxHealth);
+			SetHealthBarUI();
 		}
 	}
 
@@ -1092,8 +1128,6 @@ void AMCharacter::OnHealthUpdate()
 
 		if (CurrentHealth <= 0)
 		{
-			SetTextureInUI();
-
 			// Death
 			// to do
 			// Force respawn
@@ -1108,7 +1142,8 @@ void AMCharacter::OnHealthUpdate()
 		{
 			if (CombineWeapon)
 			{
-				CombineWeapon->Destroy();
+				PreventRefreshingCombineWeaponCD_ByDropPick(CombineWeapon);
+				CombineWeapon->SafeDestroyWhenGetThrew();
 				CombineWeapon = nullptr;
 				//SetTextureInUI(Main, nullptr);
 			}
@@ -1137,6 +1172,7 @@ void AMCharacter::OnHealthUpdate()
 void AMCharacter::Server_ForceRespawn_Implementation(float Delay)
 {
 	IsDead = true;
+	DeadAnimIndex = FMath::RandRange(0, DeadAnimNum - 1);
 	NetMulticast_DieResult();
 	StartToRespawn(Delay);
 }
@@ -1152,7 +1188,11 @@ void AMCharacter::StartToRespawn(float Delay)
 	{
 		// GetWorldTimerManager().SetTimer() InRate cannot <= 0;
 		FTimerHandle StartToRespawnTimerHandle;
-		GetWorldTimerManager().SetTimer(StartToRespawnTimerHandle, this, &AMCharacter::Client_Respawn, Delay, false);
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState->IsGameStart && MyGameState->GameTime >= 4)
+		{
+			GetWorldTimerManager().SetTimer(StartToRespawnTimerHandle, this, &AMCharacter::Client_Respawn, Delay, false);
+		}
 	}
 }
 
@@ -1194,6 +1234,7 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		//CharacterFollowWidget->SetPlayerName(MyPlayerState->PlayerNameString);
 		GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
 		BuffMap.Empty();
+		AttackedRecord.Empty();
 		InvincibleTimer = 0;
 	}
 
@@ -1203,6 +1244,19 @@ void AMCharacter::NetMulticast_RespawnResult_Implementation()
 		BPF_DeathCameraAnimation(false);
 	}
 }
+
+
+
+void AMCharacter::NetMulticast_SetWorldLocationRotation_Implementation(FVector NewWorldLocation, FRotator NewWorldRotation)
+{
+	SetActorLocation(NewWorldLocation);
+	SetActorRotation(NewWorldRotation);
+
+	// Disable Dash Vfx during instant move
+	if (EffectDash && EffectDash->IsVisible())
+		EffectDash->SetVisibility(false);
+}
+
 
 void AMCharacter::SetFollowWidgetVisibility(bool IsVisible)
 {
@@ -1226,6 +1280,15 @@ void AMCharacter::SetFollowWidgetHealthBarIsEnemy(bool IsEnemy)
 	if (CharacterFollowWidget && !IsLocallyControlled())
 	{
 		CharacterFollowWidget->SetIsEnemyHealthBar(IsEnemy);
+	}
+}
+
+void AMCharacter::SetFollowWidgetHealthBarByTeamID(int TeamID)
+{
+	UMCharacterFollowWidget* CharacterFollowWidget = Cast<UMCharacterFollowWidget>(PlayerFollowWidget->GetUserWidgetObject());
+	if (CharacterFollowWidget)
+	{
+		CharacterFollowWidget->ShowHealthBarByTeamID(TeamID);
 	}
 }
 
@@ -1262,32 +1325,40 @@ void AMCharacter::SetPlayerSkin()
 {
 	// TODO
 	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-	if (MyPlayerState)
+	if (MyPlayerState && MyPlayerState->characterIndex != -1 && !IsAlreadySetPlayerSkin)
 	{
 		/*UKismetMaterialLibrary::SetVectorParameterValue(GetWorld(), characaterMaterialParameterCollection, 
 			c, MyPlayerState->colorPicked);*/
 
-		GetMesh()->SetSkeletalMesh(CharacterBPArray[MyPlayerState->characterIndex]);
+		FScopeLock Lock(&DataGuard);
+		USkeletalMeshComponent* MyMesh = GetMesh();
+		int CharacterIndex = MyPlayerState->characterIndex;
+		FLinearColor ColorPicked = MyPlayerState->colorPicked;
+		MyMesh->SetSkeletalMesh(CharacterBPArray[CharacterIndex]);
 
 		// Kiko
 		if (MyPlayerState->characterIndex == 0) {
-			UMaterialInstanceDynamic* kiko_body_customize = GetMesh()->CreateDynamicMaterialInstance(0, GetMesh()->GetMaterial(0));
-			UMaterialInstanceDynamic* kiko_hair = GetMesh()->CreateDynamicMaterialInstance(1, GetMesh()->GetMaterial(1));
-			UMaterialInstanceDynamic* kiko_outfit = GetMesh()->CreateDynamicMaterialInstance(2, GetMesh()->GetMaterial(2));
+			UMaterialInstanceDynamic* kiko_body_customize = MyMesh->CreateDynamicMaterialInstance(0, MyMesh->GetMaterial(0));
+			UMaterialInstanceDynamic* kiko_hair = MyMesh->CreateDynamicMaterialInstance(1, MyMesh->GetMaterial(1));
+			UMaterialInstanceDynamic* kiko_outfit = MyMesh->CreateDynamicMaterialInstance(2, MyMesh->GetMaterial(2));
 
-			kiko_body_customize->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_hair->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			kiko_outfit->SetVectorParameterValue("color", MyPlayerState->colorPicked);
+			kiko_body_customize->SetVectorParameterValue("color", ColorPicked);
+			kiko_hair->SetVectorParameterValue("color", ColorPicked);
+			kiko_outfit->SetVectorParameterValue("color", ColorPicked);
 
-			GetMesh()->SetMaterial(0, kiko_body_customize);
-			GetMesh()->SetMaterial(1, kiko_hair);
-			GetMesh()->SetMaterial(2, kiko_outfit);
+			MyMesh->SetMaterial(0, kiko_body_customize);
+			MyMesh->SetMaterial(1, kiko_hair);
+			MyMesh->SetMaterial(2, kiko_outfit);
 		}
 		else {
-			auto test = GetMesh()->CreateDynamicMaterialInstance(0, GetMesh()->GetMaterial(0));
-			test->SetVectorParameterValue("color", MyPlayerState->colorPicked);
-			GetMesh()->SetMaterial(0, test);
+			auto test = MyMesh->CreateDynamicMaterialInstance(0, MyMesh->GetMaterial(0));
+			test->SetVectorParameterValue("color", ColorPicked);
+			MyMesh->SetMaterial(0, test);
 		}
+
+		//BPF_SetPlayerSkin();
+
+		IsAlreadySetPlayerSkin = true;
 	}
 }
 
@@ -1377,7 +1448,7 @@ float AMCharacter::GetCurrentEnergyWeaponUIUpdatePercent()
 				retValue = LeftWeapon->CD_LeftEnergy / LeftWeapon->CD_MaxEnergy;
 			}
 		}
-		else if (RightWeapon)
+		if (RightWeapon)
 		{
 			if (RightWeapon->CD_MaxEnergy > 0)
 			{
@@ -1423,6 +1494,7 @@ void AMCharacter::OnRep_IsAllowDash()
 		// Vfx
 		if (EffectDash)
 		{
+			EffectDash->SetVisibility(true);
 			EffectDash->Activate();
 			FTimerHandle tmpHandle;
 			GetWorld()->GetTimerManager().SetTimer(tmpHandle, this, &AMCharacter::TurnOffDashEffect, DashTime, false);
@@ -1546,7 +1618,7 @@ void AMCharacter::OnRep_IsInvincible()
 		FTimerHandle ShowBubbleOnVfxTimerHandle;
 		GetWorldTimerManager().SetTimer(ShowBubbleOnVfxTimerHandle, [this]
 			{
-				if (EffectBubbleOn && IsInvincible)
+				if (EffectBubbleOn && IsInvincible && this)
 				{
 					if (!EffectBubbleOn->IsActive())
 						EffectBubbleOn->Activate();
@@ -1602,20 +1674,14 @@ void AMCharacter::SetCurrentHealth(float healthValue)
 // DamageCauser can be either weapon or projectile
 float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-	if (DamageTaken <= 0 || IsInvincible)
+	if (DamageTaken <= 0 || CurrentHealth <= 0 || IsInvincible || !EventInstigator || !DamageCauser)
 		return 0.0f;
 
 	if (!IsDead)
 	{
 		// Check if it is the attack from self or teammates
-		auto MyController = GetController();
-		if (!MyController)
-			return 0.0f;
-		AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
-		AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-		if (!AttackerPS || !MyPS)
-			return 0.0f;
-		if (AttackerPS->TeamIndex == MyPS->TeamIndex)
+		int TeammateCheckResult = ADamageManager::IsTeammate(this, EventInstigator);
+		if (TeammateCheckResult != 0)
 			return 0.0f;
 
 		// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
@@ -1626,6 +1692,10 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 			Server_LastTime_CallGetHitSfxVfx = GetWorld()->TimeSeconds;
 		}
 
+		if (!AttackedRecord.Contains(EventInstigator))
+			AttackedRecord.Add(EventInstigator);
+		AttackedRecord[EventInstigator] = GetWorld()->TimeSeconds;
+
 		SetCurrentHealth(CurrentHealth - DamageTaken);
 
 		// If holding a taser, the attack should stop
@@ -1635,14 +1705,42 @@ float AMCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const& Dama
 		// Score Kill Death Handling
 		if (CurrentHealth <= 0 && HasAuthority())
 		{
-			AttackerPS->addScore(0);
+			AM_PlayerState* AttackerPS = EventInstigator->GetPlayerState<AM_PlayerState>();
+			AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>();
+			if (!AttackerPS || !MyPS)
+				return 0.0f;
+
+			int KillerGetScore = 0;
+			AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+			if (MyGameState)
+			{
+				KillerGetScore = MyGameState->KillScore;
+			}
+			AttackerPS->addScore(KillerGetScore);
 			AttackerPS->addKill(1);
+			// Record Kill Assists
+			float TimeNow = GetWorld()->TimeSeconds;
+			float MaxTimeCountingAsKA = 3.0f;
+			auto AttackedRecordCopy = AttackedRecord;
+			for (auto& Elem : AttackedRecordCopy)
+			{
+				if (!Elem.Key)
+					continue;
+				if (TimeNow - Elem.Value <= MaxTimeCountingAsKA)
+				{
+					if (AM_PlayerState* AssistAttackerPS = Elem.Key->GetPlayerState<AM_PlayerState>())
+					{
+						if(AssistAttackerPS != AttackerPS)
+							AssistAttackerPS->addKillAssist(1);
+					}
+				}
+			}
 			MyPS->addDeath(1);
 
 			Server_DeadTimes++;
 
 			// Broadcast function
-			BroadcastToAllController(EventInstigator, false);
+			BroadcastToAllController(DamageCauser, false);
 		}
 
 		return DamageTaken;
@@ -1771,7 +1869,7 @@ void AMCharacter::OnWeaponOverlapBegin(class UPrimitiveComponent* OverlappedComp
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, 1.0f);
 				IsSaltCure = true;
 			}
-			NetMulticast_AdjustMaxWalkSpeed();
+			Server_SetMaxWalkSpeed();
 		}
 	}
 
@@ -1823,7 +1921,7 @@ void AMCharacter::OnWeaponOverlapEnd(class UPrimitiveComponent* OverlappedComp, 
 				ADamageManager::AddBuffPoints(EnumWeaponType::None, EnumAttackBuff::Saltcure, GetController(), this, -1.0f);
 				IsSaltCure = false;
 			}
-			NetMulticast_AdjustMaxWalkSpeed();
+			Server_SetMaxWalkSpeed();
 		}
 	}
 
@@ -1853,17 +1951,11 @@ void AMCharacter::OnHealingBubbleColliderOverlapBegin(class UPrimitiveComponent*
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 		{
-			if (GetController())
-			{
-				AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-				AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
-				if (!MyPS || !TheOtherCharacterPS)
-					return;
-				if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-				{
-					ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
-				}
-			}
+			int TeammateCheckResult = ADamageManager::IsTeammate(this, pMCharacter);
+			if (TeammateCheckResult == -1)
+				return;
+			else if (TeammateCheckResult == 1)
+				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, 1.0f);
 		}
 	}	
 	
@@ -1880,14 +1972,11 @@ void AMCharacter::OnHealingBubbleColliderOverlapEnd(class UPrimitiveComponent* O
 	{
 		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
 		{
-			AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-			AM_PlayerState* TheOtherCharacterPS = pMCharacter->GetPlayerState<AM_PlayerState>();
-			if (!MyPS || !TheOtherCharacterPS)
+			int TeammateCheckResult = ADamageManager::IsTeammate(this, pMCharacter);
+			if (TeammateCheckResult == -1)
 				return;
-			if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-			{
+			else if (TeammateCheckResult == 1)
 				ADamageManager::AddBuffPoints(EnumWeaponType::Shell, EnumAttackBuff::Shellheal, GetController(), pMCharacter, -1.0f);
-			}
 		}
 	}
 
@@ -1904,6 +1993,9 @@ void AMCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Assign Variables
+	OriginalMaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
 	if (HealingBubbleCollider)
 	{
 		HealingBubbleCollider->OnComponentBeginOverlap.AddDynamic(this, &AMCharacter::OnHealingBubbleColliderOverlapBegin);
@@ -1919,22 +2011,23 @@ void AMCharacter::BeginPlay()
 		{
 			SetFollowWidgetVisibility(MyGameState->IsGameStart);
 		}
-		AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
-		if (MyPlayerState)
-		{
-			if (MyPlayerState->TeamIndex == 1)
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
-			}
-			else
-			{
-				GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
-			}
-		}
+		// AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(GetPlayerState());
+		// if (MyPlayerState)
+		// {
+		// 	if (MyPlayerState->TeamIndex == 1)
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[0]);
+		// 	}
+		// 	else
+		// 	{
+		// 		GetMesh()->SetSkeletalMesh(CharacterBPArray[1]);
+		// 	}
+		// }
 	}
 
 	if (IsLocallyControlled())
 	{
+		// Cursor Plane
 		ACursorHitPlane* pCursorHitPlane = GetWorld()->SpawnActor<ACursorHitPlane>(CursorHitPlaneSubClass);
 		if (pCursorHitPlane)
 			pCursorHitPlane->pMCharacter = this;
@@ -1966,6 +2059,12 @@ void AMCharacter::BeginPlay()
 				pWeapon->CallShowUpVfx();
 		}
 	}
+	
+	// Opponent Marker
+	if (UOpponentMarkerWidget* pOpponentMarkerWidget = Cast<UOpponentMarkerWidget>(OpponentMarkerWidget->GetUserWidgetObject()))
+		pOpponentMarkerWidget->SetAllMarkerVisibility(false);
+	// Silouette
+	GetMesh()->SetRenderCustomDepth(false);
 }
 
 
@@ -1984,7 +2083,7 @@ void AMCharacter::Tick(float DeltaTime)
 		{
 			if (!bHealingBubbleTouchingStatue)
 			{
-				float size1 = 6.0f;
+				float size1 = 6.5f;
 				float size2 = 10.0f;
 				TargetScale = bDoubleHealingBubbleSize ? size2 : size1;
 				if (NewRelativeScale.X < size1)
@@ -2111,6 +2210,79 @@ void AMCharacter::Tick(float DeltaTime)
 
 	if (IsLocallyControlled())
 	{
+		// Opponent Marker on the bottom
+		// ========================================================================================================================
+		UOpponentMarkerWidget* pOpponentMarkerWidget = Cast<UOpponentMarkerWidget>(OpponentMarkerWidget->GetUserWidgetObject());
+		APlayerController* pPlayerController = Cast<APlayerController>(GetController());
+		FVector2D ScreenPosition_Self;
+		bool Success_GetSelfScreenPos = UGameplayStatics::ProjectWorldToScreen
+		(
+			Cast<APlayerController>(GetController()),
+			GetActorLocation(),
+			ScreenPosition_Self,
+			false
+		);
+		int32 viewport_x, viewport_y;
+		if(pPlayerController)
+			pPlayerController->GetViewportSize(viewport_x, viewport_y);
+		if (Success_GetSelfScreenPos && pOpponentMarkerWidget && pPlayerController)
+		{
+			// Let Widget know my TeamId			
+			if (AM_PlayerState* MyPS = GetPlayerState<AM_PlayerState>())
+			{
+				if (pOpponentMarkerWidget->TeamID != MyPS->TeamIndex)
+				{
+					pOpponentMarkerWidget->TeamID = MyPS->TeamIndex;
+					pOpponentMarkerWidget->ResetMarkers();
+				}
+			}							
+			int MaxPeopleInTeam = 3;
+			for (size_t i = 0; i < MaxPeopleInTeam; i++)
+			{
+				pOpponentMarkerWidget->SetMarkerVisibility(i, false);
+				if (i < Opponents.Num() && Opponents[i] && !Opponents[i]->IsDead)
+				{
+					FVector WorldPos = Opponents[i]->GetActorLocation();
+					FVector2D ScreenPosition_Opponent;
+					// ProjectWorldToScreen may fail if opponent is too far from self
+					bool Success_GetOpScreenPos = UGameplayStatics::ProjectWorldToScreen
+					(
+						pPlayerController,
+						WorldPos,
+						ScreenPosition_Opponent,
+						false
+					);
+					if (Success_GetOpScreenPos)
+					{
+						if (ScreenPosition_Self.Y < ScreenPosition_Opponent.Y && viewport_y * 1.0f < ScreenPosition_Opponent.Y)
+						{			
+							pOpponentMarkerWidget->SetMarkerVisibility(i, true);
+							// line1: y = ax+b;  line2: y = viewport_y;
+							float a = (ScreenPosition_Opponent.Y - ScreenPosition_Self.Y) / (ScreenPosition_Opponent.X - ScreenPosition_Self.X);
+							float b = ScreenPosition_Opponent.Y - (a * ScreenPosition_Opponent.X);
+							float targetX = (viewport_y - b) / a;
+							targetX -= (viewport_x * 0.5f);
+							targetX = FMath::Clamp(targetX, -viewport_x * 0.5f, viewport_x * 0.5f);
+							pOpponentMarkerWidget->SetMarkerTranslation(i, targetX , 0);
+
+							FVector2D Self_To_Opponent = ScreenPosition_Opponent - ScreenPosition_Self;
+							Self_To_Opponent.Normalize();
+							FVector2D Self_To_BottomCenter = FVector2D(viewport_x * 0.5f, viewport_y) - ScreenPosition_Self;
+							Self_To_BottomCenter.Normalize();							
+							float OffsetAngle = FMath::RadiansToDegrees(FMath::Acos(FVector2D::DotProduct(Self_To_Opponent, Self_To_BottomCenter)));
+							FVector3d CrossProductResult = FVector3d::CrossProduct(FVector3d(Self_To_Opponent, 0.0f), FVector3d(Self_To_BottomCenter, 0.0f));
+							if (0 < CrossProductResult.Z)
+								OffsetAngle = -OffsetAngle;
+							OffsetAngle = FMath::Clamp(OffsetAngle, -65.0f, 65.0f);
+							pOpponentMarkerWidget->SetMarkerOffsetAngle(i, OffsetAngle);
+						}						
+					}					
+				}
+			}
+		}
+		
+			
+
 		//if (0 < CameraShakingTime)
 		//{
 		//	if (100.0f == CameraShakingIntensity)
@@ -2293,6 +2465,13 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					BurningBuffDamagePerSecond = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
 				float TargetCurrentHealth = CurrentHealth - DeltaTime * BurningBuffDamagePerSecond;
 				SetCurrentHealth(TargetCurrentHealth);
+				// Update AttackedRecord
+				if (Server_TheControllerApplyingLatestBurningBuff)
+				{
+					if (!AttackedRecord.Contains(Server_TheControllerApplyingLatestBurningBuff))
+						AttackedRecord.Add(Server_TheControllerApplyingLatestBurningBuff);
+					AttackedRecord[Server_TheControllerApplyingLatestBurningBuff] = GetWorld()->TimeSeconds;
+				}				
 				if (TargetCurrentHealth <= 0.0f)
 				{
 					auto MyController = GetController();
@@ -2301,8 +2480,31 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 						AM_PlayerState* AttackerPS = Server_TheControllerApplyingLatestBurningBuff->GetPlayerState<AM_PlayerState>();
 						AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
 						// Add Scores
-						AttackerPS->addScore(5);
+						int KillerGetScore = 0;
+						AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+						if (MyGameState)
+						{
+							KillerGetScore = MyGameState->KillScore;
+						}
+						AttackerPS->addScore(KillerGetScore);
 						AttackerPS->addKill(1);
+						// Record Kill Assists
+						float TimeNow = GetWorld()->TimeSeconds;
+						float MaxTimeCountingAsKA = 3.0f;
+						auto AttackedRecordCopy = AttackedRecord;
+						for (auto& Elem : AttackedRecordCopy)
+						{
+							if (!Elem.Key)
+								continue;
+							if (TimeNow - Elem.Value <= MaxTimeCountingAsKA)
+							{
+								if (AM_PlayerState* AssistAttackerPS = Elem.Key->GetPlayerState<AM_PlayerState>())
+								{
+									if (AssistAttackerPS != AttackerPS)
+										AssistAttackerPS->addKillAssist(1);
+								}
+							}
+						}
 						MyPS->addDeath(1);
 						// Broadcast burning kill
 						BroadcastToAllController(Server_TheControllerApplyingLatestBurningBuff, true);
@@ -2333,6 +2535,12 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 					Server_SetCanMove(false);
 					SetElectricShockAnimState(true);
 				}
+				/*float DragSpeedRatio = 0.15f;
+				FString ParName = "Paralysis_DragSpeedRatio";
+				if (AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map.Contains(ParName))
+					DragSpeedRatio = AWeaponDataHelper::DamageManagerDataAsset->Character_Buff_Map[ParName];
+				Client_MoveCharacter(Server_Direction_SelfToTaserAttacker, DragSpeedRatio);
+				Server_Direction_SelfToTaserAttacker = FVector::Zero();*/
 			}
 			else
 			{
@@ -2435,42 +2643,44 @@ void AMCharacter::ActByBuff_PerTick(float DeltaTime)
 	}
 }
 
-void AMCharacter::BroadcastToAllController(AController* AttackController, bool IsFireBuff)
+void AMCharacter::BroadcastToAllController(AActor* AttackActor, bool IsFireBuff)
 {
-	AM_PlayerState* AttackerPS = AttackController->GetPlayerState<AM_PlayerState>();
-	AM_PlayerState* MyPS = GetController()->GetPlayerState<AM_PlayerState>();
-	// Broadcast burning kill
-	AMCharacter* AttackCharacter = Cast<AMCharacter>(AttackController->GetPawn());
+	AM_PlayerState* AttackerPS = nullptr;
+	AM_PlayerState* MyPS = nullptr;
 	UTexture2D* WeaponImage = nullptr;
-	// Get Weapon Image
-	if (AttackCharacter && !IsFireBuff)
+	
+	if (IsFireBuff)
 	{
-		if (AttackCharacter->CombineWeapon)
-		{
-			WeaponImage = AttackCharacter->CombineWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->LeftWeapon && AttackCharacter->RightWeapon && AttackCharacter->LeftWeapon->WeaponType == AttackCharacter->RightWeapon->WeaponType)
-		{
-			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->LeftWeapon != nullptr && AttackCharacter->LeftWeapon->WeaponType != EnumWeaponType::Shell)
-		{
-			WeaponImage = AttackCharacter->LeftWeapon->WeaponImage_Broadcast;
-		}
-		else if (AttackCharacter->RightWeapon != nullptr && AttackCharacter->RightWeapon->WeaponType != EnumWeaponType::Shell)
-		{
-			WeaponImage = AttackCharacter->RightWeapon->WeaponImage_Broadcast;
-		}
-	}
-	else
-	{
-		// Fire Image
+		AMPlayerController* AttackCauser = Cast<AMPlayerController>(AttackActor);
+		AttackerPS = AttackCauser->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
 		WeaponImage = FireImage;
 	}
-	for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+	else if (Cast<ABaseWeapon>(AttackActor))
 	{
-		AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
-		currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+		ABaseWeapon* AttackCauser = Cast<ABaseWeapon>(AttackActor);
+		AttackerPS = AttackCauser->PreHoldingController->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
+		WeaponImage = AttackCauser->WeaponImage_Broadcast;
+	}
+	else if (Cast<ABaseProjectile>(AttackActor))
+	{
+		ABaseProjectile* AttackCauser = Cast<ABaseProjectile>(AttackActor);
+		AttackerPS = AttackCauser->GetInstigator()->GetPlayerState<AM_PlayerState>();
+		MyPS = GetController()->GetPlayerState<AM_PlayerState>();
+		// Broadcast burning kill
+		WeaponImage = AttackCauser->WeaponImage_Broadcast;
+	}
+
+	if (AttackerPS && MyPS && WeaponImage)
+	{
+		for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+		{
+			AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+			currentController->UI_InGame_BroadcastInformation(AttackerPS->TeamIndex, MyPS->TeamIndex, AttackerPS->PlayerNameString, MyPS->PlayerNameString, WeaponImage);
+		}
 	}
 }
 
@@ -2529,14 +2739,7 @@ void AMCharacter::Server_EnableEffectByCrabBubble(bool bEnable)
 	if (IsAffectedByCrabBubble != bEnable)
 	{
 		IsAffectedByCrabBubble = bEnable;
-		if (IsAffectedByCrabBubble)
-		{
-			NetMulticast_AdjustMaxWalkSpeed();
-		}
-		else
-		{
-			NetMulticast_AdjustMaxWalkSpeed();
-		}		
+		Server_SetMaxWalkSpeed();
 	}
 }
 
@@ -2558,4 +2761,35 @@ void AMCharacter::Server_CheckBubble()
 			NetMulticast_SetHealingBubbleStatus(false, CntShellHeld == 2);
 		}
 	}
+}
+
+void AMCharacter::PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon)
+{
+	if (pCombineWeapon)
+	{
+		Server_LastDitchCombineWeaponType = pCombineWeapon->WeaponType;
+		Server_LastDitchCombineWeaponTime = GetWorld()->TimeSeconds;
+		Server_LastDitchCombineWeapon_CD_LeftEnergy = pCombineWeapon->CD_LeftEnergy;
+	}
+}
+
+FString AMCharacter::Server_GetHoldingWeaponType(int WeaponFlag)
+{
+	FString ret = "";
+	if (WeaponFlag == 0)
+	{
+		if (LeftWeapon)
+			ret = LeftWeapon->GetWeaponName();
+	}
+	else if(WeaponFlag == 1)
+	{
+		if (RightWeapon)
+			ret = RightWeapon->GetWeaponName();
+	}
+	else if (WeaponFlag == 2)
+	{
+		if (CombineWeapon)
+			ret = CombineWeapon->GetWeaponName();
+	}
+	return ret;
 }

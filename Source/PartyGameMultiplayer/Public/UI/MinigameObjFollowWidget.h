@@ -22,7 +22,7 @@ public:
 	void SetHealthByPercentage(float i_percentage);
 	void SetName(FString i_Name);
 	UFUNCTION(BlueprintImplementableEvent)
-	void SetHealthProgressBar(float Percent);
+	void BPF_SetHealthProgressBar(float Percent);
 
 protected:
 	// UPROPERTY(meta = (BindWidget))

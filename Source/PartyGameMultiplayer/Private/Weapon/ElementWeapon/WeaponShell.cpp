@@ -22,6 +22,8 @@ AWeaponShell::AWeaponShell()
 	AttackDetectComponent = WeaponMesh;
 
 	Server_bDetectedByStatue = false;
+
+	SpotLightSourceLocation = FVector::Zero();
 }
 
 void AWeaponShell::BeginPlay()
@@ -36,8 +38,8 @@ void AWeaponShell::BeginPlay()
 	pShellSpotLight = GetWorld()->SpawnActor<AShellSpotLight>(SpecificShellSpotLightClass, spawnLocation, spawnRotation, spawnParameters);
 	if (pShellSpotLight)
 	{
-		//pShellSpotLight->SourceLocation = FVector(20.0f, -390.0f, 1000.0f);
-		pShellSpotLight->SourceLocation = FVector(20.0f, -400.0f, 800.0f);
+		//pShellSpotLight->SourceLocation = FVector(20.0f, -400.0f, 800.0f);
+		pShellSpotLight->SourceLocation = SpotLightSourceLocation;
 		pShellSpotLight->TargetActor = this;		
 	}
 }
@@ -70,7 +72,6 @@ void AWeaponShell::GetPickedUp(ACharacter* pCharacter)
 	Super::GetPickedUp(pCharacter);
 
 	SetActorEnableCollision(true);
-	PreHoldingController = pCharacter->GetController();
 }
 
 void AWeaponShell::GetThrewAway()

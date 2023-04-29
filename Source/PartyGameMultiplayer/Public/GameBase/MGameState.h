@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "Matchmaking/ReturnGameState.h"
 #include "UI/PlayerUI/MLobbyWidget.h"
 #include "MGameState.generated.h"
 
@@ -16,16 +17,23 @@ class PARTYGAMEMULTIPLAYER_API AMGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-
+	
 	virtual bool HasBegunPlay() const override;
 	
 	virtual void BeginPlay() override;
 
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
 	UFUNCTION()
 	void GameHasBeenPlayed();
-
+	
 	UFUNCTION(Server, Reliable)
 	void Server_StartSyncForNewPlayer();
+
+	UFUNCTION()
+	void OnRep_LevelIndex();
+	UFUNCTION()
+	void SetLobbyInformationUIVisibilityTimerFunction();
 
 	/** Property replication */
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -36,15 +44,27 @@ public:
 	// 300 sec by default
 	UPROPERTY(ReplicatedUsing=UpdateGameStartTimerUI, BlueprintReadWrite)
 	int GameTime = 300;
+	UPROPERTY(BlueprintReadWrite)
+	int CountdownTime = 10;
+
+	UPROPERTY(ReplicatedUsing=OnRep_LevelIndex, BlueprintReadOnly)
+	int LevelIndex = -1;
+	UPROPERTY(Replicated, BlueprintReadOnly)
+	int TutorialLevelIndex;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
-	int LevelIndex = -1;
+	int KillScore = -1;
 
 	UFUNCTION(Server, Reliable)
 	void Server_StartGame();
 
+	UFUNCTION(Server, Reliable)
+	void Server_StartTutorialGame();
+
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_GameStartBGM(bool isBroadcast);
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_CountdownSFX();
 
 	UFUNCTION()
 	void OnRep_IsGameStart();
@@ -55,6 +75,9 @@ public:
 	UFUNCTION()
 	void UpdateGameTime();
 
+	UFUNCTION()
+	void UpdateTutorialGameTimer();
+
 	// UFUNCTION()
 	// void OnRep_UpdateTeam1Array();
 	// UFUNCTION()
@@ -63,6 +86,7 @@ public:
 	// void OnRep_UpdateUndecidedArray();
 
 	FTimerHandle GameStartTimerHandle;
+	FTimerHandle SetLobbyUIVisibilityTimerHandler;
 
 	// Team Score Section
 	UFUNCTION()
@@ -88,4 +112,7 @@ public:
 
 	// Has Been Played Timer Handler
 	FTimerHandle HasBeenPlayedTimerHandle;
+
+	// Countdown SFX
+	bool IsStartBroadcastCountdown;
 };

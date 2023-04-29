@@ -79,6 +79,17 @@ public:
 	// Broadcasting system
 	UFUNCTION()
 	void InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, FString i_KillerName, FString i_DeceasedName, UTexture2D* i_WeaponImage);
+	// Broadcasting Mini game system
+	UFUNCTION()
+	void InGame_BroadcastMinigameInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation);
+	// Game End
+	UFUNCTION(BlueprintCallable)
+	void InGame_GameEnd();
+	// Hide Game Status MinigameInfo Image
+	UFUNCTION()
+	void InGame_HideMinigameInfo();
+	UFUNCTION()
+	void InGame_CountdownAnimation();
 
 	// Show or Hide InGame_LobbyWidget
 	UFUNCTION()
@@ -129,4 +140,8 @@ private:
 
 	UPROPERTY()
 	UMLobbyWidget* InGame_LobbyWidget;
+
+public:
+	UPROPERTY()
+	bool IsFinishedInit = false;
 };

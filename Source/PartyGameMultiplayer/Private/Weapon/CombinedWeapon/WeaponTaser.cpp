@@ -14,7 +14,10 @@
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/DamageManager.h"
 #include "Weapon/DamageType/MeleeDamageType.h"
+#include "LevelInteraction/MinigameMainObjective.h"
 #include "LevelInteraction/MinigameObject/MinigameObj_Enemy.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_Statue.h"
+#include "LevelInteraction/MinigameObject/MinigameObj_TrainingRobot.h"
 #include "Character/MCharacter.h"
 #include "M_PlayerState.h"
 
@@ -88,7 +91,7 @@ void AWeaponTaser::Tick(float DeltaTime)
 			// if not hit a target, the server fork would stretch out and the client fork would copy the location 
 			if (!Server_ActorBeingHit)
 			{
-				// stretch out to the limit
+				// stretch out to the limitd
 				FVector TaserFork_CurWorldLocation = TaserForkMesh->GetComponentLocation();
 				if (FVector::Distance(TaserFork_CurWorldLocation, TaserFork_WorldLocation_WhenAttackStart) < MaxLen)
 				{
@@ -99,11 +102,15 @@ void AWeaponTaser::Tick(float DeltaTime)
 			}
 			// if hit a target 
 			else
-			{								
-				if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+			{					
+				if (Cast<AMCharacter>(Server_ActorBeingHit) || Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
 				{
 					// Location: keep the same offset
-					TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
+					//TaserForkMesh->SetWorldLocation(Server_ActorBeingHit->GetActorLocation() + Server_ActorBeingHit_To_TaserFork_WhenHit);
+					if (AMCharacter* pMCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+						TaserForkMesh->SetWorldLocation(pMCharacter->GetActorLocation() + FVector::Zero());
+					else if(AMinigameObj_TrainingRobot* pRobot = Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
+						TaserForkMesh->SetWorldLocation(pRobot->RobotCenterMesh->GetComponentLocation() + FVector::Zero());
 					// Rotation
 					if (Server_ActorBeingHit)
 					{
@@ -120,10 +127,19 @@ void AWeaponTaser::Tick(float DeltaTime)
 						AttackStop();
 					}
 					// Apply paralysis buff(drag towards the attacker)
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacter, DeltaTime);
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Paralysis, HoldingController, Server_ActorBeingHit, DeltaTime);
 					// Stop attack when the character is dead
-					if (pCharacter->GetIsDead())
-						AttackStop();
+					if (AMCharacter* pCharacter = Cast<AMCharacter>(Server_ActorBeingHit))
+					{
+						if (pCharacter->GetIsDead())
+							AttackStop();
+					}
+					// Stop attack when the robot is dead
+					if (AMinigameObj_TrainingRobot* pRobot = Cast<AMinigameObj_TrainingRobot>(Server_ActorBeingHit))
+					{
+						if (pRobot->GetCurrentHealth() <= 0)
+							AttackStop();
+					}
 				}
 				// Stop attack when the MinigameMainObjective is dead
 				else if (AMinigameObj_Enemy* pMinigameObj_Enemy = Cast<AMinigameObj_Enemy>(Server_ActorBeingHit))
@@ -193,7 +209,8 @@ void AWeaponTaser::AttackStart(float AttackTargetDistance)
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 
 	SetActorEnableCollision(bAttackOn);
 
@@ -216,7 +233,8 @@ void AWeaponTaser::AttackStop()
 	{
 		OnRep_bAttackOn();
 	}
-	ApplyDamageCounter = 0;
+	for (auto& Elem : ApplyDamageCounter)
+		Elem.Value = 0;
 	AttackObjectMap.Empty();
 
 	if (AttackType == EnumAttackType::Constant)
@@ -268,7 +286,7 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 	if (IsPickedUp && GetOwner())
 	{
 		// if hit characters / minigame objects
-		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_Enemy>(OtherActor))
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameMainObjective>(OtherActor))
 		{
 			bool bTargetCanBeAttacked = true;
 			// Check if this character can be attacked
@@ -277,17 +295,12 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				// if it hits the teammates
 				if(pCharacterBeingHit != GetOwner())
 				{
-					auto MyController = HoldingController;
-					if (!MyController)
+					int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), pCharacterBeingHit);
+					if (TeammateCheckResult == -1)
 						return;
-					AM_PlayerState* MyPS = MyController->GetPlayerState<AM_PlayerState>();
-					AM_PlayerState* TheOtherCharacterPS = pCharacterBeingHit->GetPlayerState<AM_PlayerState>();
-					if (!MyPS || !TheOtherCharacterPS)
-						return;
-					if (MyPS->TeamIndex == TheOtherCharacterPS->TeamIndex)
-					{
-						bTargetCanBeAttacked = false;
-					}
+					else if (TeammateCheckResult == 1)
+						bTargetCanBeAttacked = false;	
+				
 				}
 				// if it hits an invincible character
 				if (pCharacterBeingHit->IsInvincible)
@@ -302,6 +315,10 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 					pMinigameEnemyBeingHit->NetMulticast_ShowNoDamageHint(HoldingController, 0.5f * (pMinigameEnemyBeingHit->CrabCenterMesh->GetComponentLocation() + AttackDetectComponent->GetComponentLocation()));
 				}					
 			}
+			else if (auto pMinigameStatueBeingHit = Cast<AMinigameObj_Statue>(OtherActor))
+			{
+				bTargetCanBeAttacked = false;
+			}
 
 			if (!bTargetCanBeAttacked)
 			{
@@ -311,10 +328,10 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 			else
 			{
 				Server_ActorBeingHit = OtherActor;
-				if (auto pCharacterBeingHit = Cast<AMCharacter>(OtherActor))
+				if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_TrainingRobot>(OtherActor))
 				{
 					// Apply paralysis buff
-					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pCharacterBeingHit, 1.0f);
+					ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, OtherActor, 1.0f);
 					Server_ActorBeingHit_To_TaserFork_WhenHit = FVector::Zero();
 				}
 				else if (auto pMiniGameObjectBeingHit = Cast<AMinigameObj_Enemy>(OtherActor))
@@ -340,11 +357,19 @@ void AWeaponTaser::OnAttackOverlapBegin(class UPrimitiveComponent* OverlappedCom
 				if (GetNetMode() == NM_ListenServer)
 					OnRep_bAttackOverlap();
 
-				if (ApplyDamageCounter == 0 && HoldingController)
+				bool HasAppliedDamageToSth = false;
+				for (auto& Elem : ApplyDamageCounter)
+				{
+					if (Elem.Value != 0)
+						HasAppliedDamageToSth = true;
+				}					
+				if (!HasAppliedDamageToSth && HoldingController)
 				{
 					ADamageManager::TryApplyDamageToAnActor(this, HoldingController, UMeleeDamageType::StaticClass(), OtherActor, 0);
-					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, Cast<AMCharacter>(OtherActor), 0);
-					ApplyDamageCounter++;
+					ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, HoldingController, OtherActor, 0);
+					if (!ApplyDamageCounter.Contains(OtherActor))
+						ApplyDamageCounter.Add(OtherActor);
+					ApplyDamageCounter[OtherActor]++;
 				}
 			}
 		}
@@ -368,8 +393,8 @@ void AWeaponTaser::OnAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp,
 	if (Server_ActorBeingHit == OtherActor)
 	{
 		Server_ActorBeingHit = nullptr;
-		if (auto pMCharacter = Cast<AMCharacter>(OtherActor))
-			ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, pMCharacter, -1.0f);
+		if (Cast<AMCharacter>(OtherActor) || Cast<AMinigameObj_TrainingRobot>(OtherActor))
+			ADamageManager::AddBuffPoints(WeaponType, EnumAttackBuff::Paralysis, HoldingController, OtherActor, -1.0f);
 	}
 
 	if (AttackObjectMap.Contains(OtherActor))
@@ -426,5 +451,32 @@ void AWeaponTaser::SetTaserForkAttached(bool bShouldAttachToWeapon)
 		// Attach the component to the world with absolute position, rotation, and scale
 		TaserForkMesh->AttachToComponent(nullptr, FAttachmentTransformRules::KeepWorldTransform);
 		bForkAttachedToWeapon = false;
+	}
+}
+
+void AWeaponTaser::OnRep_IsPickedUp()
+{
+	Super::OnRep_IsPickedUp();
+
+	if (IsPickedUp)
+	{
+		//// Show weapon silouette on teammates' end
+		//int TeammateCheckResult = ADamageManager::IsTeammate(GetOwner(), GetWorld()->GetFirstPlayerController());
+		//if (TeammateCheckResult == 1)
+		//{
+		//	// Exclude self
+		//	if (auto pMCharacter = Cast<AMCharacter>(GetOwner()))
+		//	{
+		//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+		//		{
+		//			TaserForkMesh->SetRenderCustomDepth(true);
+		//			TaserForkMesh->SetCustomDepthStencilValue(252);
+		//		}
+		//	}
+		//}
+	}
+	else
+	{
+		//TaserForkMesh->SetRenderCustomDepth(false);
 	}
 }

@@ -20,15 +20,6 @@ void AM_PlayerState::Server_UpdatePlayerName_Implementation(const FString& i_Nam
 	{
 		OnRep_PlayerNameString();
 	}
-	
-	// for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
-	// {
-	// 	AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-	// 	if (MyController)
-	// 	{
-	// 		MyController->Client_SyncLobbyInformation();
-	// 	}
-	// }
 }
 
 void AM_PlayerState::Server_UpdatePlayerReadyState_Implementation()
@@ -200,12 +191,14 @@ void AM_PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	//Replicate current health
 	DOREPLIFETIME(AM_PlayerState, kill);
+	DOREPLIFETIME(AM_PlayerState, killAssist);
 	DOREPLIFETIME(AM_PlayerState, death);
 	DOREPLIFETIME(AM_PlayerState, PlayerNameString);
 	DOREPLIFETIME(AM_PlayerState, TeamIndex);
 	DOREPLIFETIME(AM_PlayerState, IsReady);
 	DOREPLIFETIME(AM_PlayerState, colorPicked);
 	DOREPLIFETIME(AM_PlayerState, characterIndex);
+	DOREPLIFETIME(AM_PlayerState, IsHost);
 }
 #pragma endregion Replicated Properties
 
@@ -225,10 +218,17 @@ void AM_PlayerState::addScore(float i_scoreToAdd) {
 	}
 }
 
-void AM_PlayerState::addKill(int i_killToAdd) {
+void AM_PlayerState::addKill(int i_killToAdd)
+{
 	kill += i_killToAdd;
 }
 
-void AM_PlayerState::addDeath(int i_deathToAdd) {
+void AM_PlayerState::addKillAssist(int i_killAssistToAdd)
+{
+	killAssist += i_killAssistToAdd;
+}
+
+void AM_PlayerState::addDeath(int i_deathToAdd)
+{
 	death += i_deathToAdd;
 }

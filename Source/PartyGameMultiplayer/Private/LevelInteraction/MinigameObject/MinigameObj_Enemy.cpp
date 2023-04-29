@@ -7,6 +7,8 @@
 #include "NiagaraFunctionLibrary.h"
 
 #include "M_PlayerState.h"
+#include "Character/MPlayerController.h"
+#include "GameBase/MGameState.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
@@ -172,7 +174,7 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 	// Call GetHit vfx & sfx (cannot call in OnHealthUpdate since health can be increased or decreased)
 	if (Server_LastTime_CallGetHitEffects < 0 || Server_CallGetHitEffects_MinInterval < GetWorld()->TimeSeconds - Server_LastTime_CallGetHitEffects)
 	{
-		//NetMulticast_CallGetHitSfx();
+		NetMulticast_CallGetCorrectHitSfx();
 		
 		// Call crab get hit animation
 		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CrabHit isAttacked = true"));
@@ -189,7 +191,15 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 		if (AM_PlayerState* killerPS = EventInstigator->GetPlayerState<AM_PlayerState>())
 		{
 			killerPS->addScore(ScoreCanGet);
+			
+			// Broadcast information to all clients
+			for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+			{
+				AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+				currentController->UI_InGame_BroadcastMiniInformation(killerPS->TeamIndex, killerPS->PlayerNameString, MinigameInformation);
+			}
 		}
+		
 		Server_WhenDead();
 	}
 
@@ -200,16 +210,31 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 void AMinigameObj_Enemy::Server_WhenDead()
 {
 	// Drop the Big Weapon
-	FTimerHandle DropWeaponTimerHandle;
-	GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
-		{
-			FVector spawnLocation = Server_SpawnBigWeaponLocation;
-			FRotator spawnRotation = Server_SpawnBigWeaponRotation;
-			FActorSpawnParameters spawnParameters;
-			spawnParameters.Instigator = nullptr;
-			spawnParameters.Owner = nullptr;
-			auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
-		}, DropWeaponDelay, false);
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState && MyGameState->GameTime >= DropWeaponDelay)
+	{
+		FTimerHandle DropWeaponTimerHandle;
+		GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
+			{
+				if (this)
+				{
+					FVector spawnLocation = Server_SpawnBigWeaponLocation;
+					if (this)
+					{
+						FRotator spawnRotation = Server_SpawnBigWeaponRotation;
+						FActorSpawnParameters spawnParameters;
+						spawnParameters.Instigator = nullptr;
+						spawnParameters.Owner = nullptr;
+						if (this)
+						{
+							auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+						}
+					}
+				}
+		
+			}, DropWeaponDelay, false);	
+	}
+
 
 	//// Spawn the little crab that walks into the ocean.
 	//FTimerHandle SpawnCrabTimerHandle;
@@ -221,8 +246,11 @@ void AMinigameObj_Enemy::Server_WhenDead()
 	//	}, DropWeaponDelay * 0.5f, false);
 
 	// Respawn(Destroy)
-	FTimerHandle RespawnMinigameObjectTimerHandle;
-	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, RespawnDelay, false);
+	if (MyGameState->IsGameStart && MyGameState->GameTime >= RespawnDelay)
+	{
+		FTimerHandle RespawnMinigameObjectTimerHandle;
+		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, RespawnDelay, false);
+	}
 }
 
 void AMinigameObj_Enemy::BeginPlay()
@@ -247,10 +275,10 @@ void AMinigameObj_Enemy::BeginPlay()
 	else if (SpecificWeaponClass->IsChildOf(AWeaponAlarm::StaticClass()))
 		SocketName_str = "Alarm";
 	SocketName = FName(*SocketName_str);
-	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	BigWeaponMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 	SocketName_str = "LittleCrab";
 	SocketName = FName(*SocketName_str);
-	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+	LittleCrabMesh->AttachToComponent(CrabMesh, FAttachmentTransformRules::SnapToTargetIncludingScale, SocketName);
 
 	IsRisingFromSand = true; 
 	if (Rising_NC && !Rising_NC->IsActive())
@@ -267,7 +295,10 @@ void AMinigameObj_Enemy::BeginPlay()
 		//}
 		if (auto pCamMg = pController->PlayerCameraManager)
 			pCamMg->StartCameraShake(CameraShakeTriggered);
-	}		
+	}	
+
+	// Sfx
+	CallStartSfx();
 }
 
 void AMinigameObj_Enemy::OnRep_CurrentHealth()
@@ -280,16 +311,32 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 		FTimerHandle HideCrabTimerHandle;
 		GetWorldTimerManager().SetTimer(HideCrabTimerHandle, [this]
 			{
-				SetActorEnableCollision(false);
-				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
-				if (FollowWidget)
-					FollowWidget->SetVisibility(false);
-				BPF_BroadcastCrabAnimation();
+				if (this)
+				{
+					SetActorEnableCollision(false);
+					if (this)
+					{
+						SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+						if (FollowWidget)
+							FollowWidget->SetVisibility(false);
+						// little crab
+						if (this)
+						{
+							BPF_BroadcastCrabAnimation();
+							if (this)
+							{
+								CallLittleCrabFleeSfx();
+							}
+						}
+					}
+				}
 			}, DropWeaponDelay, false);
 
 		// Vfx
 		if (Explode_NC)
 			Explode_NC->Activate();
+		// Sfx
+		CallDeathSfx();
 	}
 
 	// Set UI: Health Bar
@@ -300,7 +347,7 @@ void AMinigameObj_Enemy::OnRep_CurrentHealth()
 
 void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AController* pController, FVector HitLocation)
 {
-	if (GetWorld()->GetFirstPlayerController() == pController)
+	if (0 < CurrentHealth && GetWorld()->GetFirstPlayerController() == pController)
 	{
 		if (Local_ShowNoDamageHint_LastTime < 0 || Local_ShowNoDamageHint_Interval < GetWorld()->TimeSeconds - Local_ShowNoDamageHint_LastTime)
 		{
@@ -316,6 +363,12 @@ void AMinigameObj_Enemy::NetMulticast_ShowNoDamageHint_Implementation(AControlle
 						NoDamageHintActor->Destroy();
 				}, NoDamageHintAnimTime, false);
 			Local_ShowNoDamageHint_LastTime = GetWorld()->TimeSeconds;
+			CallGetIncorrectHitSfx();
 		}		
 	}	
+}
+
+void AMinigameObj_Enemy::NetMulticast_CallGetCorrectHitSfx_Implementation()
+{
+	CallGetCorrectHitSfx();
 }

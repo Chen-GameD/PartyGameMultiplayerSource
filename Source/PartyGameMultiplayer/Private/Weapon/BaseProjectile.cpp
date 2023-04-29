@@ -39,6 +39,8 @@ ABaseProjectile::ABaseProjectile()
 		StaticMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
 	}	
 
+	AttackDetectComponent = StaticMesh;
+
 	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovementComponent->SetUpdatedComponent(StaticMesh);
 
@@ -74,6 +76,11 @@ void ABaseProjectile::Tick(float DeltaTime)
 			Destroy();
 			return;
 		}
+		//if (GetActorLocation().Z < 0)
+		//{
+		//	Destroy();
+		//	return;
+		//}
 
 		// Explosion has started
 		if (HasExploded)
@@ -108,7 +115,8 @@ void ABaseProjectile::GetLifetimeReplicatedProps(TArray <FLifetimeProperty>& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ABaseProjectile, HasExploded);	
+	DOREPLIFETIME(ABaseProjectile, HasExploded);
+	DOREPLIFETIME(ABaseProjectile, TimePassed_SinceExplosion);	
 }
 
 
@@ -135,7 +143,7 @@ void ABaseProjectile::BeginPlay()
 			Destroy();
 			return;
 		}
-		StaticMesh->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
+		AttackDetectComponent->OnComponentBeginOverlap.AddDynamic(this, &ABaseProjectile::OnProjectileOverlapBegin);
 	}	
 	// Client
 	else
@@ -170,6 +178,21 @@ void ABaseProjectile::BeginPlay()
 		if (AttackOnEffect_NSComponent)
 			AttackOnEffect_NSComponent->Activate();
 	}
+
+	//// Show projectile silouette on teammates' end
+	//int TeammateCheckResult = ADamageManager::IsTeammate(GetInstigator(), GetWorld()->GetFirstPlayerController());
+	//if (TeammateCheckResult == 1)
+	//{
+	//	// Exclude self
+	//	if (auto pMCharacter = Cast<AMCharacter>(GetInstigator()))
+	//	{
+	//		if (pMCharacter->GetController() != GetWorld()->GetFirstPlayerController())
+	//		{
+	//			StaticMesh->SetRenderCustomDepth(true);
+	//			StaticMesh->SetCustomDepthStencilValue(252);
+	//		}
+	//	}
+	//}
 }
 
 
@@ -226,7 +249,7 @@ void ABaseProjectile::OnProjectileOverlapBegin(class UPrimitiveComponent* Overla
 	// Direct Hit Damage
 	ADamageManager::TryApplyDamageToAnActor(this, Controller, UDamageType::StaticClass(), OtherActor, 0);
 	// Apply knockback buff
-	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, Cast<AMCharacter>(OtherActor), 0);
+	ADamageManager::ApplyOneTimeBuff(WeaponType, EnumAttackBuff::Knockback, Controller, OtherActor, 0);
 
 	// Range Damage		
 	if (0 < TotalDamage)

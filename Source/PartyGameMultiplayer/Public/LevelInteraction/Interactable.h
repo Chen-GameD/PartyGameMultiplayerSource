@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "Interactable.generated.h"
 
+// This class is useless now, the same as AActor
+
 UCLASS()
 class PARTYGAMEMULTIPLAYER_API AInteractable : public AActor
 {

@@ -15,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
 #include "Components/WidgetComponent.h"
+#include "GameBase/MGameState.h"
 #include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_Statue::AMinigameObj_Statue()
@@ -114,6 +115,9 @@ void AMinigameObj_Statue::BeginPlay()
 	// UI
 	if (UMinigameObjFollowWidget* pFollowWidget = Cast<UMinigameObjFollowWidget>(FollowWidget->GetUserWidgetObject()))
 		pFollowWidget->SetHealthByPercentage(0);
+
+	// Sfx
+	CallStartSfx();
 }
 
 void AMinigameObj_Statue::Tick(float DeltaTime)
@@ -161,7 +165,7 @@ void AMinigameObj_Statue::Tick(float DeltaTime)
 		if(GodRayMesh_CurRelativeScale.X < 200.0f)
 			GodRayExpandSpeed = 50.0f;
 		else
-			GodRayExpandSpeed = 100.0f;
+			GodRayExpandSpeed = 75.0f;
 	}
 
 	// Dark bubble
@@ -300,6 +304,13 @@ void AMinigameObj_Statue::OnShellOverlapBegin(UPrimitiveComponent* OverlappedCom
 					if (CurrentPS)
 					{
 						CurrentPS->addScore(ScoreCanGet);
+
+						// Broadcast information to all clients
+						for (FConstPlayerControllerIterator iter = GetWorld()->GetPlayerControllerIterator(); iter; ++iter)
+						{
+							AMPlayerController* currentController = Cast<AMPlayerController>(*iter);
+							currentController->UI_InGame_BroadcastMiniInformation(CurrentPS->TeamIndex, CurrentPS->PlayerNameString, MinigameInformation);
+						}
 					}
 				}
 			}
@@ -333,7 +344,7 @@ void AMinigameObj_Statue::OnGodRayOverlapBegin(UPrimitiveComponent* OverlappedCo
 		SourceLocation.Z = MCharacterLocation.Z;
 		FVector PushDirection = MCharacterLocation - SourceLocation;
 		PushDirection.Normalize();
-		pMCharacter->LaunchCharacter(PushDirection * 800.0f, true, false);
+		pMCharacter->LaunchCharacter(PushDirection * 2000.0f, true, false);
 	}
 }
 
@@ -353,8 +364,14 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 		FTimerHandle HideStatueTimerHandle;
 		GetWorldTimerManager().SetTimer(HideStatueTimerHandle, [this]
 			{
-				SetActorEnableCollision(false);
-				SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+				if (this)
+				{
+					SetActorEnableCollision(false);
+					if (this)
+					{
+						SetActorLocation(GetActorLocation() + FVector(0, 0, -1000.0f));
+					}
+				}
 				/*if(FollowWidget)
 					FollowWidget->SetVisibility(false);*/
 
@@ -363,7 +380,7 @@ void AMinigameObj_Statue::OnRep_CurrentHealth()
 			}, LittleCrabDelay, false);
 
 		// TODO
-		OnStatueFinishedEvent();
+		//OnStatueFinishedEvent();
 
 		// Sfx
 		CallDeathSfx();
@@ -392,6 +409,10 @@ void AMinigameObj_Statue::NewShellHasBeenInserted()
 void AMinigameObj_Statue::Server_WhenDead()
 {
 	// Respawn(Destroy)
-	FTimerHandle RespawnMinigameObjectTimerHandle;
-	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, RespawnDelay, false);
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState->IsGameStart && MyGameState->GameTime >= RespawnDelay)
+	{
+		FTimerHandle RespawnMinigameObjectTimerHandle;
+		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, RespawnDelay, false);
+	}
 }

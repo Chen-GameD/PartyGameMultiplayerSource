@@ -8,13 +8,15 @@ USessionEntry::USessionEntry()
 	sessionID = FString();
 	maxPlayers = 0;
 	minPlayers = 0;
+	isPrivateSession = false;
 }
 
-void USessionEntry::SetSessionData(FString id, int32 max, int32 min)
+void USessionEntry::SetSessionData(FString id, int32 max, int32 min, bool isPrivate)
 {
 	sessionID = id;
 	maxPlayers = max;
 	minPlayers = min;
+	isPrivateSession = isPrivate;
 }
 
 FString USessionEntry::GetSessionID()
@@ -30,4 +32,9 @@ int32 USessionEntry::GetMaxPlayers()
 int32 USessionEntry::GetMinPlayers()
 {
 	return minPlayers;
+}
+
+bool USessionEntry::IsSessionPrivate()
+{
+	return isPrivateSession;
 }

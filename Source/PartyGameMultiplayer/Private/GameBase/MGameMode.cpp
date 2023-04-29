@@ -26,7 +26,7 @@
 
 void AMGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
-	Super::InitGame(MapName, Options, ErrorMessage);
+	Super::InitGame(MapName, Options, ErrorMessage); 
 	
 	/*if (UJsonFactory::InitJsonObject_1())
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("GameMode Init JsonObject_1 succeeded"));
@@ -35,7 +35,9 @@ void AMGameMode::InitGame(const FString& MapName, const FString& Options, FStrin
 
 	//CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->MinigameConfigTable.Num() - 1);
 
-	Server_RearrangeWeapons();
+	//"UEDPIE_0_FormalLevel_Crabs_Landscape"   "UEDPIE_0_FormalLevel_Museum"
+	if( MapName.Contains("FormalLevel_Crabs_Landscape") || MapName.Contains("FormalLevel_Museum") )
+		Server_RearrangeWeapons();
 }
 
 void AMGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -78,7 +80,7 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 				return;
 			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
 			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("MAINSESSION"), *UniqueNetId, false);
+			bool bRegistrationSuccess = OnlineSessionRef->RegisterPlayer(FName("CBGameSession"), *UniqueNetId, false);
 			if(bRegistrationSuccess)
 			{
 				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success Registration"));
@@ -90,6 +92,11 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 		MyPlayerState->Client_SetPlayerNameFromGameInstance();
 		MyPlayerState->Client_SetPlayerSkinFromGameInstance();
 		CurrentPlayerNum++;
+		AMGameState* MyGameState = GetGameState<AMGameState>();
+		if (MyGameState)
+		{
+			Cast<UEOSGameInstance>(GetGameInstance())->UpdateSession(CurrentPlayerNum, !MyGameState->IsGameStart);
+		}
 
 		if (NewPlayer->IsLocalPlayerController())
 		{
@@ -98,13 +105,10 @@ void AMGameMode::PostLogin(APlayerController* NewPlayer)
 			{
 				MyPawn->OnRep_PlayerState();
 			}
-		}
 
-		// AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
-		// if (MyGameState)
-		// {
-		// 	MyGameState->LevelIndex = LevelIndex;
-		// }
+			// Set the host
+			MyPlayerState->IsHost = true;
+		}
 	}
 }
 
@@ -115,62 +119,35 @@ void AMGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPl
 
 void AMGameMode::Logout(AController* Exiting)
 {
-	Super::Logout(Exiting);
-	
-	if (Exiting)
-	{
-		APlayerController* NewPlayer = Cast<APlayerController>(Exiting);
-		if(Cast<UEOSGameInstance>(GetGameInstance())->GetIsLoggedIn())
-		{
-			FUniqueNetIdRepl UniqueNetIdRepl;
-			if(!NewPlayer->IsLocalController())
-			{
-				UNetConnection *NetConnectionRef = Cast<UNetConnection>(NewPlayer->Player);
-				if(IsValid(NetConnectionRef))
-				{
-					UniqueNetIdRepl = NetConnectionRef->PlayerId;
-				}
-				else
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error in Un-Registeration!"));
-					UE_LOG(LogTemp, Error, TEXT("Error in Un-Registeration : Invalid NetConnectionRef"));
-				}
-			}
-		
-			TSharedPtr<const FUniqueNetId> UniqueNetId = UniqueNetIdRepl.GetUniqueNetId();
-			if(UniqueNetId == nullptr)
-				return;
-			IOnlineSubsystem *OnlineSubsystemRef = Online::GetSubsystem(NewPlayer->GetWorld());
-			IOnlineSessionPtr OnlineSessionRef = OnlineSubsystemRef->GetSessionInterface();
-			bool bRegistrationSuccess = OnlineSessionRef->UnregisterPlayer(FName("MAINSESSION"), *UniqueNetId);
-			if(bRegistrationSuccess)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("Success UN-Registration"));
-				UE_LOG(LogTemp, Warning, TEXT("Success UN-registration: %d"), bRegistrationSuccess);
-			}
-		}
-	}
-	
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("CHECKEND : Logout-GameMode-Server"));
+	UE_LOG(LogTemp, Warning, TEXT("CHECKEND : Logout-GameMode-Server"));
+
 	CurrentPlayerNum--;
-
-	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	AMGameState* MyGameState = GetGameState<AMGameState>();
+	if (MyGameState)
 	{
-		if (*ControllerItr != Exiting)
+		Cast<UEOSGameInstance>(GetGameInstance())->UpdateSession(CurrentPlayerNum, !MyGameState->IsGameStart);
+	}
+	AM_PlayerState* PS = Exiting->GetPlayerState<AM_PlayerState>();
+	if (PS)
+	{
+		switch (PS->TeamIndex)
 		{
-			AMPlayerController* MyController = Cast<AMPlayerController>(*ControllerItr);
-			if (MyController)
-			{
-				MyController->Client_SyncLobbyInformation();
-			}
+		case 1:
+			TeamOnePlayerNum--;
+			break;
+		case 2:
+			TeamTwoPlayerNum--;
+		case 0:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Log out when Player teamindex is 0!"));
+			break;
+		default:
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Log out when Player teamindex is invaild!"));
+			break;
 		}
 	}
-
-	//	if (CurrentPlayerNum <= 0)
-	//	{
-	//		// Need to restart the server level
-	//		//UGameplayStatics::OpenLevel(this, FName(*GetWorld()->GetName()), false);
-	//	}
-	//}
+	
+	Super::Logout(Exiting);
 }
 
 void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerController)
@@ -214,31 +191,19 @@ void AMGameMode::Server_RespawnPlayer_Implementation(APlayerController* PlayerCo
 void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpawn)
 {
 	if (MinigameDataAsset)
-	{		
-		if (bFirstTimeSpawn)
+	{
+		CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
+		if (bFirstTimeSpawn && LevelIndex != TutorialLevelIndex)
 		{
 			// SpawnMinigameObject with a certain delay after the game starts
-			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 7.0f;
+			float DelaySpawnMinigameObjectAtStart = (LevelIndex == 0) ? 1.0f : 4.5f;
 			FTimerHandle TimerHandle;
-			GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this]()
-				{
-					// Spawn the minigame object
-					CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-					FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-					AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-					if (spawnActor && MinigameDataAsset)
-						spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
-
-				}, DelaySpawnMinigameObjectAtStart, false);
+			GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &AMGameMode::SpawnMinigameObj, DelaySpawnMinigameObjectAtStart, false);
 		}
 		else
 		{
 			// Spawn the minigame object
-			CurrentMinigameIndex = FMath::RandRange(0, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable.Num() - 1);
-			FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
-			AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
-			if (spawnActor && MinigameDataAsset)
-				spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
+			SpawnMinigameObj();
 		}
 		
 
@@ -259,6 +224,18 @@ void AMGameMode::Server_RespawnMinigameObject_Implementation(bool bFirstTimeSpaw
 		{
 			MyGameState->NetMulticast_UpdateMinigameHint(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHint, MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameHintImage);
 		}
+	}
+}
+
+void AMGameMode::SpawnMinigameObj()
+{
+	// Spawn the minigame object
+	FTransform spawnTransform = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObjectSpawnTransform;
+	AMinigameMainObjective* spawnActor = GetWorld()->SpawnActor<AMinigameMainObjective>(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].MinigameObject, spawnTransform);
+	if (spawnActor && MinigameDataAsset)
+	{
+		CurrentMinigameObj = spawnActor;
+		spawnActor->UpdateScoreCanGet(MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].MinigameConfigTable[CurrentMinigameIndex].ScoreCanGet);
 	}
 }
 
@@ -346,7 +323,8 @@ void AMGameMode::CheckGameStart()
 			if (CanStart)
 			{
 				// Can start the game
-				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+				Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
+				GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, 6.5, false);
 			}
 		}
 		else
@@ -357,6 +335,17 @@ void AMGameMode::CheckGameStart()
 	else
 	{
 		CanStart = false;
+	}
+
+	if (LevelIndex == TutorialLevelIndex)
+	{
+		CanStart = true;
+		GetWorldTimerManager().SetTimer(StartGameCountDownTimerHandle, this, &AMGameMode::StartTheGame, .5, false);
+		AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+		if (MyPlayerController)
+		{
+			MyPlayerController->Tutorial_InitForPlayerController();
+		}
 	}
 
 	if (!CanStart)
@@ -387,7 +376,16 @@ void AMGameMode::StartTheGame()
 		MyGameState->GameTime = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].GameTime;
 		
 		MyGameState->IsGameStart = true;
-		MyGameState->Server_StartGame();
+		MyGameState->KillScore = MinigameDataAsset->LevelMinigameConfigTable[LevelIndex].KillScore;
+		if (LevelIndex != TutorialLevelIndex)
+		{
+			MyGameState->Server_StartGame();
+			//Cast<UEOSGameInstance>(GetGameInstance())->SetSessionStateStarted();
+		}
+		else
+		{
+			MyGameState->Server_StartTutorialGame();
+		}
 	}
 
 	//Server_RearrangeWeapons();
@@ -408,6 +406,12 @@ void AMGameMode::OnLevelIndexUpdate(int i_LevelIndex)
 		if (MyGameState)
 		{
 			MyGameState->LevelIndex = LevelIndex;
+			MyGameState->TutorialLevelIndex = TutorialLevelIndex;
+
+			if (GetNetMode() == NM_ListenServer)
+			{
+				MyGameState->OnRep_LevelIndex();
+			}
 		}
 	}
 }

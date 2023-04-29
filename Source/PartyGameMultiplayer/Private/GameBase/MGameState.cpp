@@ -5,10 +5,11 @@
 #include "../../Public/M_PlayerState.h"
 #include "Character/MPlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 #include "../../Public/Character/MCharacter.h"
 #include "../../../../../Engine/Source/Runtime/Engine/Classes/Components/PrimitiveComponent.h"
-#include "GameFramework/GameSession.h"
 #include "EngineUtils.h"
+#include "GameBase/MGameMode.h"
 
 bool AMGameState::HasBegunPlay() const
 {
@@ -25,6 +26,21 @@ void AMGameState::BeginPlay()
 	FTimerDelegate TimerDelegate;
 	TimerDelegate.BindUObject(this, &AMGameState::GameHasBeenPlayed);
 	GetWorldTimerManager().SetTimer(HasBeenPlayedTimerHandle, TimerDelegate, 1, true);
+
+	IsStartBroadcastCountdown = false;
+}
+
+void AMGameState::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+
+	for (TActorIterator<AMPlayerController> ControllerItr(GetWorld()); ControllerItr; ++ControllerItr)
+	{
+		if (*ControllerItr && ControllerItr->IsLocalPlayerController())
+		{
+			ControllerItr->Client_SyncLobbyInformation_Implementation();
+		}
+	}
 }
 
 void AMGameState::GameHasBeenPlayed()
@@ -51,6 +67,25 @@ void AMGameState::Server_StartSyncForNewPlayer_Implementation()
 	}
 }
 
+void AMGameState::OnRep_LevelIndex()
+{
+	GetWorldTimerManager().SetTimer(SetLobbyUIVisibilityTimerHandler, this, &AMGameState::SetLobbyInformationUIVisibilityTimerFunction, 0.5, true);
+}
+
+void AMGameState::SetLobbyInformationUIVisibilityTimerFunction()
+{
+	// Check the level index, If its tutorial level, should hide lobby information UI
+	if (LevelIndex != TutorialLevelIndex)
+	{
+		AMPlayerController* MyPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
+		if (MyPlayerController->IsHudInit)
+		{
+			MyPlayerController->GetInGameHUD()->InGame_SetVisibilityLobbyWidget(ESlateVisibility::Visible);
+			GetWorldTimerManager().ClearTimer(SetLobbyUIVisibilityTimerHandler);
+		}
+	}
+}
+
 void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -61,31 +96,74 @@ void AMGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	DOREPLIFETIME(AMGameState, Team_1_Score);
 	DOREPLIFETIME(AMGameState, Team_2_Score);
 	DOREPLIFETIME(AMGameState, LevelIndex);
+	DOREPLIFETIME(AMGameState, TutorialLevelIndex);
 }
 
 void AMGameState::OnRep_IsGameStart()
 {
 	AMPlayerController* MyLocalPlayerController = Cast<AMPlayerController>(GetWorld()->GetFirstPlayerController());
 	
+	if (IsGameStart)
+	{
+		// Assign character's Teammates and Opponents
+		TSubclassOf<AMCharacter> ActorClass = AMCharacter::StaticClass();
+		TArray<AActor*> OutActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ActorClass, OutActors);
+		for (size_t i = 0; i < OutActors.Num(); i++)
+		{
+			auto Chr = Cast<AMCharacter>(OutActors[i]);
+			Chr->Teammates.Empty();
+			Chr->Opponents.Empty();
+		}
+		for (size_t i = 0; i < OutActors.Num(); i++)
+		{
+			for (size_t j = i + 1; j < OutActors.Num(); j++)
+			{
+				auto Chr1 = Cast<AMCharacter>(OutActors[i]);
+				auto Chr2 = Cast<AMCharacter>(OutActors[j]);
+				if (!Chr1 || !Chr2)
+					continue;
+				auto Ps1 = Chr1->GetPlayerState<AM_PlayerState>();
+				auto Ps2 = Chr2->GetPlayerState<AM_PlayerState>();
+				if (!Ps1 || !Ps2)
+					continue;
+				if (Ps1->TeamIndex == Ps2->TeamIndex)
+				{
+					Chr1->Teammates.Add(Chr2);
+					Chr2->Teammates.Add(Chr1);
+				}
+				else
+				{
+					Chr1->Opponents.Add(Chr2);
+					Chr2->Opponents.Add(Chr1);
+				}
+			}
+		}
+	}	
+
 #pragma region Siloutte_Config
 
-	// Get local player state and team id
-	AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(MyLocalPlayerController->
-		GetPawn()->GetPlayerState());
-	auto myTeamID = MyPlayerState->TeamIndex;
+	//// Get local player state and team id
+	//AM_PlayerState* MyPlayerState = Cast<AM_PlayerState>(MyLocalPlayerController->
+	//	GetPawn()->GetPlayerState());
+	//auto myTeamID = MyPlayerState->TeamIndex;
+	//for (int i = 0; i < PlayerArray.Num(); i++) {
+	//	// Cast to custom ps
+	//	auto ps = Cast<AM_PlayerState>(PlayerArray[i]);
+	//	auto character = Cast<AMCharacter>(ps->GetPawn());
+	//	// On the same team as the local player
+	//	if (ps->TeamIndex == myTeamID) 
+	//	{
+	//		character->GetMesh()->SetCustomDepthStencilValue(252);
+	//	}
+	//	else 
+	//	{
+	//		character->GetMesh()->SetCustomDepthStencilValue(0);
+	//	}
 
-	for (int i = 0; i < PlayerArray.Num(); i++) {
-		// Cast to custom ps
-		auto ps = Cast<AM_PlayerState>(PlayerArray[i]);
-		auto character = Cast<AMCharacter>(ps->GetPawn());
-		// On the same team as the local player
-		if (ps->TeamIndex == myTeamID) {
-			character->GetMesh()->SetCustomDepthStencilValue(252);
-		}
-		else {
-			character->GetMesh()->SetCustomDepthStencilValue(0);
-		}
-	}
+	//	if (ps->PlayerNameString == MyPlayerState->PlayerNameString)
+	//		character->GetMesh()->SetRenderCustomDepth(false);
+	//}
 
 #pragma endregion Siloutte_Config
 
@@ -93,6 +171,10 @@ void AMGameState::OnRep_IsGameStart()
 	{
 		if (MyLocalPlayerController)
 		{
+			if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+			{
+				gameInstance->SaveEndGameState();
+			}
 			MyLocalPlayerController->StartTheGame();
 			MyLocalPlayerController->AddWeaponUI();
 			BPF_GameStartBGM(true);
@@ -102,6 +184,22 @@ void AMGameState::OnRep_IsGameStart()
 	{
 		if (MyLocalPlayerController)
 		{
+			if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+			{
+				gameInstance->SaveEndGameState();
+			}
+
+			// Clean all timer of all pawn
+			for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(*PawnItr);
+			}
+			// Clean all timer of all minigame object
+			for (TActorIterator<AMinigameMainObjective> MiniObjItr(GetWorld()); MiniObjItr; ++MiniObjItr)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(*MiniObjItr);
+			}
+			
 			MyLocalPlayerController->EndTheGame();
 			BPF_GameStartBGM(false);
 		}
@@ -114,6 +212,15 @@ void AMGameState::UpdateGameStartTimerUI()
 	if (MyLocalPlayerController)
 	{
 		MyLocalPlayerController->GetInGameHUD()->InGame_UpdateTimer(GameTime);
+		if (GameTime <= CountdownTime && LevelIndex != TutorialLevelIndex)
+		{
+			MyLocalPlayerController->GetInGameHUD()->InGame_CountdownAnimation();
+			if (!IsStartBroadcastCountdown)
+			{
+				BPF_CountdownSFX();
+				IsStartBroadcastCountdown = true;
+			}
+		}
 	}
 }
 
@@ -133,7 +240,29 @@ void AMGameState::UpdateGameTime()
 			OnRep_IsGameStart();
 		}
 		GetWorldTimerManager().ClearTimer(GameStartTimerHandle);
+
+		// Try to clean the timer on the minigame obj;
+		AMGameMode* MyGameMode = Cast<AMGameMode>(GetWorld()->GetAuthGameMode());
+		if (MyGameMode)
+		{
+			if (MyGameMode->CurrentMinigameObj)
+			{
+				GetWorldTimerManager().ClearAllTimersForObject(MyGameMode->CurrentMinigameObj);
+			}
+		}
 	}
+	
+	if (GetNetMode() == NM_ListenServer)
+	{
+		UpdateGameStartTimerUI();
+	}
+}
+
+void AMGameState::UpdateTutorialGameTimer()
+{
+	GameTime++;
+
+	FString TipInformation = FString::Printf(TEXT("Game time : %d"), GameTime);
 	
 	if (GetNetMode() == NM_ListenServer)
 	{
@@ -156,6 +285,10 @@ void AMGameState::OnRep_Team_1_ScoreUpdate()
 			}
 		}
 	}
+	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		gameInstance->SaveEndGameState();
+	}
 }
 
 void AMGameState::OnRep_Team_2_ScoreUpdate()
@@ -172,6 +305,10 @@ void AMGameState::OnRep_Team_2_ScoreUpdate()
 				MyHUD->InGame_UpdateTeamScore(2, Team_2_Score);
 			}
 		}
+	}
+	if(const auto gameInstance = Cast<UEOSGameInstance>(GetGameInstance()))
+	{
+		gameInstance->SaveEndGameState();
 	}
 }
 
@@ -198,5 +335,14 @@ void AMGameState::Server_StartGame_Implementation()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TipInformation);
 	
 	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateGameTime, 1, true);
+	OnRep_IsGameStart();
+}
+
+
+void AMGameState::Server_StartTutorialGame_Implementation()
+{
+	FString TipInformation = FString::Printf(TEXT("Start Tutorial timer!"));
+	
+	GetWorldTimerManager().SetTimer(GameStartTimerHandle, this, &AMGameState::UpdateTutorialGameTimer, 1, true);
 	OnRep_IsGameStart();
 }

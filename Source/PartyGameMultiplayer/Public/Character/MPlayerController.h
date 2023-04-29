@@ -20,6 +20,8 @@ class PARTYGAMEMULTIPLAYER_API AMPlayerController : public APlayerController
 	
 public:
 	AMPlayerController();
+
+	virtual void Destroyed() override;
 	
 	/** Property replication */
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -48,6 +50,9 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void Client_SyncCharacters();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void CheckIfSaveFileExist();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
@@ -87,10 +92,22 @@ public:
 	void UI_InGame_OnUseSkill(SkillType UseSkill, float CoolDownTotalTime);
 	UFUNCTION(Client, Reliable)
 	void UI_InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedTeamIndex, const FString& i_KillerName, const FString& i_DeceasedName, UTexture2D* i_WeaponImage);
+	UFUNCTION(Client, Reliable)
+	void UI_InGame_BroadcastMiniInformation(int KillerTeamIndex, const FString& i_KillerName, const FString& i_MinigameInformation);
 
 	// HUD getter
 	UFUNCTION(BlueprintCallable)
 	AMInGameHUD* GetInGameHUD();
+
+	// For tutorial level only
+	//////////////////////////////////////////////////////
+	/// this is hard code right now, sorry for this!!!!!!!!!!!
+	//////////////////////////////////////////////////////
+	UFUNCTION()
+	void Tutorial_InitForPlayerController();
+	UFUNCTION()
+	void SetHudInitTimerFunction();
+	
 	
 protected:
 
@@ -107,35 +124,10 @@ protected:
 	/** Called for side to side input */
 	void MoveRight(float Value);
 
-	/**
-	 * Called via input to turn at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void TurnAtRate(float Rate);
-
-	/**
-	 * Called via input to turn look up/down at a given rate.
-	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	 */
-	void LookUpAtRate(float Rate);
-
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
-	// Test
-	UFUNCTION(Server, Reliable)
-	void Test();
-
 	// Begin PlayerController interface
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void SetupInputComponent() override;
 	// End PlayerController interface
-
-	UFUNCTION(BlueprintCallable)
-	void UI_ShowLobbyMenu();
 	
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
@@ -157,13 +149,18 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	bool CanMove = true;
 
+	UPROPERTY()
+	bool IsHudInit = false;
+
 // Members
 // ==============================================================
 private:
 	//InGame HUD
+	UPROPERTY()
 	AMInGameHUD* MyInGameHUD;
-
+	
 	FTimerHandle UpdateLobbyTimerHandle;
 	FTimerHandle UpdatePlayerStateHandle;
+	FTimerHandle HudInitTimerHandle;
 	
 };

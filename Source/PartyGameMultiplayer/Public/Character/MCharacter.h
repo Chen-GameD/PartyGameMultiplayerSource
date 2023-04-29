@@ -32,7 +32,11 @@ class PARTYGAMEMULTIPLAYER_API AMCharacter : public ACharacter
 	
 	/**	Health Bar UI widget */
 	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UWidgetComponent* PlayerFollowWidget;
+		class UWidgetComponent* PlayerFollowWidget;
+
+	/**	Opponent Marker UI widget */
+	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+		class UWidgetComponent* OpponentMarkerWidget;
 
 	/**	Inventory Menu UI widget Reference */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -104,15 +108,11 @@ public:
 	void Client_Respawn();
 	
 	UFUNCTION()
-	void SetFollowWidgetVisibility(bool IsVisible);
+		void SetFollowWidgetVisibility(bool IsVisible);
 	UFUNCTION()
-	void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
-
-	// UFUNCTION()
-	// void SetFollowWidgetStatusAndInformation();
-
-	// UFUNCTION()
-	// void SetLocallyControlledGameUI(bool isVisible);
+		void SetFollowWidgetHealthBarIsEnemy(bool IsEnemy);
+	UFUNCTION()
+		void SetFollowWidgetHealthBarByTeamID(int TeamID);
 
 	UFUNCTION()
 	void SetPlayerNameUIInformation();
@@ -120,8 +120,14 @@ public:
 	UFUNCTION()
 	void SetPlayerSkin();
 
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_SetPlayerSkin();
+
 	UFUNCTION()
 	void InitFollowWidget();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void BPF_SetPlayerDirectionIndicatorWidget(int TeamIndex);
 
 	UFUNCTION(BlueprintCallable)
 	void SetOutlineEffect(bool isVisible);
@@ -152,6 +158,9 @@ public:
 	// Multicast respawn result
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_RespawnResult();
+
+	UFUNCTION(NetMulticast, Reliable)
+		void NetMulticast_SetWorldLocationRotation(FVector NewWorldLocation, FRotator NewWorldRotation);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void BPF_DeathCameraAnimation(bool isBroadcast);
@@ -193,6 +202,9 @@ public:
 
 	void Server_GiveShellToStatue(class AWeaponShell* pShell);
 	void Server_EnableEffectByCrabBubble(bool bEnable);
+
+	UFUNCTION(BlueprintCallable)
+		FString Server_GetHoldingWeaponType(int WeaponFlag);  // WeaponFlag 0: leftweapon, 1 rightweapon, 2 combineweapon
 
 protected:
 
@@ -258,8 +270,9 @@ protected:
 
 	float Server_GetMaxWalkSpeedRatioByWeapons();
 
+	void Server_SetMaxWalkSpeed();
 	UFUNCTION(NetMulticast, Reliable)
-		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatio = -1);
+		void NetMulticast_AdjustMaxWalkSpeed(float MaxWalkSpeedRatioByWeapon);
 	UFUNCTION(NetMulticast, Reliable)
 		void NetMulticast_SetHealingBubbleStatus(bool i_bBubbleOn, bool i_bDoubleSize);
 
@@ -313,8 +326,9 @@ protected:
 
 	// Broadcast function
 	UFUNCTION()
-	void BroadcastToAllController(AController* AttackController, bool IsFireBuff);
+	void BroadcastToAllController(AActor* AttackActor, bool IsFireBuff);
 
+	void PreventRefreshingCombineWeaponCD_ByDropPick(ABaseWeapon* pCombineWeapon);
 
 // Members
 // ==============================================================
@@ -356,6 +370,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
 	TArray<bool> AnimState = {false, false, false, false, false, false, false, false, false};
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Replicated)
+	int DeadAnimIndex = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	int DeadAnimNum;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 		TArray<FName> CharacterMatParamNameArray;
 
@@ -391,7 +411,7 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectRun;
-	UPROPERTY(EditAnywhere, Category = "Effects")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
 		class UNiagaraComponent* EffectDash;
 	UPROPERTY(EditAnywhere, Category = "Effects")
 		class UNiagaraComponent* EffectJump;
@@ -432,6 +452,7 @@ public:
 		bool IsBurned;
 	UPROPERTY(ReplicatedUsing = OnRep_IsParalyzed)
 		bool IsParalyzed;
+	FVector Server_Direction_SelfToTaserAttacker;
 	UPROPERTY(ReplicatedUsing = OnRep_IsInvincible)
 		bool IsInvincible;
 	UPROPERTY(Replicated)
@@ -439,7 +460,10 @@ public:
 	UPROPERTY(Replicated)
 		bool IsSaltCure;
 	float InvincibleTimer;
-	float InvincibleMaxTime;
+	UPROPERTY(EditAnywhere)
+		float InvincibleMaxTime;
+
+	TMap<class AController*, float> AttackedRecord;
 	
 	// Effects
 	// =============================
@@ -456,6 +480,11 @@ public:
 	// Fire Image
 	UPROPERTY(EditDefaultsOnly, Category = "FireBuff")
 	UTexture2D* FireImage;
+
+	// Teammates and Opponents in the same world
+	TArray<AMCharacter*> Teammates;
+	TArray<AMCharacter*> Opponents;
+
 protected:
 
 	/** The player's maximum health. This is the highest that their health can be, and the value that their health starts at when spawned.*/
@@ -472,16 +501,17 @@ protected:
 
 	// Action
 	bool IsOnGround;
-	float OriginalMaxWalkSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float OriginalMaxWalkSpeed;
 	float Client_MaxHeightDuringLastTimeOffGround;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAllowDash)
-	bool IsAllowDash;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashDistance;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashTime;
-	UPROPERTY(EditAnywhere, Category = "Dash")
-	float DashCoolDown;
+		bool IsAllowDash;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashDistance;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashTime;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+		float DashCoolDown;
 	FTimerHandle DashingTimer;
 
 	// buff
@@ -496,6 +526,10 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=SetTextureInUI, Category = "Weapon")
 	ABaseWeapon*  CombineWeapon;
+
+	EnumWeaponType Server_LastDitchCombineWeaponType;
+	float Server_LastDitchCombineWeaponTime;
+	float Server_LastDitchCombineWeapon_CD_LeftEnergy;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	TArray<ABaseWeapon*>  CurrentTouchedWeapon;
@@ -514,4 +548,7 @@ protected:
 	bool IsPickingWeapon = false;
 
 	FTimerHandle InitPlayerInformationTimer;
+
+	mutable FCriticalSection DataGuard;
+	bool IsAlreadySetPlayerSkin = false;
 };

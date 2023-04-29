@@ -22,7 +22,7 @@ void ATriggerBoxJumpPad::BeginPlay()
 {
 	Super::BeginPlay();
 
-    DrawDebugBox(GetWorld(), GetActorLocation(), GetComponentsBoundingBox().GetExtent(), FColor::Purple, true, -1, 0, 5);
+    //DrawDebugBox(GetWorld(), GetActorLocation(), GetComponentsBoundingBox().GetExtent(), FColor::Purple, true, -1, 0, 5);
 
     /* 
         Interestingly, if you name the 2 overlap function just OnOverlapBegin & OnOverlapEnd,

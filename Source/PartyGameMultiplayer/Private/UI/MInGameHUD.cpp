@@ -63,10 +63,12 @@ void AMInGameHUD::BeginPlay()
 			if (InGame_LobbyWidget)
 			{
 				InGame_LobbyWidget->AddToViewport();
-				InGame_LobbyWidget->SetVisibility(ESlateVisibility::Visible);
+				InGame_LobbyWidget->SetVisibility(ESlateVisibility::Hidden);
 			}
 		}
 	}
+
+	IsFinishedInit = true;
 }
 
 void AMInGameHUD::Tick(float DeltaSeconds)
@@ -231,6 +233,38 @@ void AMInGameHUD::InGame_BroadcastInformation(int KillerTeamIndex, int DeceasedT
 	if (InGame_GameStatusWidget)
 	{
 		InGame_GameStatusWidget->UpdateAndShowBroadcastingInformation(KillerTeamIndex, DeceasedTeamIndex, i_KillerName, i_DeceasedName, i_WeaponImage);
+	}
+}
+
+void AMInGameHUD::InGame_BroadcastMinigameInformation(int KillerTeamIndex, FString i_KillerName, FString i_MinigameInformation)
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->UpdateAndShowMiniBroadcastingInformation(KillerTeamIndex, i_KillerName, i_MinigameInformation);
+	}
+}
+
+void AMInGameHUD::InGame_GameEnd()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->BPF_GameEnd();
+	}
+}
+
+void AMInGameHUD::InGame_HideMinigameInfo()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->HideMinigameInfo();
+	}
+}
+
+void AMInGameHUD::InGame_CountdownAnimation()
+{
+	if (InGame_GameStatusWidget)
+	{
+		InGame_GameStatusWidget->BPF_CountdownAnimation();
 	}
 }
 
