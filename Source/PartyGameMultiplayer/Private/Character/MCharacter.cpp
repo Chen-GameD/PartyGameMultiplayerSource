@@ -1188,7 +1188,11 @@ void AMCharacter::StartToRespawn(float Delay)
 	{
 		// GetWorldTimerManager().SetTimer() InRate cannot <= 0;
 		FTimerHandle StartToRespawnTimerHandle;
-		GetWorldTimerManager().SetTimer(StartToRespawnTimerHandle, this, &AMCharacter::Client_Respawn, Delay, false);
+		AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+		if (MyGameState->IsGameStart && MyGameState->GameTime >= 4)
+		{
+			GetWorldTimerManager().SetTimer(StartToRespawnTimerHandle, this, &AMCharacter::Client_Respawn, Delay, false);
+		}
 	}
 }
 

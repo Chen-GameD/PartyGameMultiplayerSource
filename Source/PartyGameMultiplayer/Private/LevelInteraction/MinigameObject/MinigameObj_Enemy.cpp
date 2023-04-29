@@ -8,6 +8,7 @@
 
 #include "M_PlayerState.h"
 #include "Character/MPlayerController.h"
+#include "GameBase/MGameState.h"
 #include "PartyGameMultiplayer/PartyGameMultiplayerCharacter.h"
 #include "Weapon/BaseProjectile.h"
 #include "Weapon/BaseWeapon.h"
@@ -209,26 +210,31 @@ float AMinigameObj_Enemy::TakeDamage(float DamageTaken, struct FDamageEvent cons
 void AMinigameObj_Enemy::Server_WhenDead()
 {
 	// Drop the Big Weapon
-	FTimerHandle DropWeaponTimerHandle;
-	GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
-		{
-			if (this)
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState && MyGameState->GameTime >= DropWeaponDelay)
+	{
+		FTimerHandle DropWeaponTimerHandle;
+		GetWorldTimerManager().SetTimer(DropWeaponTimerHandle, [this] 
 			{
-				FVector spawnLocation = Server_SpawnBigWeaponLocation;
 				if (this)
 				{
-					FRotator spawnRotation = Server_SpawnBigWeaponRotation;
-					FActorSpawnParameters spawnParameters;
-					spawnParameters.Instigator = nullptr;
-					spawnParameters.Owner = nullptr;
+					FVector spawnLocation = Server_SpawnBigWeaponLocation;
 					if (this)
 					{
-						auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+						FRotator spawnRotation = Server_SpawnBigWeaponRotation;
+						FActorSpawnParameters spawnParameters;
+						spawnParameters.Instigator = nullptr;
+						spawnParameters.Owner = nullptr;
+						if (this)
+						{
+							auto pBigWeapon = GetWorld()->SpawnActor<ABaseWeapon>(SpecificWeaponClass, spawnLocation, spawnRotation, spawnParameters);
+						}
 					}
 				}
-			}
 		
-		}, DropWeaponDelay, false);
+			}, DropWeaponDelay, false);	
+	}
+
 
 	//// Spawn the little crab that walks into the ocean.
 	//FTimerHandle SpawnCrabTimerHandle;
@@ -240,8 +246,11 @@ void AMinigameObj_Enemy::Server_WhenDead()
 	//	}, DropWeaponDelay * 0.5f, false);
 
 	// Respawn(Destroy)
-	FTimerHandle RespawnMinigameObjectTimerHandle;
-	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, RespawnDelay, false);
+	if (MyGameState->IsGameStart && MyGameState->GameTime >= RespawnDelay)
+	{
+		FTimerHandle RespawnMinigameObjectTimerHandle;
+		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Enemy::StartToRespawnActor, RespawnDelay, false);
+	}
 }
 
 void AMinigameObj_Enemy::BeginPlay()

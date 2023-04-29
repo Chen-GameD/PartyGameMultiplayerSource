@@ -15,6 +15,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Weapon/ElementWeapon/WeaponShell.h"
 #include "Components/WidgetComponent.h"
+#include "GameBase/MGameState.h"
 #include "UI/MinigameObjFollowWidget.h"
 
 AMinigameObj_Statue::AMinigameObj_Statue()
@@ -408,6 +409,10 @@ void AMinigameObj_Statue::NewShellHasBeenInserted()
 void AMinigameObj_Statue::Server_WhenDead()
 {
 	// Respawn(Destroy)
-	FTimerHandle RespawnMinigameObjectTimerHandle;
-	GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, RespawnDelay, false);
+	AMGameState* MyGameState = Cast<AMGameState>(GetWorld()->GetGameState());
+	if (MyGameState->IsGameStart && MyGameState->GameTime >= RespawnDelay)
+	{
+		FTimerHandle RespawnMinigameObjectTimerHandle;
+		GetWorldTimerManager().SetTimer(RespawnMinigameObjectTimerHandle, this, &AMinigameObj_Statue::StartToRespawnActor, RespawnDelay, false);
+	}
 }
