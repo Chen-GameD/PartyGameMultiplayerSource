@@ -199,7 +199,8 @@ void AMGameState::OnRep_IsGameStart()
 			{
 				GetWorldTimerManager().ClearAllTimersForObject(*MiniObjItr);
 			}
-			
+
+			MyLocalPlayerController->EndGameLockMovement();
 			MyLocalPlayerController->EndTheGame();
 			BPF_GameStartBGM(false);
 		}

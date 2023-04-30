@@ -151,6 +151,14 @@ void AMPlayerController::Timer_CheckPlayerState()
 	}
 }
 
+void AMPlayerController::EndGameLockMovement()
+{
+	FInputModeUIOnly inputMode;
+	inputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+	this->SetInputMode(inputMode);
+	CanMove = false;
+}
+
 void AMPlayerController::Client_SyncCharacters_Implementation()
 {
 	for (TActorIterator<AMCharacter> PawnItr(GetWorld()); PawnItr; ++PawnItr)

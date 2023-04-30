@@ -54,6 +54,8 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void CheckIfSaveFileExist();
 
+	UFUNCTION()
+	void EndGameLockMovement();
 	UFUNCTION(BlueprintImplementableEvent)
 	void EndTheGame();
 
